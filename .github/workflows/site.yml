@@ -132,6 +132,10 @@ jobs:
           vercel build --prod --token="$VERCEL_TOKEN"
           url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
           echo "Deployed $url" | tee -a "$GITHUB_STEP_SUMMARY"
+          # A production deploy normally takes every production domain, but one attached moments earlier can stay on the
+          # previous deployment; pointing it explicitly makes the public site follow every deploy.
+          vercel alias set "$url" "$PUBLIC_DOMAIN" --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
+          echo "Pointed $PUBLIC_DOMAIN at $url" | tee -a "$GITHUB_STEP_SUMMARY"
 
       # Until DNS for the public domain resolves to Vercel this check warns instead of failing the run.
       - name: Check the public site

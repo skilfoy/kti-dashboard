@@ -1,0 +1,19 @@
+{
+  "system": "Notion",
+  "workspace_page": {
+    "title": "Kilfoy Threat Intelligence Platform",
+    "id": "4099857fdd4681148168dc200ac48e17"
+  },
+  "work_tracker": {
+    "title": "KTI work tracker",
+    "data_source_id": "307c4bd1-8d5e-4473-87fe-88b2649ad949",
+    "types": ["Work item", "Epic", "Operations", "Feedback"],
+    "statuses": ["Inbox", "Backlog", "Todo", "In Progress", "Done", "Canceled"],
+    "operations_parent": "SEA-160"
+  },
+  "milestones": {
+    "title": "KTI milestones",
+    "data_source_id": "bed0d669-8c41-4d0e-b1e4-84867a27c604"
+  },
+  "history": "Linear project issues SEA-34 to SEA-275, with their comments, documents and status updates, copied on 30 October 2026; Linear is retired for this project."
+}
