@@ -1,0 +1,7 @@
+# Deploys are prebuilt in CI; this keeps a direct `vercel deploy` from uploading work files too.
+/feeds/
+/work/
+/data/
+/pipeline/
+/test/
+/.github/

@@ -1,0 +1,15 @@
+# Built outputs: the workflow assembles these on every run
+/public/data/
+/public/site.json
+neon/collector.mjs
+/feeds/
+/work/
+.vercel/
+node_modules/
+__pycache__/
+*.pyc
+.clones/
+test-results/
+e2e_shots/
+.DS_Store
+.env*

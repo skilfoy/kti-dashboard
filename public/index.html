@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Global Threat Intelligence</title>
+<meta name="description" content="Open-source threat intelligence reassessed daily: geopolitical theaters, threat vectors, exploited vulnerabilities, ransomware, threat actors and threat-informed defense, each judgment tied to cited public sources.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Global Threat Intelligence">
+<meta property="og:description" content="Open-source threat intelligence reassessed daily, with every judgment tied to cited public sources.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/styles.css">
+<script src="/runtime/theme.js"></script>
+</head>
+<body>
+<a class="site-skip" href="#tabs">Skip to the pages</a>
+<noscript><div class="site-noscript">This site draws its tables, charts and map in the browser and needs JavaScript. The underlying datasets are listed at <a href="/site.json">/site.json</a> and served as JSON under /data.</div></noscript>
+<div class="ti" id="ti">
+  <div class="ti-classbar" id="marking">
+    <span class="ti-tlp">TLP:AMBER</span><span>PAP:AMBER</span><span>Open-source intelligence</span><span id="marking-scope">Inherent threat, calibrated per vertical</span>
+  </div>
+
+  <div class="ti-controls" id="controls">
+    <label class="ti-ctl"><span class="ti-ctl-lbl">Critical-infrastructure vertical</span>
+      <select class="ti-select" id="ti-vertical" aria-label="Critical-infrastructure vertical"></select></label>
+    <span class="ti-ctl-note" id="ti-vertical-note">Threat levels calibrated for the selected sector.</span>
+    <span class="ti-ctl-spacer"></span>
+    <span class="ti-badge" id="ti-feedstatus" data-ok="">Feeds…</span>
+    <label class="ti-ctl ti-ctl-inline"><span class="ti-ctl-lbl">Auto-refresh</span>
+      <input class="ti-input ti-input-sm" id="ti-interval" type="text" placeholder="e.g. 15 minutes" aria-label="Auto-refresh interval"></label>
+    <span class="ti-ctl-note" id="ti-interval-note">Auto-refresh off</span>
+    <button class="ti-chip" type="button" id="ti-refresh" title="Refresh live feeds now">Refresh now</button>
+    <span class="ti-ctl-note" id="ti-refresh-note"></span>
+    <button class="ti-chip" type="button" id="ti-theme" aria-label="Theme auto">Theme: auto</button>
+  </div>
+
+  <header class="ti-head" id="header">
+    <div>
+      <h1 class="ti-title" id="title">Global threat intelligence</h1>
+      <p class="ti-take" id="takeaway">
+        <span data-source="posture" data-field="critical" data-row="0" data-fill data-fmt="int" class="dash-skeleton">—</span> theaters at CRITICAL
+        (<span data-source="posture" data-field="critical_names" data-row="0" data-fill>—</span>) and
+        <span data-source="posture" data-field="escalating" data-row="0" data-fill data-fmt="int">—</span> escalating.
+        <span data-source="kev_stats" data-field="edge_30d" data-row="0" data-fill data-fmt="int">—</span> edge-device flaws reached KEV in 30 days, with a median
+        <span data-source="kev_stats" data-field="edge_lag_median" data-row="0" data-fill data-fmt="int">—</span>-day lag from publication this year; extortion claims against financial services moved
+        <span data-source="rw_stats" data-field="financial_change" data-row="0" data-fill data-fmt="signedPct">—</span> period on period.
+      </p>
+    </div>
+    <div class="ti-asof" id="asof">
+      <div>Run <span class="ti-mono" data-source="latest_run" data-field="run_id" data-row="0" data-fill>—</span> · <span data-source="latest_run" data-field="at" data-row="0" data-fill>—</span></div>
+      <div><span data-source="latest_run" data-field="validator" data-row="0" data-fill>—</span></div>
+      <div>Reassessed daily, 06:45 CT</div>
+    </div>
+  </header>
+
+  <nav class="ti-tabs" role="tablist" id="tabs" aria-label="Pages">
+    <button class="ti-tab" role="tab" id="tab-brief" data-page="brief" aria-selected="true"><span class="ti-step">1</span>Brief</button>
+    <button class="ti-tab" role="tab" id="tab-map" data-page="map" aria-selected="false"><span class="ti-step">2</span>Map</button>
+    <button class="ti-tab" role="tab" id="tab-theaters" data-page="theaters" aria-selected="false"><span class="ti-step">3</span>Theaters</button>
+    <button class="ti-tab" role="tab" id="tab-vectors" data-page="vectors" aria-selected="false"><span class="ti-step">4</span>Vectors</button>
+    <button class="ti-tab" role="tab" id="tab-vulnerabilities" data-page="vulnerabilities" aria-selected="false"><span class="ti-step">5</span>Vulnerabilities</button>
+    <button class="ti-tab" role="tab" id="tab-ransomware" data-page="ransomware" aria-selected="false"><span class="ti-step">6</span>Ransomware</button>
+    <button class="ti-tab" role="tab" id="tab-residual" data-page="residual" aria-selected="false"><span class="ti-step">7</span>Residual risk</button>
+    <button class="ti-tab" role="tab" id="tab-actors" data-page="actors" aria-selected="false"><span class="ti-step">8</span>Actors</button>
+    <button class="ti-tab" role="tab" id="tab-defense" data-page="defense" aria-selected="false"><span class="ti-step">9</span>Defense</button>
+    <button class="ti-tab" role="tab" id="tab-requirements" data-page="requirements" aria-selected="false"><span class="ti-step">10</span>Requirements</button>
+    <button class="ti-tab" role="tab" id="tab-sources" data-page="sources" aria-selected="false"><span class="ti-step">11</span>Sources</button>
+    <button class="ti-tab" role="tab" id="tab-method" data-page="method" aria-selected="false"><span class="ti-step">12</span>Method</button>
+  </nav>
+
+  <!-- 1 BRIEF -->
+  <section class="ti-page" id="brief" role="tabpanel" aria-labelledby="tab-brief">
+    <div class="ti-tiles" id="brief-tiles">
+      <div class="ti-tile" id="tile-critical">
+        <div class="ti-tile-label">Theaters at CRITICAL</div>
+        <div class="ti-big" data-source="posture" data-field="critical" data-row="0" data-fill data-fmt="int">—</div>
+        <div class="ti-tile-sub"><span data-source="posture" data-field="high" data-row="0" data-fill data-fmt="int">—</span> at HIGH · <span data-source="posture" data-field="escalating" data-row="0" data-fill data-fmt="int">—</span> escalating</div>
+      </div>
+      <div class="ti-tile" id="tile-judgments">
+        <div class="ti-tile-label">Executive judgments</div>
+        <div class="ti-big" data-source="brief_stats" data-field="exec_shown" data-row="0" data-fill data-fmt="int">—</div>
+        <div class="ti-tile-sub"><span data-source="brief_stats" data-field="high" data-row="0" data-fill data-fmt="int">—</span> HIGH · <span data-source="brief_stats" data-field="medium" data-row="0" data-fill data-fmt="int">—</span> MEDIUM confidence overall</div>
+      </div>
+      <div class="ti-tile" id="tile-kev">
+        <div class="ti-tile-label">KEV additions, 30 days</div>
+        <div class="ti-big" data-source="kev_stats" data-field="added_30d" data-row="0" data-fill data-fmt="int">—</div>
+        <div class="ti-tile-sub"><span data-source="kev_stats" data-field="edge_30d" data-row="0" data-fill data-fmt="int">—</span> edge devices from <span data-source="kev_stats" data-field="edge_vendors_30d" data-row="0" data-fill data-fmt="int">—</span> vendors</div>
+      </div>
+      <div class="ti-tile" id="tile-lag">
+        <div class="ti-tile-label">Edge CVE to KEV, median days</div>
+        <div class="ti-big" data-source="kev_stats" data-field="edge_lag_median" data-row="0" data-fill data-fmt="int">—</div>
+        <div class="ti-tile-sub">This year, <span data-source="kev_stats" data-field="edge_lag_n" data-row="0" data-fill data-fmt="int">—</span> CVEs</div>
+      </div>
+      <div class="ti-tile" id="tile-fin">
+        <div class="ti-tile-label">Financial-sector extortion claims, 90 days</div>
+        <div class="ti-big" data-source="rw_stats" data-field="financial_90d" data-row="0" data-fill data-fmt="int">—</div>
+        <div class="ti-tile-sub"><span data-source="rw_stats" data-field="financial_change" data-row="0" data-fill data-fmt="signedPct">—</span> vs prior 90 days · to <span data-source="rw_stats" data-field="snapshot" data-row="0" data-fill>—</span></div>
+      </div>
+      <div class="ti-tile" id="tile-items">
+        <div class="ti-tile-label">Cited reporting items, 7 days</div>
+        <div class="ti-big" data-source="brief_stats" data-field="items_7d" data-row="0" data-fill data-fmt="int">—</div>
+        <div class="ti-tile-sub"><span data-source="brief_stats" data-field="items_total" data-row="0" data-fill data-fmt="int">—</span> items in the evidence base</div>
+      </div>
+    </div>
+
+    <div class="ti-section" id="key-judgments">
+      <h2 class="ti-h2">Key judgments <span class="ti-pir">PIR-1 to PIR-7</span></h2>
+      <p class="ti-lede">Only MEDIUM or HIGH confidence judgments appear here, at most six. Likelihood uses ICD-203 terms; confidence is computed from the evidence each judgment cites, so a likely event can carry moderate confidence. Open a card for its argument map.</p>
+      <div class="ti-grid-wide" id="kj-list"></div>
+    </div>
+
+    <div class="ti-grid-wide ti-section">
+      <div class="ti-card" id="brief-changes">
+        <h3 class="ti-h3">What changed in the last 7 days</h3>
+        <p class="ti-card-note">Cited reporting items dated within 7 days of the newest item, newest first. Grades are Admiralty reliability and credibility.</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-changes" data-source="items" data-row-key="item_id"></table></div>
+      </div>
+      <div class="ti-card" id="brief-disruption">
+        <h3 class="ti-h3">Disruption lane <span class="ti-pir">PIR-7</span></h3>
+        <p class="ti-card-note">Takedowns, sanctions, charges and seizures that change the near-term threat (Bhardwaj p192-196).</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-disruption" data-source="items" data-row-key="item_id"></table></div>
+      </div>
+    </div>
+
+    <div class="ti-card ti-section" id="brief-live">
+      <h3 class="ti-h3">Live feeds <span class="ti-pir">via threat-feeds</span></h3>
+      <p class="ti-card-note">Pulled in your browser from this site's threat-feeds service (ransomware.live, FIRST EPSS, abuse.ch). Use Refresh now or set an auto-refresh interval in the header. When the service does not answer these show as unavailable and the daily built data still stands.</p>
+      <div class="ti-tiles" id="live-tiles">
+        <div class="ti-tile"><div class="ti-tile-label">Leak-site claims, last 24h</div><div class="ti-big" data-source="live_rw_summary" data-field="last_24h" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="live_rw_summary" data-field="last_7d" data-row="0" data-fill data-fmt="int">—</span> in 7 days · top <span data-source="live_rw_summary" data-field="top_group" data-row="0" data-fill>—</span></div></div>
+        <div class="ti-tile"><div class="ti-tile-label">Claims against <span id="live-vname">the selected vertical</span> (live set)</div><div class="ti-big" id="live-vclaims" data-source="live_rw_by_sector" data-field="claims" data-where="vertical_id=financial" data-fill data-fmt="int">—</div><div class="ti-tile-sub">of <span data-source="live_rw_summary" data-field="total" data-row="0" data-fill data-fmt="int">—</span> recent claims · matched on <span id="live-vsector">Financial Services</span></div></div>
+        <div class="ti-tile"><div class="ti-tile-label">Indicators, ThreatFox (live set)</div><div class="ti-big" data-source="live_tf_summary" data-field="iocs" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="live_tf_summary" data-field="families" data-row="0" data-fill data-fmt="int">—</span> malware families · top <span data-source="live_tf_summary" data-field="top_family" data-row="0" data-fill>—</span></div></div>
+        <div class="ti-tile"><div class="ti-tile-label">Top-EPSS CVEs not in KEV</div><div class="ti-big" data-source="live_epss_summary" data-field="not_in_kev" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub">of <span data-source="live_epss_summary" data-field="scored" data-row="0" data-fill data-fmt="int">—</span> highest-scored today</div></div>
+      </div>
+      <div class="ti-grid-wide">
+        <div class="ti-card" id="live-rw-card">
+          <h3 class="ti-h3">Live claims by group</h3>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-live-rw" data-source="live_rw_by_group" data-row-key="group"></table></div>
+        </div>
+        <div class="ti-card" id="live-tf-card">
+          <h3 class="ti-h3">Live indicators by malware family <span class="ti-pir">abuse.ch ThreatFox</span></h3>
+          <p class="ti-card-note">Families and indicator types only; the raw indicators stay in the feed for blocking tools, so nothing here is a clickable link.</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-live-tf" data-source="live_tf_by_malware" data-row-key="malware"></table></div>
+        </div>
+        <div class="ti-card" id="live-feed-card">
+          <h3 class="ti-h3">Feed status</h3>
+          <p class="ti-card-note">Upstream reachability as the proxy last saw it. Each feed's proxy cache bounds how fresh a refresh can be: claims 1 minute, indicators 5, EPSS an hour (FIRST publishes once a day). An interval shorter than a feed's cache returns the same rows.</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-live-health" data-source="live_health_upstreams" data-row-key="feed"></table></div>
+          <h4 class="ti-h4">Collector record <span class="ti-pir">checked every 30 minutes</span></h4>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-collector-uptime" data-source="live_collector_uptime" data-row-key="feed"></table></div>
+        </div>
+        <div class="ti-card" id="brief-sec-card">
+          <h3 class="ti-h3">Disclosed material cyber incidents <span class="ti-pir">SEC Form 8-K Item 1.05</span> <span class="ti-count" id="brief-sec-asof"></span></h3>
+          <p class="ti-card-note">The newest Item 1.05 filings by U.S.-listed companies, each linked to the 8-K itself. The Ransomware page lists every filing with the Item 8.01 candidates.</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-brief-sec" data-source="live_sec8k" data-row-key="adsh"></table></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ti-caveat ti-section" id="blind-spots">
+      <strong>Blind spots.</strong> Open sources only: no human sources, and residual risk depends on the asset and control data you connect. Insider activity is barely visible in open reporting, and zero-day exploitation appears only after disclosure. Leak-site counts show the victims who did not pay, so they understate the total and overstate groups that publish aggressively. Theaters without current reporting hold at their baseline and are flagged for collection. Party and adversary-controlled statements are graded D or lower or shown as claims.
+    </div>
+  </section>
+
+  <!-- MAP -->
+  <section class="ti-page" id="map" role="tabpanel" aria-labelledby="tab-map" hidden>
+    <template>
+      <div class="ti-section" id="map-sec">
+        <h2 class="ti-h2">World threat map <span class="ti-pir">PIR-4</span></h2>
+        <p class="ti-lede">One picture of the kinetic and cyber situation. Theaters sit at their locations, colored by ThreatCon calibrated for the selected vertical. Live layers add reported botnet C2 servers, ThreatFox IOC endpoints, DShield scanning sources and URLhaus malware hosts by IP geolocation, cyberattacks disclosed in the press at the victim's country, GDELT armed-conflict arcs from the actor's location to the action, IODA internet disruptions and, on request, attributed state-nexus targeting. Hover anything for its record, click for the source, and use Replay to re-run the last 24 hours in reported order.</p>
+        <div class="ti-tools" role="group" aria-label="Country shading">
+          <span class="ti-tool-lbl">Shade:</span>
+          <button class="ti-chip" type="button" id="map-theater" aria-pressed="true">Theater level</button>
+          <button class="ti-chip" type="button" id="map-ransomware" aria-pressed="false">Ransomware claims</button>
+          <button class="ti-chip" type="button" id="map-conflict" aria-pressed="false">Conflict intensity <span class="ti-live-dot" title="live via threat-feeds"></span></button>
+          <button class="ti-chip" type="button" id="map-infra" aria-pressed="false">Hostile infrastructure <span class="ti-live-dot" title="live via threat-feeds"></span></button>
+        </div>
+        <div class="ti-tools" role="group" aria-label="Live cyber and conflict layers">
+          <span class="ti-tool-lbl">Live layers:</span>
+          <button class="ti-chip ti-chip-c2" type="button" id="map-c2" aria-pressed="true">C2 servers</button>
+          <button class="ti-chip ti-chip-ioc" type="button" id="map-ioc" aria-pressed="true">IOC endpoints</button>
+          <button class="ti-chip ti-chip-src" type="button" id="map-src" aria-pressed="true">Scanning sources</button>
+          <button class="ti-chip ti-chip-url" type="button" id="map-url" aria-pressed="true">Malware hosts</button>
+          <button class="ti-chip ti-chip-atk" type="button" id="map-attacks" aria-pressed="true" title="Cyberattacks disclosed in the press, collected by ransomware.live, at the victim's country">Reported attacks</button>
+          <button class="ti-chip ti-chip-flow" type="button" id="map-flows" aria-pressed="true">Conflict arcs</button>
+          <button class="ti-chip ti-chip-out" type="button" id="map-outages" aria-pressed="true">Internet outages</button>
+          <button class="ti-chip ti-chip-fire" type="button" id="map-fires" aria-pressed="true" title="NASA FIRMS VIIRS thermal anomalies in the kinetic theaters, last 24 hours">Thermal anomalies</button>
+          <button class="ti-chip ti-chip-att" type="button" id="map-attrib" aria-pressed="false">Attribution arcs</button>
+        </div>
+        <div class="ti-tools" role="group" aria-label="Live layer options">
+          <span class="ti-tool-lbl">Options:</span>
+          <label class="ti-ctl ti-ctl-inline"><span class="ti-ctl-lbl">Family</span><select class="ti-select ti-select-sm" id="map-family" aria-label="Highlight one malware family"><option value="">All families</option></select></label>
+          <button class="ti-chip" type="button" id="map-singles" aria-pressed="false" title="Show conflict arcs that only one article reports">Single-source arcs</button>
+          <button class="ti-chip" type="button" id="map-motion" aria-pressed="true">Motion</button>
+          <button class="ti-chip" type="button" id="map-replay" aria-pressed="false">Replay 24h</button>
+          <button class="ti-chip" type="button" id="map-globe" aria-pressed="false" title="Orthographic globe of the same layers; drag to turn it">Globe</button>
+          <button class="ti-chip" type="button" id="map-wall" aria-pressed="false" title="Full-screen situation display">Wall mode</button>
+        </div>
+        <div class="ti-tools">
+          <span class="ti-tool-lbl">Overlay:</span>
+          <button class="ti-chip" type="button" id="map-cells" aria-pressed="false">Conflict events</button>
+          <button class="ti-chip" type="button" id="map-chokes" aria-pressed="false">Oil chokepoints</button>
+          <span class="ti-ctl-spacer"></span>
+          <button class="ti-chip" type="button" id="map-labels" aria-pressed="true">Labels</button>
+          <button class="ti-chip" type="button" id="map-reset">Reset zoom</button>
+        </div>
+        <div class="ti-tools" id="map-time" hidden>
+          <button class="ti-chip" type="button" id="map-play">Play</button>
+          <input class="ti-range" type="range" id="map-hours" min="1" max="24" value="24" step="1" aria-label="Hours of conflict events shown">
+          <span class="ti-count" id="map-hours-label">last 24h</span>
+          <span class="ti-ctl-note" id="map-time-note"></span>
+        </div>
+        <div class="ti-card ti-pew-card">
+          <div class="ti-pew-wrap">
+            <div class="ti-chart" id="ti-map" data-source="theaters theater_calibrated ransomware_countries live_rw_by_country live_gdelt_by_country live_gdelt_cells live_gdelt_meta live_gdelt_theaters chokepoints live_threatmap live_gdelt_flows live_outages live_attrib_pairs live_cyberattacks live_fires"></div>
+            <div class="ti-pew-hud" id="pew-hud" data-source="live_threatmap live_gdelt_flows live_outages live_actors live_health live_cyberattacks live_fires"></div>
+            <div class="ti-pew-sel" id="pew-sel" hidden></div>
+            <div class="ti-pew-tools" role="group" aria-label="Wall display controls">
+              <button type="button" class="ti-chip" data-pew-act="replay" aria-pressed="false">Replay 24h</button>
+              <button type="button" class="ti-chip" data-pew-act="globe" aria-pressed="false">Globe</button>
+              <button type="button" class="ti-chip" data-pew-act="reset">Reset view</button>
+              <button type="button" class="ti-chip" data-pew-act="wall">Exit wall mode</button>
+            </div>
+          </div>
+          <div class="ti-legend ti-pew-legend" id="pew-legend"></div>
+          <div class="ti-pew-feed">
+            <h3 class="ti-h3">Latest across the live layers <span class="ti-pir">click to locate</span></h3>
+            <ol class="ti-pew-ticker" id="pew-ticker" data-source="live_threatmap live_outages live_gdelt_flows live_cyberattacks"></ol>
+          </div>
+        </div>
+        <p class="ti-cap ti-muted" style="margin-top: var(--cds-gap-xs)">Live layers read this site's threat-feeds service, whose collector refreshes every 15 minutes. IP geolocation (ip-api.com, GeoJS) places the hosting, not the operator; a reported attack marks only the victim's country, as settled from ransomware.live's record; and an arc asserts no traffic between its ends: conflict arcs join GDELT's geocodes for the actor and the action of a press-reported event, and attribution arcs join an actor's attributed country to countries public reporting names as victims. Chokepoint oil flows are from the U.S. EIA, World Oil Transit Chokepoints.</p>
+      </div>
+      <div class="ti-split ti-section">
+        <div class="ti-card" id="map-cal-card">
+          <h3 class="ti-h3">Calibrated for <span id="map-vname">the selected vertical</span></h3>
+          <p class="ti-card-note" id="map-vsummary">Each theater's ThreatCon times the vertical's weight, rounded and held between 1 and 5. The weights are an analyst lens on sector exposure, set in the build and reviewed with the theaters.</p>
+          <div class="ti-cal" id="map-cal" data-source="theater_calibrated theaters"></div>
+        </div>
+        <div class="ti-card" id="map-rw-card">
+          <h3 class="ti-h3">Victim countries <span class="ti-pir" id="map-rw-basis">90-day snapshot</span></h3>
+          <p class="ti-card-note">Leak-site claims by victim country; the live set replaces the daily snapshot once the threat-feeds service answers.</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-map-rw" data-source="ransomware_countries" data-row-key="country"></table></div>
+        </div>
+      </div>
+      <div class="ti-card ti-section" id="map-enrich-card">
+        <h3 class="ti-h3">On-demand enrichment <span class="ti-pir">public analyzers via threat-feeds</span></h3>
+        <p class="ti-card-note">One public indicator at a time, read by free analyzers: CIRCL BGP Ranking and IP-to-ASN history, cl0q's index of hosted sites, the Tranco research ranking, CIRCL hashlookup's known-software database, abuse.ch MalwareBazaar and YARAify for a file hash (read with the community Auth-Key held by the collector), the ORKL report library and the collector's own holdings for an address on the map. Each answer names its analyzer and when it was read, and the collector caches it for a day. Private and reserved addresses are refused. Nothing read here is added to the map or the cited items.</p>
+        <div class="ti-tools" role="group" aria-label="Enrichment input">
+          <label class="ti-ctl ti-ctl-inline"><span class="ti-ctl-lbl">Type</span><select class="ti-select ti-select-sm" id="enrich-type" aria-label="Indicator type"><option value="ip">IPv4 address</option><option value="asn">ASN</option><option value="domain">Domain</option><option value="hash">File hash</option><option value="actor">Actor name</option></select></label>
+          <input class="ti-input" type="text" id="enrich-q" placeholder="203.0.113.9, AS13335, example.com, a SHA-256 or APT29" aria-label="Indicator" autocomplete="off" spellcheck="false">
+          <button class="ti-chip" type="button" id="enrich-run">Run</button>
+        </div>
+        <div id="enrich-out" data-source="live_enrich"></div>
+      </div>
+      <div class="ti-card ti-section" id="map-conflict-card" hidden>
+        <h3 class="ti-h3">Top armed-conflict events, last 24h <span class="ti-pir">GDELT via threat-feeds</span></h3>
+        <p class="ti-card-note">The most-reported material-conflict events involving an armed actor, one row per source article, machine-coded by GDELT from world news. Event type is the CAMEO root; mentions count how widely each is reported, a rough salience signal. These are press-reported events, not confirmed incidents.</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-map-conflict" data-source="live_gdelt_events" data-row-key="url"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="map-atk-card">
+        <h3 class="ti-h3">Reported cyberattacks <span class="ti-pir">ransomware.live press tracking</span> <span class="ti-count" id="map-atk-count"></span></h3>
+        <p class="ti-card-note">Attacks disclosed in the press over recent weeks as ransomware.live collects them: the victim as it names them (some names in French), the outlet and headline, and the leak-site group where ransomware.live matched the report to a claim. Its country field is free text, so the threat-feeds service checks each code against the victim's domain, the outlet's domain and the headline before placing a mark; Basis gives the rule that settled each country, and a code that could name two countries with nothing to choose between them stays unplaced. Attack date is the date ransomware.live records for the attack or its discovery; Listed is when it added the report, months later for some state breach notices. Click a row to locate it.</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-map-atk" data-source="live_cyberattacks" data-row-key="victim,date,url"></table></div>
+      </div>
+      <div class="ti-split ti-section" id="map-cyber-cards">
+        <div class="ti-card" id="map-fam-card">
+          <h3 class="ti-h3">Hostile infrastructure by family <span class="ti-pir">abuse.ch</span></h3>
+          <p class="ti-card-note">Listed hosts per malware family across Feodo Tracker C2, ThreatFox ip:port indicators and URLhaus malware hosts; New counts mapped hosts listed by their source in the last 24 hours, or first observed by the collector in that window once it has watched for a day. Pick a family above to light it up on the map.</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-map-fam" data-source="live_tm_families" data-row-key="family"></table></div>
+        </div>
+        <div class="ti-card" id="map-out-card">
+          <h3 class="ti-h3">Internet disruptions, 7 days <span class="ti-pir">IODA</span></h3>
+          <p class="ti-card-note">Country-level outage events detected by Georgia Tech's IODA from BGP, active probing and darknet telescope signals. A disruption can follow a cable cut, a power failure, a shutdown order or an attack; IODA records the signal, not the cause.</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-map-out" data-source="live_outages" data-row-key="cc,start_at,datasource"></table></div>
+        </div>
+      </div>
+      <div class="ti-card ti-section" id="map-att-card">
+        <h3 class="ti-h3">Attributed targeting by origin <span class="ti-pir">MISP galaxy · CFR tracker</span></h3>
+        <p class="ti-card-note">Origin and victim countries for named actors, as recorded in the MISP galaxy threat-actor cluster with the Council on Foreign Relations Cyber Operations Tracker fields. This is historical attribution from public reporting with each source's own confidence; it says where reporting placed targeting over the years, not what is happening now.</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-map-att" data-source="live_attrib_pairs" data-row-key="o,t"></table></div>
+      </div>
+    </template>
+  </section>
+
+  <!-- 2 THEATERS -->
+  <section class="ti-page" id="theaters" role="tabpanel" aria-labelledby="tab-theaters" hidden>
+    <template>
+      <div class="ti-section" id="theater-board">
+        <h2 class="ti-h2">Indications and warning board <span class="ti-pir">PIR-4</span></h2>
+        <p class="ti-lede">ThreatCon keeps MERIDIAN's 1-5 scale so levels compare, but each level here is set from named leading indicators and cited reporting. Bars show escalation indicators observed out of each theater's total. Pick a theater for its assessment.</p>
+        <div class="ti-board" id="th-board" data-source="theaters indicator_rollup theater_calibrated"></div>
+      </div>
+      <div class="ti-split ti-section">
+        <div class="ti-card" id="theater-detail" data-source="theaters theater_calibrated confidence live_lanes live_ofac ofac_listings chokepoints live_fires live_maritime live_lanesreg"></div>
+        <div class="ti-grid">
+          <div class="ti-card" id="theater-indicators">
+            <h3 class="ti-h3">Warning indicators</h3>
+            <p class="ti-card-note">States follow Suryavanshi ch4: not observed, emerging, observed, confirmed. Each observed state cites an item.</p>
+            <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-indicators" data-source="theater_indicators" data-row-key="ind_id"></table></div>
+          </div>
+          <div class="ti-card" id="theater-events">
+            <h3 class="ti-h3">Cited events</h3>
+            <p class="ti-card-note">Every item links to its source. Veracity runs claimed, reported, corroborated, confirmed.</p>
+            <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-theater-items" data-source="items" data-row-key="item_id"></table></div>
+          </div>
+        </div>
+      </div>
+      <div id="theater-context">
+        <div class="ti-card ti-section" id="warn-card">
+          <h3 class="ti-h3">Measured indications and warning <span class="ti-pir">For analyst approval</span></h3>
+          <p class="ti-card-note">Each theater's tempo from five independent collection families: press events (GDELT conflict events against their 48-hour rate, and Lanes temperatures, which derive from GDELT and so count as the same family), satellite thermal anomalies (NASA FIRMS), internet measurement (IODA outages), maritime notices (NGA, MARAD, UKMTO) and sanctions actions (OFAC). Rising means a family's reading runs above its own baseline at the threshold its rules use (GDELT 1.5 times the 48-hour rate, Lanes up 0.05 week on week above the 0.3 amber line, FIRMS 1.5 times the daily median or three new cells, an IODA outage rated critical in 72 hours (IODA rates each event against its own baseline), OFAC actions outrunning the prior 14 days); Active marks maritime warnings, which carry no baseline. Hover a cell for the reading. Consistency is how many independent families rise together and momentum is each reading against its own baseline (Suryavanshi ch4); a single family never corroborates itself (Arici 3.5.2).</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-warn-tempo" data-source="live_gdelt_theaters warn_lanes live_fires warn_outages live_maritime warn_ofac theaters" data-row-key="theater_id"></table></div>
+          <h4 class="ti-h4">Indicators a live measurement can show moving</h4>
+          <p class="ti-card-note">Analyst-set rules tie 26 of the 56 warning indicators to a live reading, each marked direct or proxy with its reason. One family above threshold proposes Emerging; two independent families, or one direct measurement, propose Observed; an observed state with no measured signal past three weeks asks for review. Indicators no feed can measure (statements, prices, sorties, sabotage) stay with reporting. Nothing changes until the analyst applies a proposal.</p>
+          <p class="ti-cap" id="warn-note" data-source="indicator_rules theater_indicators"></p>
+          <div class="ti-tools">
+            <select class="ti-select" id="warn-filter" aria-label="Proposal"><option value="">All measured indicators</option><option value="change">Proposed changes and reviews</option><option>Observed</option><option>Emerging</option><option>Review</option><option>No change</option><option>Cannot measure now</option></select>
+            <span class="ti-count" id="warn-count"></span>
+          </div>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-warn-prop" data-source="theater_indicators indicator_rules" data-row-key="ind_id"></table></div>
+          <h4 class="ti-h4">Rule readings</h4>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-warn-rules" data-source="indicator_rules" data-row-key="rule_id"></table></div>
+        </div>
+        <div class="ti-card ti-section" id="lanes-card">
+          <h3 class="ti-h3">Relationship temperatures <span class="ti-pir">Lanes</span> <span class="ti-count" id="lanes-asof"></span></h3>
+          <p class="ti-card-note">Lanes scores each country pair it tracks from GDELT events, article-weighted: 0.6 times the share of verbal and material conflict plus 0.4 times twice the share of material conflict, capped, from 0 cooperative to 1 open conflict; Lanes treats 0.3 as the amber line (dashed). The 7-day mean and its change against the prior 7 days are computed here from Lanes' daily rows. This measures how the pair's interactions were reported, so it moves with coverage. A pair attaches to a theater holding both countries, or by rule where one party sits outside the theater's list (Israel and Palestine to the Levant, the United States and Iran to Hormuz). Lanes' daily pages are AI-compiled from cited reporting and not human-reviewed. Open data, CC BY 4.0: Lanes News, derived from the GDELT Project.</p>
+          <div class="ti-chart" id="lanes-chart" data-source="live_lanes"></div>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-lanes" data-source="live_lanes theaters" data-row-key="conflict"></table></div>
+        </div>
+        <div class="ti-card ti-section" id="ofac-card">
+          <h3 class="ti-h3">OFAC Recent Actions <span class="ti-pir">U.S. Treasury</span> <span class="ti-count" id="ofac-span"></span></h3>
+          <p class="ti-card-note">The newest entries on OFAC's Recent Actions listing, the authoritative record behind the U.S. lists that sanctions search tools index. Programs and action types are matched in OFAC's own titles; a program tied to a theater (Iran to Hormuz, Russia to Ukraine, Venezuela, North Korea, Sudan, Yemen and the Houthis, Syria and Lebanon, Afghanistan, the Western Balkans, Somalia and Ethiopia, Mali, Mexican cartels) attaches the action to it, and a title naming no listed program attaches to none. Each action links to its Treasury page, which the collector reads once for the SDN entries it adds and removes under OFAC's own headings. Cyber marks a title naming the cyber-related program or an added entry tagged CYBER.</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-ofac" data-source="live_ofac theaters" data-row-key="id"></table></div>
+        </div>
+        <div class="ti-card ti-section" id="ofac-list-card">
+          <h3 class="ti-h3">OFAC vessels and cyber designations <span class="ti-pir">U.S. Treasury SDN</span></h3>
+          <p class="ti-card-note">Read from the Treasury page of each recent action: vessels designated or delisted with the name, IMO number, type, flag, call sign and MMSI OFAC prints, one row per IMO (a vessel listed under two names shows both), and every entry under a cyber-related program. A designation is a legal action against a named vessel or party; it reports no incident and carries no position.</p>
+          <p class="ti-card-note" id="ofac-list-note" data-source="ofac_listings live_ofac"></p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-ofac-vessels" data-source="ofac_listings theaters" data-row-key="key"></table></div>
+          <h4 class="ti-h4">Cyber-related programs</h4>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-ofac-cyber" data-source="ofac_listings" data-row-key="key"></table></div>
+        </div>
+        <div class="ti-card ti-section" id="fires-card">
+          <h3 class="ti-h3">Thermal anomalies by theater <span class="ti-pir">NASA FIRMS VIIRS</span> <span class="ti-count" id="fires-asof"></span></h3>
+          <p class="ti-card-note" id="fires-note"></p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-fires" data-source="live_fires" data-row-key="id"></table></div>
+        </div>
+        <div class="ti-card ti-section" id="maritime-card">
+          <h3 class="ti-h3">Maritime security sources <span class="ti-pir">MARAD · NGA · UKMTO</span> <span class="ti-count" id="maritime-asof"></span></h3>
+          <p class="ti-card-note" id="maritime-note"></p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-maritime" data-source="live_maritime" data-row-key="kind,id"></table></div>
+        </div>
+        <div class="ti-card ti-section" id="lanesreg-card">
+          <h3 class="ti-h3">Press lanes behind the temperatures <span class="ti-pir">Lanes outlet registry</span> <span class="ti-count" id="lanesreg-asof"></span></h3>
+          <p class="ti-card-note" id="lanesreg-note"></p>
+          <h4 class="ti-h4">Naming choices by press lane, 14 days</h4>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-lanes-naming" data-source="live_lanesreg" data-row-key="conflict,refers_to,lane"></table></div>
+          <h4 class="ti-h4">Outlets Lanes reads</h4>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-lanes-outlets" data-source="live_lanesreg" data-row-key="id"></table></div>
+        </div>
+      </div>
+      <div class="ti-card ti-section" id="theater-timeline">
+        <h3 class="ti-h3">Reporting timeline, last 60 days</h3>
+        <p class="ti-card-note">One dot per cited item, colored by the theater's ThreatCon. Hover for the item.</p>
+        <div class="ti-chart ti-tall" id="th-timeline" data-source="items theaters"></div>
+      </div>
+      <div class="ti-card ti-section" id="theater-compare">
+        <h3 class="ti-h3">Assessed level against MERIDIAN's static baseline</h3>
+        <p class="ti-card-note">MERIDIAN started each region from a fixed base and adjusted by keyword-scored incident counts. These levels come from indicators and cited items; blank baselines are theaters MERIDIAN did not cover.</p>
+        <div class="ti-tbox"><table class="ti-table" id="tbl-theaters" data-source="theaters" data-row-key="theater_id"></table></div>
+      </div>
+    </template>
+  </section>
+
+  <!-- 3 VECTORS -->
+  <section class="ti-page" id="vectors" role="tabpanel" aria-labelledby="tab-vectors" hidden>
+    <template>
+      <div class="ti-section" id="vector-cards-sec">
+        <h2 class="ti-h2">Threat vectors <span class="ti-pir">PIR-5, PIR-6</span></h2>
+        <p class="ti-lede">Vector first, actor second: the Big 5 plus a fraud lens, with identity and valid accounts as its own card (Thomas p73-104). Threat is intent plus capability plus opportunity, each rated with its basis (Tiepolo and Sorensen p42-43).</p>
+        <div class="ti-grid" id="vec-cards" data-source="vectors vector_items vector_calibrated"></div>
+      </div>
+      <div class="ti-card ti-section" id="vector-heat">
+        <h3 class="ti-h3">Media-reported incident volume by vector, 26 weeks</h3>
+        <p class="ti-card-note">Weekly multi-outlet incident clusters (ThreatCluster snapshot, model-generated summaries) mapped to vectors. This measures what the press covered, which is the availability-bias check (Arici 2.1.4); it ends at the snapshot date and the last week is partial.</p>
+        <div class="ti-tools"><button class="ti-chip" type="button" id="heat-all" aria-pressed="true">All sectors</button><button class="ti-chip" type="button" id="heat-fin" aria-pressed="false">Financial sector</button></div>
+        <div class="ti-chart ti-tall ti-heat" id="vec-heat" data-source="vector_baseline"></div>
+      </div>
+      <div class="ti-card ti-section" id="vector-items">
+        <h3 class="ti-h3">Cited items by vector</h3>
+        <div class="ti-tools" id="vec-chips"></div>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-vector-items" data-source="items" data-row-key="item_id"></table></div>
+      </div>
+    </template>
+  </section>
+
+  <!-- 4 VULNERABILITIES -->
+  <section class="ti-page" id="vulnerabilities" role="tabpanel" aria-labelledby="tab-vulnerabilities" hidden>
+    <template>
+      <div class="ti-tiles" id="vuln-tiles">
+        <div class="ti-tile"><div class="ti-tile-label">KEV catalog</div><div class="ti-big" data-source="kev_stats" data-field="total" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub">as of <span data-source="kev_stats" data-field="as_of" data-row="0" data-fill>—</span></div></div>
+        <div class="ti-tile"><div class="ti-tile-label">Added, 30 days</div><div class="ti-big" data-source="kev_stats" data-field="added_30d" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="kev_stats" data-field="weaponized_30d" data-row="0" data-fill data-fmt="int">—</span> weaponized</div></div>
+        <div class="ti-tile"><div class="ti-tile-label">Ransomware-linked KEV</div><div class="ti-big" data-source="kev_stats" data-field="ransomware_known" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="kev_stats" data-field="ransomware_30d" data-row="0" data-fill data-fmt="int">—</span> among 30-day additions</div></div>
+        <div class="ti-tile"><div class="ti-tile-label">Exploited before CISA listing</div><div class="ti-big" data-source="ew_stats" data-field="exploited" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="ew_stats" data-field="weaponized" data-row="0" data-fill data-fmt="int">—</span> more weaponized</div></div>
+      </div>
+      <div class="ti-grid-wide ti-section">
+        <div class="ti-card" id="vuln-ladder">
+          <h3 class="ti-h3">Milestone ladder, CVEs published in 12 months <span class="ti-pir">PIR-2</span></h3>
+          <p class="ti-card-note">Each CVE sits on the highest rung it has reached (Automating CTI p344). Rungs are not strictly nested: some CVEs are exploited with no public PoC. Log scale.</p>
+          <div class="ti-chart" id="vu-ladder" data-source="vuln_ladder"></div>
+        </div>
+        <div class="ti-card" id="vuln-cvss">
+          <h3 class="ti-h3">CVSS is never used alone</h3>
+          <p class="ti-card-note">Share of each CVSS band among all new CVEs, all KEV entries and ransomware-linked KEV entries. Many exploited flaws score below Critical (Ransomware Analysis p85).</p>
+          <div class="ti-chart" id="vu-cvss" data-source="cvss_shares"></div>
+        </div>
+      </div>
+      <div class="ti-card ti-section" id="vuln-weapon">
+        <h3 class="ti-h3">From publication to PoC, weaponization and KEV <span class="ti-pir">PIR-2</span></h3>
+        <p class="ti-card-note">KEV CVEs by publication year since KEV opened (3 November 2021), with medians of days from CVE publication to the first public GitHub repository naming the CVE, to the first Nuclei template or Metasploit exploit module, and to CISA's listing. Risk rises sharply at weaponization (Automating CTI p344); a weaponized flaw is a patch priority before anyone confirms exploitation, the lesson of EternalBlue before WannaCry (Ali and Bhatti p175-178). A first repository can be a scanner, a write-up or a fake PoC, and a KEV date records when CISA catalogued the flaw, which can trail its first exploitation (Fleurat et al. ch13).</p>
+        <p class="ti-cap" id="vw-note" data-source="weapon_summary"></p>
+        <div class="ti-chart" id="vu-weapon" data-source="weapon_lags"></div>
+        <div class="ti-legend"></div>
+        <p class="ti-cap ti-muted" id="vw-prov" data-source="weaponization_sources"></p>
+      </div>
+      <div class="ti-grid-wide ti-section">
+        <div class="ti-card" id="vuln-weapon-first">
+          <h3 class="ti-h3">Weaponized before CISA listed them <span class="ti-count" id="weap-first-count"></span></h3>
+          <p class="ti-card-note">KEV CVEs published since KEV opened whose first Nuclei template or Metasploit exploit module predates the KEV listing. Lead is days from weaponization to listing.</p>
+          <div class="ti-tools"><input class="ti-input" id="weap-q" type="search" placeholder="Search CVE, vendor or product" aria-label="Search weaponized CVEs"></div>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-weap-first" data-source="weaponization" data-row-key="cve"></table></div>
+        </div>
+        <div class="ti-card" id="vuln-weapon-ew">
+          <h3 class="ti-h3">Weaponized, not in KEV <span class="ti-count" id="weap-ew-count"></span></h3>
+          <p class="ti-card-note">Early-warning CVEs with a Nuclei template or Metasploit exploit module and no KEV listing, newest weaponization first. Mass-scanning templates and exploit modules lower the cost of exploitation for everyone.</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-weap-ew" data-source="weaponization early_warning" data-row-key="cve"></table></div>
+        </div>
+      </div>
+      <div class="ti-card ti-section" id="vuln-window">
+        <h3 class="ti-h3">KEV additions and CISA's remediation window, 24 months</h3>
+        <p class="ti-card-note">Bars: CVEs added per month. Line: median days CISA allowed agencies to remediate, which fell from 21 to 3 under BOD 26-04 (June 2026).</p>
+        <div class="ti-chart" id="vu-window" data-source="kev_monthly"></div>
+      </div>
+      <div class="ti-card ti-section" id="vuln-edge">
+        <h3 class="ti-h3">Edge-device lens</h3>
+        <p class="ti-card-note">Firewalls, VPNs, gateways, routers, mail and file-transfer appliances and remote-management tools are where state and criminal actors gain entry (Tiepolo and Sorensen p240-243). Median lag is days from CVE publication to KEV across all years.</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-edge" data-source="edge_lens" data-row-key="edge_class"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="vuln-kev">
+        <h3 class="ti-h3">Known exploited vulnerabilities</h3>
+        <p class="ti-card-note">Ordered by date added. Weaponized means a Metasploit module or Nuclei template exists. Data gaps flag missing CVSS v3+, CWE or SSVC (Kuhn p182-192). ATT&amp;CK exploitation and impact are CTID's KEV mappings (419 CVEs, July 2025); the Defense page ranks those techniques.</p>
+        <div class="ti-tools">
+          <input class="ti-input" id="kev-q" type="search" placeholder="Search CVE, vendor, product" aria-label="Search KEV">
+          <button class="ti-chip" type="button" id="kev-edge" aria-pressed="false">Edge devices</button>
+          <button class="ti-chip" type="button" id="kev-rw" aria-pressed="false">Ransomware-linked</button>
+          <button class="ti-chip" type="button" id="kev-weap" aria-pressed="false">Weaponized</button>
+          <button class="ti-chip" type="button" id="kev-due" aria-pressed="false">Due in future</button>
+          <span class="ti-count" id="kev-count"></span>
+        </div>
+        <div class="ti-tbox"><table class="ti-table" id="tbl-kev" data-source="kev" data-row-key="cve"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="vuln-ew">
+        <h3 class="ti-h3">Pre-KEV early warning</h3>
+        <p class="ti-card-note">CVEs from the last 200 days that CISA has not listed but that VulnCheck lists as exploited, that have a Metasploit module or Nuclei template, or that carry EPSS of 0.10 or more. Triage owned products weekly.</p>
+        <div class="ti-tools">
+          <input class="ti-input" id="ew-q" type="search" placeholder="Search CVE, vendor, product" aria-label="Search early warning">
+          <select class="ti-select" id="ew-stage" aria-label="Stage"><option value="">All stages</option><option>Exploited</option><option>Weaponized</option><option>PoC public</option><option>Published only</option></select>
+          <span class="ti-count" id="ew-count"></span>
+        </div>
+        <div class="ti-tbox"><table class="ti-table" id="tbl-ew" data-source="early_warning" data-row-key="cve"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="vuln-live-epss">
+        <h3 class="ti-h3">Live: highest EPSS today <span class="ti-pir">FIRST EPSS via threat-feeds</span></h3>
+        <p class="ti-card-note">Pulled in your browser on refresh. A high exploitation probability with no KEV listing is a candidate for the early-warning watch; one already in KEV confirms the patch queue order.</p>
+        <div class="ti-tools">
+          <button class="ti-chip" type="button" id="epss-notkev" aria-pressed="false">Not in KEV only</button>
+          <span class="ti-count" id="epss-count"></span>
+        </div>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-live-epss" data-source="live_epss_kev" data-row-key="cve"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="vuln-ics">
+        <h3 class="ti-h3">ICS advisories</h3>
+        <p class="ti-card-note">CISA industrial control system advisories with sectors and deployment as the vendor reports them.</p>
+        <div class="ti-tools">
+          <input class="ti-input" id="ics-q" type="search" placeholder="Search vendor, product, sector" aria-label="Search ICS advisories">
+          <button class="ti-chip" type="button" id="ics-vertical" aria-pressed="false">Selected vertical only</button>
+          <span class="ti-count" id="ics-count"></span>
+        </div>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-ics" data-source="ics_advisories" data-row-key="advisory_id"></table></div>
+      </div>
+    </template>
+  </section>
+
+  <!-- 5 RANSOMWARE -->
+  <section class="ti-page" id="ransomware" role="tabpanel" aria-labelledby="tab-ransomware" hidden>
+    <template>
+      <div class="ti-caveat ti-section" id="rw-caveat"><strong>Read as claims.</strong> Every count here is a listing an extortion group published on its leak site. Victims who paid never appear, groups re-list and fabricate, and the collector changed its sector labels in mid-July 2026 (mapped back to the earlier scheme here). The snapshot ends on <span data-source="rw_stats" data-field="snapshot" data-row="0" data-fill>—</span>; live claims arrive with the threat-feeds service.</div>
+      <div class="ti-tiles">
+        <div class="ti-tile"><div class="ti-tile-label">Claims, 90 days</div><div class="ti-big" data-source="rw_stats" data-field="claims_90d" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="rw_stats" data-field="change" data-row="0" data-fill data-fmt="signedPct">—</span> vs prior 90 days</div></div>
+        <div class="ti-tile"><div class="ti-tile-label">Financial services, 90 days</div><div class="ti-big" data-source="rw_stats" data-field="financial_90d" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="rw_stats" data-field="financial_change" data-row="0" data-fill data-fmt="signedPct">—</span> vs prior 90 days</div></div>
+        <div class="ti-tile"><div class="ti-tile-label">Most active group</div><div class="ti-big" data-source="rw_stats" data-field="top_group" data-row="0" data-fill>—</div><div class="ti-tile-sub"><span data-source="rw_stats" data-field="top_group_claims" data-row="0" data-fill data-fmt="int">—</span> claims</div></div>
+        <div class="ti-tile"><div class="ti-tile-label">Groups new in the window</div><div class="ti-big" data-source="rw_stats" data-field="new_groups" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub">of <span data-source="rw_stats" data-field="active_groups" data-row="0" data-fill data-fmt="int">—</span> active</div></div>
+      </div>
+      <div class="ti-card ti-section" id="rw-groups-trend">
+        <h3 class="ti-h3">Monthly claims by the ten most active groups <span class="ti-pir">PIR-3</span></h3>
+        <p class="ti-card-note">One small chart per group on a shared scale; the last month is partial.</p>
+        <div class="ti-chart ti-tall" id="rw-multiples" data-source="ransomware_monthly"></div>
+      </div>
+      <div class="ti-grid-wide ti-section">
+        <div class="ti-card" id="rw-sector">
+          <h3 class="ti-h3">Claims by sector, 90 days against the prior 90</h3>
+          <p class="ti-card-note">Thin bar: prior 90 days.</p>
+          <div class="ti-chart ti-tall" id="rw-sectors" data-source="ransomware_sectors"></div>
+        </div>
+        <div class="ti-card" id="rw-country">
+          <h3 class="ti-h3">Claims by victim country</h3>
+          <p class="ti-card-note">ISO country codes as the collector assigns them.</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-rw-countries" data-source="ransomware_countries" data-row-key="country"></table></div>
+        </div>
+      </div>
+      <div class="ti-card ti-section" id="rw-groups">
+        <h3 class="ti-h3">Groups</h3>
+        <div class="ti-tools"><input class="ti-input" id="rw-q" type="search" placeholder="Search group" aria-label="Search groups"><span class="ti-count" id="rw-count"></span></div>
+        <div class="ti-tbox"><table class="ti-table" id="tbl-rw-groups" data-source="ransomware_groups" data-row-key="group"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="rw-sec8k">
+        <h3 class="ti-h3">Disclosed incidents, SEC Form 8-K <span class="ti-pir">PIR-3 · EDGAR full-text search</span> <span class="ti-count" id="sec8k-asof"></span></h3>
+        <p class="ti-lede" id="sec8k-sum" data-source="live_sec8k"></p>
+        <div class="ti-tools">
+          <label class="ti-ctl ti-ctl-inline"><span class="ti-ctl-lbl">Show</span><select class="ti-select ti-select-sm" id="sec8k-kind" aria-label="Filing kind"><option value="">All filings</option><option value="105">Item 1.05 disclosures</option><option value="801">Item 8.01 candidates</option></select></label>
+          <span class="ti-count" id="sec8k-count"></span>
+        </div>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-sec8k" data-source="live_sec8k" data-row-key="adsh"></table></div>
+        <p class="ti-card-note" id="sec8k-note"></p>
+      </div>
+      <div class="ti-card ti-section" id="rw-leak">
+        <h3 class="ti-h3">Leak-site claims, independently corroborated? <span class="ti-pir">ThreatCluster against ransomware.live</span> <span class="ti-count" id="leak-asof"></span></h3>
+        <p class="ti-lede" id="leak-sum" data-source="live_leaksites"></p>
+        <div class="ti-tools"><span class="ti-count" id="leak-count"></span></div>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-leaksites" data-source="live_leaksites" data-row-key="group"></table></div>
+        <p class="ti-card-note" id="leak-note"></p>
+      </div>
+      <div class="ti-card ti-section" id="rw-pay">
+        <h3 class="ti-h3">Ransom payments on chain <span class="ti-pir">Ransomwhere, historical</span> <span class="ti-count" id="pay-asof"></span></h3>
+        <p class="ti-lede" id="pay-sum" data-source="live_ransompay"></p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-ransompay" data-source="live_ransompay" data-row-key="family"></table></div>
+        <p class="ti-card-note" id="pay-note"></p>
+      </div>
+    </template>
+  </section>
+
+
+  <!-- RESIDUAL RISK -->
+  <section class="ti-page" id="residual" role="tabpanel" aria-labelledby="tab-residual" hidden>
+    <template>
+      <div class="ti-caveat ti-section" id="resid-banner" hidden><strong>Sample inputs.</strong> The asset inventory and dark-web read below are clearly-labeled sample rows on documentation IP space, so the mechanism is visible before the connectors are wired. The daily run replaces them with your authorized AutoRecon scan output and darknet-mcp-server monitoring results. The dashboard only reads results produced against assets you own or are authorized to test, and holds no scan launcher.</div>
+      <div class="ti-tiles" id="resid-tiles">
+        <div class="ti-tile"><div class="ti-tile-label">Owned assets</div><div class="ti-big" data-source="residual_summary" data-field="assets" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="residual_summary" data-field="internet_facing" data-row="0" data-fill data-fmt="int">—</span> internet-facing</div></div>
+        <div class="ti-tile"><div class="ti-tile-label">Internet-facing, exploited CVE present</div><div class="ti-big" data-source="residual_summary" data-field="at_risk" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="residual_summary" data-field="ransomware_linked" data-row="0" data-fill data-fmt="int">—</span> ransomware-linked</div></div>
+        <div class="ti-tile"><div class="ti-tile-label">Leaked credentials (dark web)</div><div class="ti-big" data-source="residual_summary" data-field="creds" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="residual_summary" data-field="stealer" data-row="0" data-fill data-fmt="int">—</span> infostealer infections</div></div>
+      </div>
+      <div class="ti-card ti-section" id="resid-chart-card">
+        <h3 class="ti-h3">Residual risk by vector <span class="ti-pir">follows the selected vertical</span></h3>
+        <p class="ti-card-note">Residual = inherent (vertical-calibrated vector level) x exposure (owned-asset match and dark-web read) x (1 - control coverage). Asset and control data are what turn the inherent read into residual risk (Thomas p178-183). Change the vertical in the header to recalibrate; hover a bar for the exposure basis.</p>
+        <div class="ti-chart" id="resid-chart" data-source="residual_risk"></div>
+      </div>
+      <div class="ti-card ti-section" id="resid-matrix-card">
+        <h3 class="ti-h3">Residual risk across every vertical</h3>
+        <p class="ti-card-note">Same estate and controls, each vertical's weights applied: the row for the selected vertical is outlined. Read across a row for where that sector's residual exposure concentrates, down a column for which sectors a vector hits hardest.</p>
+        <div class="ti-chart" id="resid-matrix" data-source="residual_risk verticals"></div>
+      </div>
+      <div class="ti-card ti-section" id="resid-assets">
+        <h3 class="ti-h3">Owned assets matched to exploited CVEs</h3>
+        <p class="ti-card-note">AutoRecon inventory joined by vendor and product against KEV and the pre-KEV early-warning list. Internet-facing assets with a match are the residual-risk surface. The join reads the product line and leaves version out, so a match flags exploited CVEs in that product for a version check against the advisory.</p>
+        <div class="ti-tbox"><table class="ti-table" id="tbl-assets" data-source="asset_exposure" data-row-key="host"></table></div>
+      </div>
+      <div class="ti-section ti-stack">
+        <div class="ti-card" id="resid-controls">
+          <h3 class="ti-h3">Control coverage</h3>
+          <p class="ti-card-note">NIST CSF 2.0 coverage per vector, owner-set (0 to 1); the residual column uses the selected vertical. Coverage values change by a reviewed commit to data/authored/controls.json.</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-controls" data-source="controls" data-row-key="vector_id"></table></div>
+        </div>
+        <div class="ti-card" id="resid-exposure">
+          <h3 class="ti-h3">Dark-web exposure <span class="ti-pir">darknet-mcp-server</span></h3>
+          <p class="ti-card-note">Breach, infostealer, leak-site, paste and reputation reads for the organization's own domains and egress, from the darknet-mcp-server tools.</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-exposure" data-source="exposure_darkweb" data-row-key="kind"></table></div>
+        </div>
+      </div>
+      <div class="ti-card ti-section" id="resid-live" data-source="live_exposure_summary live_exposure_rows">
+        <h3 class="ti-h3">Live exposure monitor <span class="ti-pir">via threat-feeds</span></h3>
+        <p class="ti-card-note" id="resid-live-note">Pulled in your browser through the threat-feeds service: breaches of your domains (HIBP), leak-site listings that name you or a supplier (ransomware.live), and reputation of your egress IPs (Tor Project, abuse.ch, GreyNoise). It needs a watchlist; until one is set it returns nothing and the sample read above stands.</p>
+        <div class="ti-tools" id="resid-watchlist">
+          <label class="ti-ctl ti-ctl-inline"><span class="ti-ctl-lbl">Your domains</span><input class="ti-input ti-input-sm" id="resid-domains" type="text" placeholder="example.com" aria-label="Your domains"></label>
+          <label class="ti-ctl ti-ctl-inline"><span class="ti-ctl-lbl">Suppliers</span><input class="ti-input ti-input-sm" id="resid-vendors" type="text" placeholder="vendor1.com, vendor2.com" aria-label="Supplier domains"></label>
+          <label class="ti-ctl ti-ctl-inline"><span class="ti-ctl-lbl">Egress IPs</span><input class="ti-input ti-input-sm" id="resid-ips" type="text" placeholder="198.51.100.1" aria-label="Egress IPs"></label>
+          <button class="ti-chip" type="button" id="resid-watch-apply">Monitor</button>
+          <span class="ti-ctl-note" id="resid-watch-note"></span>
+        </div>
+        <div class="ti-tiles" id="resid-live-tiles" hidden>
+          <div class="ti-tile"><div class="ti-tile-label">Your breaches (HIBP)</div><div class="ti-big" data-source="live_exposure_summary" data-field="breaches" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="live_exposure_summary" data-field="breaches_pw" data-row="0" data-fill data-fmt="int">—</span> with passwords</div></div>
+          <div class="ti-tile"><div class="ti-tile-label">Your leak-site listings</div><div class="ti-big" data-source="live_exposure_summary" data-field="org_leaks" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="live_exposure_summary" data-field="org_leaks_year" data-row="0" data-fill data-fmt="int">—</span> in the last year</div></div>
+          <div class="ti-tile"><div class="ti-tile-label">Supplier leak-site listings</div><div class="ti-big" data-source="live_exposure_summary" data-field="supplier_leaks" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="live_exposure_summary" data-field="suppliers_hit" data-row="0" data-fill data-fmt="int">—</span> suppliers named</div></div>
+          <div class="ti-tile"><div class="ti-tile-label">Egress IPs flagged</div><div class="ti-big" data-source="live_exposure_summary" data-field="ips_flagged" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub">of <span data-source="live_exposure_summary" data-field="ips" data-row="0" data-fill data-fmt="int">—</span> checked</div></div>
+        </div>
+        <div class="ti-tbox ti-short" id="resid-live-box" hidden><table class="ti-table" id="tbl-resid-live" data-source="live_exposure_rows" data-row-key="rid"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="resid-connectors">
+        <h3 class="ti-h3">How the connectors feed this page</h3>
+        <p class="ti-card-note">Both inputs are results about the organization's own estate. The page reads them; scanning and monitoring run in their own tools, under the operator's authorization.</p>
+        <div class="ti-grid-wide">
+          <dl class="ti-int">
+            <div class="ti-int-row"><dt>AutoRecon</dt><dd>Multi-threaded nmap-based enumeration of targets you own or are authorized to test. It writes per-target nmap XML under <span class="ti-mono">results/&lt;target&gt;/scans/xml/</span>.</dd></div>
+            <div class="ti-int-row"><dt>Ingest</dt><dd><span class="ti-mono">ingest_autorecon.py</span> reads that XML, keeps open ports with a service fingerprint, and joins each host to <span class="ti-mono">scope.csv</span> (address, exposure, site). Hosts missing from the scope file are dropped and listed.</dd></div>
+            <div class="ti-int-row"><dt>Feeds</dt><dd>The <span class="ti-mono">assets</span> dataset: host, port, service, product, version, CPE, exposure, site. The page joins product and CPE to KEV and the pre-KEV early-warning list.</dd></div>
+            <div class="ti-int-row"><dt>Moves</dt><dd>Exploitation exposure: the share of internet-facing services carrying an exploited CVE; ransomware exposure: the ransomware-linked share.</dd></div>
+          </dl>
+          <dl class="ti-int">
+            <div class="ti-int-row"><dt>darknet-mcp-server</dt><dd>Defensive monitoring tools run against the organization's own domains, accounts and egress IPs: <span class="ti-mono">breachList</span>, <span class="ti-mono">breachSearch</span>, <span class="ti-mono">stealer_domain</span>, <span class="ti-mono">ransomwareSearch</span>, <span class="ti-mono">intelx_phonebook</span>, <span class="ti-mono">greynoise_ip</span>, <span class="ti-mono">abuseipdb_check</span>, <span class="ti-mono">tor_search_onion</span>.</dd></div>
+            <div class="ti-int-row"><dt>Ingest</dt><dd><span class="ti-mono">ingest_darknet.py</span> reduces the saved tool results to counts, dates and categories. Credentials, passwords, machine names and email addresses never leave the script, and the validator rejects a row that carries one.</dd></div>
+            <div class="ti-int-row"><dt>Feeds</dt><dd>The <span class="ti-mono">exposure_darkweb</span> dataset: leaked credentials, infostealer infections, leak-site mentions, exposed selectors, flagged egress IPs, onion chatter.</dd></div>
+            <div class="ti-int-row"><dt>Moves</dt><dd>Identity and fraud exposure from stealer infections and leaked credentials; insider exposure from stealer infections; a leak-site mention lifts ransomware exposure directly.</dd></div>
+          </dl>
+        </div>
+      </div>
+    </template>
+  </section>
+
+  <!-- 6 ACTORS -->
+  <section class="ti-page" id="actors" role="tabpanel" aria-labelledby="tab-actors" hidden>
+    <template>
+      <div class="ti-grid-wide ti-section">
+        <div class="ti-card" id="actor-nexus">
+          <h3 class="ti-h3">ATT&amp;CK groups by stated nexus <span class="ti-pir">PIR-1, PIR-5</span></h3>
+          <p class="ti-card-note">Nexus exactly as ATT&amp;CK's description states it. Dark: state-attributed; light: other groups.</p>
+          <div class="ti-chart" id="ac-nexus" data-source="nexus_counts"></div>
+        </div>
+        <div class="ti-card" id="actor-diff">
+          <h3 class="ti-h3">Release diff, ATT&amp;CK v19.2 to v20</h3>
+          <p class="ti-card-note">New group-to-technique relationships are events: they record newly documented behaviour (Arici 6.3.2).</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-diff" data-source="attack_groups" data-row-key="group_id"></table></div>
+        </div>
+      </div>
+      <div class="ti-card ti-section" id="actor-groups">
+        <h3 class="ti-h3">Groups, with attribution as stated by two curators</h3>
+        <p class="ti-card-note">ATT&amp;CK's nexus is quoted from its own description; MISP and the CFR tracker sit beside it. The page shows divergence and leaves it unresolved (Tiepolo and Sorensen p502-529). Pick a group for its profile.</p>
+        <div class="ti-tools">
+          <input class="ti-input" id="ac-q" type="search" placeholder="Search group or alias" aria-label="Search groups">
+          <select class="ti-select" id="ac-nexus-f" aria-label="Nexus"><option value="">All nexus</option></select>
+          <select class="ti-select" id="ac-agree" aria-label="Attribution agreement"><option value="">Any agreement</option><option>Agree</option><option>ATT&amp;CK silent</option><option>MISP silent</option><option>Both silent</option><option>No MISP entry</option><option>Diverge</option></select>
+          <span class="ti-count" id="ac-count"></span>
+        </div>
+        <div class="ti-tbox"><table class="ti-table" id="tbl-groups" data-source="attack_groups" data-row-key="group_id"></table></div>
+      </div>
+      <div class="ti-split ti-section">
+        <div class="ti-card" id="actor-profile"></div>
+        <div class="ti-grid">
+          <div class="ti-card" id="actor-tactics-card">
+            <h3 class="ti-h3">Playbook by tactic</h3>
+            <p class="ti-card-note">Techniques per tactic for the selected group; empty tactics are documentation gaps.</p>
+            <div class="ti-chart" id="ac-tactics" data-source="attack_groups"></div>
+          </div>
+          <div class="ti-card" id="actor-techniques">
+            <h3 class="ti-h3">Techniques</h3>
+            <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-gt" data-source="attack_group_techniques" data-row-key="pair"></table></div>
+          </div>
+        </div>
+      </div>
+      <div class="ti-grid-wide ti-section">
+        <div class="ti-card" id="actor-prevalence">
+          <h3 class="ti-h3">Technique prevalence across groups</h3>
+          <p class="ti-card-note">Groups using each technique, split by the four state nexus most active against financial targets (Thomas p202-206).</p>
+          <div class="ti-tools"><input class="ti-input" id="tech-q" type="search" placeholder="Search technique" aria-label="Search techniques"><span class="ti-count" id="tech-count"></span></div>
+          <div class="ti-tbox"><table class="ti-table" id="tbl-tech" data-source="attack_techniques" data-row-key="technique_id"></table></div>
+        </div>
+        <div class="ti-card" id="actor-campaigns">
+          <h3 class="ti-h3">Campaigns</h3>
+          <div class="ti-tbox"><table class="ti-table" id="tbl-camp" data-source="attack_campaigns" data-row-key="campaign_id"></table></div>
+        </div>
+      </div>
+      <div class="ti-split ti-section">
+        <div class="ti-card" id="actor-u42">
+          <h3 class="ti-h3">Unit 42 timely threat notes <span class="ti-pir">Palo Alto Networks</span> <span class="ti-count" id="u42-asof"></span></h3>
+          <p class="ti-card-note" id="u42-note"></p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-unit42" data-source="live_unit42" data-row-key="file"></table></div>
+        </div>
+        <div class="ti-card" id="actor-gen">
+          <h3 class="ti-h3">Gen Threat Labs indicator sets <span class="ti-pir">Gen Digital</span> <span class="ti-count" id="gen-asof"></span></h3>
+          <p class="ti-card-note" id="gen-note"></p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-genioc" data-source="live_genioc" data-row-key="family"></table></div>
+        </div>
+      </div>
+    </template>
+  </section>
+
+  <!-- 9 DEFENSE -->
+  <section class="ti-page" id="defense" role="tabpanel" aria-labelledby="tab-defense" hidden>
+    <template>
+      <p class="ti-lede">Threat-informed defense for <span class="def-vname">the selected vertical</span>: the ATT&amp;CK techniques to defend first under this dashboard's threat model, where public detection and test content runs out, which telemetry and controls cover the most of it, and what to hunt and test next. Public content counts describe what Sigma, Elastic, Splunk and Atomic Red Team have published; the organization's own rule inventory and log coverage decide its real gaps (Bhardwaj p179-182).</p>
+      <div class="ti-tiles" id="def-tiles" data-source="defense_summary"></div>
+      <div class="ti-grid-wide ti-section">
+        <div class="ti-card" id="def-drivers-card">
+          <h3 class="ti-h3">What to defend first, and why <span class="ti-pir">PIR-1, PIR-5</span></h3>
+          <p class="ti-card-note">The 15 highest priorities for <span class="def-vname"></span>. Each bar stacks prevalence (how much of the threat model uses the technique and how often CTI reporting observes it), choke point and actionability, each 0 to 1: the CTID Top ATT&amp;CK Techniques method recomputed for this vertical (Thomas p202-206). Pick a bar for the technique.</p>
+          <div class="ti-chart" id="def-drivers" data-source="defense_priority"></div>
+          <div class="ti-legend"></div>
+        </div>
+        <div class="ti-card" id="def-tactics-card">
+          <h3 class="ti-h3">Public rule coverage by tactic, weighted by threat use</h3>
+          <p class="ti-card-note">Bar: the share of each tactic's threat use that falls on leaf techniques (sub-techniques, and techniques without any) with at least one Sigma, Elastic or Splunk rule. Tick: the share on techniques with an Atomic Red Team test. ATT&amp;CK read in reverse, as a map of where defenders have the least to start from (Arici 6.3.2). Reconnaissance and Resource Development happen outside the estate, where intelligence collection watches them.</p>
+          <div class="ti-chart" id="def-tactics" data-source="defense_tactic_cov"></div>
+        </div>
+      </div>
+      <div class="ti-card ti-section" id="def-priorities">
+        <h3 class="ti-h3">Technique priorities for <span class="def-vname"></span></h3>
+        <p class="ti-card-note">Every ATT&amp;CK v20 technique and sub-technique, ranked. A parent's counts include its sub-techniques. Shift is how many places this vertical's threat model moves a technique against plain ATT&amp;CK frequency (every group weighing 1). Gap flags mark techniques no public rule or no Atomic test carries. Pick a row for its hunt hypothesis, content, telemetry and exploited CVEs.</p>
+        <div class="ti-tools">
+          <input class="ti-input" id="def-q" type="search" placeholder="Search technique or group" aria-label="Search techniques">
+          <select class="ti-select" id="def-tactic" aria-label="Tactic"><option value="">All tactics</option></select>
+          <select class="ti-select" id="def-gap" aria-label="Gap"><option value="">Any coverage</option><option value="any">Any gap</option><option>No public rule</option><option>No Atomic test</option><option>No rule, no test</option></select>
+          <select class="ti-select" id="def-scope" aria-label="Scope"><option value="">All techniques</option><option value="in">Used by in-scope groups</option><option value="parents">Parent techniques only</option><option value="rise">Raised 10+ places by this vertical</option><option value="ransom">CTID ransomware top 10</option></select>
+          <span class="ti-count" id="def-count"></span>
+          <button class="ti-chip" type="button" id="def-pri-csv">Save as CSV</button>
+          <span class="ti-count" id="def-pri-note"></span>
+        </div>
+        <div class="ti-tbox"><table class="ti-table" id="tbl-def-pri" data-source="defense_priority" data-row-key="key"></table></div>
+      </div>
+      <div class="ti-split ti-split-r ti-section">
+        <div class="ti-card" id="def-detail" data-source="defense_priority defense_techniques defense_content defense_telemetry kev_attack"></div>
+        <div class="ti-stack">
+          <div class="ti-card" id="def-inference">
+            <h3 class="ti-h3">What else to look for <span class="ti-pir">Hypotheses</span></h3>
+            <p class="ti-card-note">Enter technique ids seen in an intrusion. Candidates are the techniques CTI reports most often observe with them in CTID's Technique Inference Engine dataset (4,466 reports with two or more techniques), scored by share of reports times the log of lift and summed across what was entered. Co-occurrence suggests where to hunt; it proves nothing about this intrusion (Fleurat et al. ch13).</p>
+            <div class="ti-tools"><input class="ti-input" id="def-observed" type="search" placeholder="e.g. T1566.001, T1204.002" aria-label="Observed techniques"></div>
+            <p class="ti-cap ti-muted" id="def-inf-note"></p>
+            <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-def-inf" data-source="defense_cooccur" data-row-key="technique_id"></table></div>
+          </div>
+          <div class="ti-card" id="def-gaps-card">
+            <h3 class="ti-h3">Blind-spot candidates <span class="ti-count" id="def-gaps-count"></span></h3>
+            <p class="ti-card-note">Techniques inside the estate with threat use of 0.15 or more that no public rule or no Atomic test carries. They need in-house detection engineering or a custom test; check them against the organization's own rule inventory first. Reconnaissance and Resource Development happen outside the estate and are watched through intelligence collection, so they are left out here.</p>
+            <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-def-gaps" data-source="defense_priority" data-row-key="key"></table></div>
+          </div>
+        </div>
+      </div>
+      <div class="ti-card ti-section" id="def-actors-card">
+        <h3 class="ti-h3">In-scope groups and public coverage of their playbooks <span class="ti-count" id="def-actors-count"></span></h3>
+        <p class="ti-card-note">Groups weighing 0.6 or more for <span class="def-vname"></span>: a stated nexus whose theater stands at ThreatCon 3 or more and whose ATT&amp;CK description or MISP entry names one of this vertical's sectors as a target (sector relevance, Tiepolo and Sorensen p573), or a financial motive meeting a Ransomware or Fraud vector at 3 or more. Beside each, the share of its ATT&amp;CK techniques inside the estate that a public rule or an Atomic test covers: overlaying a playbook on coverage shows which steps of its attack path would pass unseen (Bhardwaj p181-182). Pick a group for its first uncovered technique.</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-def-actors" data-source="defense_actor_cov" data-row-key="key"></table></div>
+      </div>
+      <div class="ti-grid-wide ti-section">
+        <div class="ti-card" id="def-tele-card">
+          <h3 class="ti-h3">Telemetry to collect first</h3>
+          <p class="ti-card-note">ATT&amp;CK v20 data components ranked by the summed priority of the top 100 techniques whose ATT&amp;CK detection analytics read them. This is the public half of a DeTT&amp;CT assessment; scoring the organization's own visibility for each component (-1 to 5 on completeness, timeliness, consistency and retention) turns it into a gap list (Bhardwaj p179-182).</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-def-tele" data-source="defense_telemetry_rank" data-row-key="key"></table></div>
+        </div>
+        <div class="ti-card" id="def-cri-card">
+          <h3 class="ti-h3">CRI Profile v2.1 statements that cover the most threat <span class="ti-count" id="def-cri-count"></span></h3>
+          <p class="ti-card-note">The financial sector's Cyber Risk Institute Profile diagnostic statements, ranked by the share of top-100 prevalence carried by techniques each statement mitigates (CTID Mappings Explorer, ATT&amp;CK 16.1 mappings carried to v20).</p>
+          <div class="ti-tools"><select class="ti-select" id="def-cri-f" aria-label="CRI function"><option value="">All functions</option></select></div>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-def-cri" data-source="defense_cri_rank" data-row-key="key"></table></div>
+        </div>
+      </div>
+      <div class="ti-card ti-section" id="def-register">
+        <h3 class="ti-h3">Purple-team test definitions <span class="ti-pir">Validation</span></h3>
+        <p class="ti-card-note">The 15 highest-priority techniques that in-scope groups use and Atomic Red Team can exercise, as the test-definition half of a purple-team register: the behavior, the intelligence that justifies testing it, the scenario, the telemetry the detection relies on, the testable hypothesis and the adversary-prevalence band (Tiepolo and Sorensen p572-575). Asset criticality and results belong to the exercise: record each as Detected-Alerted, Detected-Noisy, Detected-Late, Logged-Not-Detected or Missed, with a content, telemetry or process root cause.</p>
+        <div class="ti-tools"><button class="ti-chip" type="button" id="def-reg-csv">Save as CSV</button><span class="ti-count" id="def-reg-note"></span></div>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-def-reg" data-source="defense_priority defense_telemetry defense_content" data-row-key="technique_id"></table></div>
+      </div>
+      <div class="ti-grid-wide ti-section">
+        <div class="ti-card" id="def-kev-card">
+          <h3 class="ti-h3">How exploited vulnerabilities get in</h3>
+          <p class="ti-card-note">CISA KEV entries grouped by the ATT&amp;CK technique CTID maps as the way each is exploited (419 KEV CVEs mapped as of the 28 July 2025 KEV mapping). Exposure to these techniques is where patching and detection meet.</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-def-kevx" data-source="defense_kev_exploit" data-row-key="technique_id"></table></div>
+        </div>
+        <div class="ti-card" id="def-layer-card">
+          <h3 class="ti-h3">ATT&amp;CK Navigator layer <span class="ti-count" id="def-layer-count"></span></h3>
+          <p class="ti-card-note">A layer for <span class="def-vname"></span> to open in ATT&amp;CK Navigator (Open Existing Layer, Upload from local): the top 100 priorities scored 0 to 3, or the public detection gaps scored by prevalence. Each technique's comment carries its drivers. Combine it with a group's layer by score expression to see where that group's playbook meets the gaps (Bhardwaj p140-147).</p>
+          <div class="ti-tools" id="def-layer-mode">
+            <button class="ti-chip" type="button" data-mode="priority" aria-pressed="true">Priorities</button>
+            <button class="ti-chip" type="button" data-mode="gaps" aria-pressed="false">Detection gaps</button>
+            <button class="ti-chip" type="button" id="def-layer-save">Save layer</button>
+            <button class="ti-chip" type="button" id="def-layer-copy">Copy</button>
+            <span class="ti-count" id="def-export-note"></span>
+          </div>
+          <textarea class="ti-export" id="def-layer-out" readonly aria-label="ATT&amp;CK Navigator layer" data-source="defense_priority"></textarea>
+        </div>
+      </div>
+      <div class="ti-card ti-section" id="def-sources">
+        <h3 class="ti-h3">Sources for this page</h3>
+        <p class="ti-card-note">Each repository at the commit the build read. Rule titles and links only; rule bodies stay in their repositories under their own licenses.</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-def-src" data-source="defense_sources" data-row-key="source_id"></table></div>
+      </div>
+    </template>
+  </section>
+
+  <!-- 10 REQUIREMENTS -->
+  <section class="ti-page" id="requirements" role="tabpanel" aria-labelledby="tab-requirements" hidden>
+    <template>
+      <div class="ti-card ti-section" id="req-pirs">
+        <h3 class="ti-h3">Priority intelligence requirements</h3>
+        <p class="ti-card-note">Each is one question tied to one decision, scored QIR = (S x D x F) x (R + T) on 1-4 scales, maximum 512; a weak core sends a requirement back for rework (Fleurat et al. ch6). Pick one for its SIRs, EEIs and gaps.</p>
+        <div class="ti-tbox"><table class="ti-table" id="tbl-pirs" data-source="pirs" data-row-key="pir_id"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="req-detail"></div>
+      <div class="ti-card ti-section" id="req-matrix">
+        <h3 class="ti-h3">Collection matrix</h3>
+        <p class="ti-card-note">Requirement to source traceability (Arici 2.1.2). Gap and planned rows are where collection is missing.</p>
+        <div class="ti-tools"><select class="ti-select" id="cm-pir" aria-label="Requirement"><option value="">All requirements</option></select><span class="ti-count" id="cm-count"></span></div>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-matrix" data-source="collection_matrix" data-row-key="cell"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="req-followons">
+        <h3 class="ti-h3">Follow-on requirements</h3>
+        <p class="ti-card-note">Feedback on this site becomes FP-numbered requirements, classified and prioritised for approval (Fleurat et al. ch12; Arici 2.5).</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-fp" data-source="followons" data-row-key="fp_id"></table></div>
+      </div>
+    </template>
+  </section>
+
+  <!-- 8 SOURCES -->
+  <section class="ti-page" id="sources" role="tabpanel" aria-labelledby="tab-sources" hidden>
+    <template>
+      <div class="ti-card ti-section" id="src-catalogs">
+        <h3 class="ti-h3">Feed catalogs in this run</h3>
+        <p class="ti-card-note">Version or snapshot date of each machine-collected catalog.</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-catalogs" data-source="catalogs" data-row-key="catalog"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="src-registry">
+        <h3 class="ti-h3">Source registry</h3>
+        <p class="ti-card-note">The closed catalog the daily run may cite. Admiralty reliability A-F and default credibility 1-6; tier T1-T3; validity; and the seven feed criteria (timeliness, relevancy, accuracy, context, format, enrichment, licensing) rated H, M or L (Bhardwaj p169).</p>
+        <div class="ti-tools">
+          <input class="ti-input" id="src-q" type="search" placeholder="Search source" aria-label="Search sources">
+          <select class="ti-select" id="src-status" aria-label="Status"><option value="">All statuses</option></select>
+          <span class="ti-count" id="src-count"></span>
+        </div>
+        <div class="ti-tbox"><table class="ti-table" id="tbl-sources" data-source="sources" data-row-key="source_id"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="src-osint-tools">
+        <h3 class="ti-h3">OSINT toolkit <span class="ti-pir">The OSINT Newsletter</span></h3>
+        <p class="ti-card-note">The analyst tools added to The OSINT Newsletter's toolkit and how this dashboard uses each: ingested as a feed, linked as a pivot, kept as a reference, or held because it searches for look-alikes of the organization and waits on the owner's decision. Each row was checked against the tool's entry in the OSINT Tools Library and, where the Checked column says so, against the tool's own pages on 2026-10-19. A tool whose site is a JavaScript application with no published link pattern opens on its front page.</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-osint-tools" data-source="osint_tools" data-row-key="tool_id"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="src-gates">
+        <h3 class="ti-h3">Sources not answering</h3>
+        <p class="ti-card-note">What the collector could not read at its last run, in each source's own answer. A refused or frozen source leaves its layer dark; nothing stands in for it.</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-gates" data-source="source_gaps" data-row-key="key"></table></div>
+        <p class="ti-card-note" id="gates-tf" data-source="live_threatfox"></p>
+      </div>
+      <div class="ti-card ti-section" id="src-lists">
+        <h3 class="ti-h3">Corroboration lists for mapped hosts <span class="ti-pir">credibility inputs</span> <span class="ti-count" id="lists-asof"></span></h3>
+        <p class="ti-card-note" id="lists-sum" data-source="live_lists"></p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-lists" data-source="live_lists" data-row-key="id"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="src-volume">
+        <h3 class="ti-h3">Feed volume against its 30-day baseline</h3>
+        <p class="ti-card-note" id="volume-sum" data-source="live_health"></p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-volume" data-source="live_health" data-row-key="kind,feed"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="src-blogs">
+        <h3 class="ti-h3">CTI blog candidates, 7 days <span class="ti-pir">awesome_threat_intel_blogs</span> <span class="ti-count" id="blogs-asof"></span></h3>
+        <p class="ti-card-note" id="blogs-sum" data-source="live_blogs"></p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-blog-items" data-source="live_blogs" data-row-key="link"></table></div>
+        <h4 class="ti-h4">Blog feeds read</h4>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-blog-feeds" data-source="live_blogs" data-row-key="url"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="src-links">
+        <h3 class="ti-h3">Link health <span class="ti-pir">registry, toolkit and pivots</span> <span class="ti-count" id="links-asof"></span></h3>
+        <p class="ti-card-note" id="links-sum" data-source="live_links"></p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-links" data-source="live_links" data-row-key="url"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="src-items">
+        <h3 class="ti-h3">Every cited reporting item</h3>
+        <p class="ti-card-note">Items are what a source reported; judgments are built on them and stored apart (Arici 12.3.3). Score = reliability x credibility.</p>
+        <div class="ti-tools"><input class="ti-input" id="it-q" type="search" placeholder="Search items" aria-label="Search items"><span class="ti-count" id="it-count"></span></div>
+        <div class="ti-tbox"><table class="ti-table" id="tbl-items" data-source="items" data-row-key="item_id"></table></div>
+      </div>
+    </template>
+  </section>
+
+  <!-- 9 METHOD -->
+  <section class="ti-page" id="method" role="tabpanel" aria-labelledby="tab-method" hidden>
+    <template>
+      <div class="ti-grid-wide ti-section">
+        <div class="ti-card" id="method-approach">
+          <h3 class="ti-h3">How this site reasons</h3>
+          <dl class="ti-dl">
+            <dt>Page order</dt><dd>Perception (theaters, vectors, vulnerabilities, ransomware, actors), comprehension (judgments) and projection (outlooks and indicators of change), after Endsley as applied by Kuhn p89 and Skopik p244-266.</dd>
+            <dt>Items and judgments</dt><dd>Reporting items record what a named source said, with grades and veracity. Judgments are owned hypotheses that cite items as evidence; confidence is computed from that evidence.</dd>
+            <dt>ThreatCon</dt><dd>5 CRITICAL: ongoing attacks on shipping, energy or civilian infrastructure with global effects and escalation indicators in the last 7 days. 4 HIGH: active hostilities or sustained attacks with regional effects. 3 ELEVATED: coercion or credible escalation indicators without sustained hostilities. 2 GUARDED: isolated incidents and no escalation indicator, also the hold level for a theater without current reporting. 1 NORMAL: no credible indicators.</dd>
+            <dt>Confidence</dt><dd>Item score = reliability (A 1.0, B 0.8, C 0.6, D 0.4, E 0.2, F 0.3) x credibility (1 1.0, 2 0.8, 3 0.6, 4 0.4, 5 0.2, 6 0.3). HIGH needs three or more independent origins across three or more evidence categories, a mean score of at least 0.7 and an alternative considered; MEDIUM needs two and two with a mean of at least 0.4; otherwise LOW. Attribution judgments cap at MEDIUM.</dd>
+            <dt>Daily run</dt><dd>Each morning a build workflow rebuilds every machine-collected dataset from its public source. At 06:45 Central the reassessment re-researches each theater against the closed source registry, drafts changes, has a separate judge check them, and commits them only when the deterministic validator passes; the same validator runs again before the site deploys. Each reassessment appends a hash-chained ledger entry.</dd>
+          </dl>
+        </div>
+        <div class="ti-card" id="method-confidence">
+          <h3 class="ti-h3">Confidence workings</h3>
+          <p class="ti-card-note">The calculation behind every confidence badge.</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-conf" data-source="confidence" data-row-key="judgment_id"></table></div>
+        </div>
+      </div>
+      <div class="ti-card ti-section" id="method-doctrine">
+        <h3 class="ti-h3">Doctrine traceability</h3>
+        <p class="ti-card-note">Each design choice and the book and page of the CTI literature it comes from.</p>
+        <div class="ti-tbox"><table class="ti-table" id="tbl-method" data-source="method" data-row-key="rule_id"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="method-cred">
+        <h3 class="ti-h3">Credibility of mapped hosts and incident classification</h3>
+        <p class="ti-card-note">Admiralty credibility for a host on the threat map counts independent operators: the map source's operator plus each list operator that names it. Aggregates, derived lists and Tor exits sit beside the count, never in it. The item score is source reliability times credibility weight (Tiepolo and Sorensen p525). Classes follow ENISA's Reference Security Incident Taxonomy.</p>
+        <div id="method-cred-body" data-source="live_threatmap live_lists"></div>
+      </div>
+      <div class="ti-card ti-section" id="method-ledger">
+        <h3 class="ti-h3">Run ledger</h3>
+        <p class="ti-card-note">Each entry hashes the run's datasets and the previous entry, so any edit to history breaks the chain (Gupta and Tennin p117).</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-ledger" data-source="ledger" data-row-key="run_id"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="method-data">
+        <h3 class="ti-h3">Datasets on this site</h3>
+        <p class="ti-card-note">Every dataset the page reads. Built files are rebuilt by the site's workflow (machine-collected) or revised by the daily reassessment (analyst-authored) and can be downloaded as JSON; live queries are read from the threat-feeds service when the page opens and on refresh. <span id="data-build"></span></p>
+        <div class="ti-tools"><input class="ti-input" id="data-q" type="search" placeholder="Search datasets" aria-label="Search datasets"><span class="ti-count" id="data-count"></span></div>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-datasets" data-row-key="id"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="method-stix">
+        <h3 class="ti-h3">STIX 2.1 export</h3>
+        <p class="ti-card-note">Key judgments as STIX opinion-style notes with their cited reports, marked TLP:AMBER and PAP:AMBER, the most restrictive marking of their inputs. Select all and copy.</p>
+        <textarea class="ti-export" id="stix-out" readonly aria-label="STIX bundle" data-source="judgments confidence evidence items"></textarea>
+      </div>
+    </template>
+  </section>
+</div>
+<footer class="site-foot" id="site-foot">
+  <p>Open-source intelligence analysis by Sean Kilfoy, built from cited public sources. Grading, source terms and how the site is built are on the Sources and Method pages; live feeds are read from the providers named there.</p>
+</footer>
+<script src="/vendor/d3.min.js"></script>
+<script src="/runtime/dash.js"></script>
+<script src="/js/geo.bundle.js"></script>
+<script src="/js/worldgeo.js"></script>
+<script src="/js/app.js"></script>
+<script src="/js/calcs.js"></script>
+<script src="/js/tfwire.js"></script>
+<script src="/js/live.js"></script>
+<script src="/js/context.js"></script>
+<script src="/js/intel.js"></script>
+<script src="/js/brief.js"></script>
+<script src="/js/pew.js"></script>
+<script src="/js/globe.js"></script>
+<script src="/js/map.js"></script>
+<script src="/js/theaters.js"></script>
+<script src="/js/warning.js"></script>
+<script src="/js/vectors.js"></script>
+<script src="/js/vulns.js"></script>
+<script src="/js/weapon.js"></script>
+<script src="/js/ransomware.js"></script>
+<script src="/js/residual.js"></script>
+<script src="/js/actors.js"></script>
+<script src="/js/defense.js"></script>
+<script src="/js/reqs.js"></script>
+<script src="/js/sources.js"></script>
+<script src="/js/method.js"></script>
+<script src="/js/catalog.js"></script>
+<script src="/js/controls.js"></script>
+<script src="/js/boot.js"></script>
+</body>
+</html>

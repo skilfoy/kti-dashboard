@@ -1,0 +1,142 @@
+# Build, test and deploy the site and the threat-feeds service to Vercel (production).
+#   push to main       validate, assemble with the last built feeds, test, deploy
+#   pull request       validate, assemble, test (no deploy)
+#   schedule           three times a day: rebuild every machine-built dataset from its sources first, then as a push
+#   manual run         as a push; tick "rebuild_feeds" to rebuild the feeds too
+# Needs one repository secret, VERCEL_TOKEN (a Vercel access token scoped to the skilfoys-projects team).
+name: Site
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Every eight hours. The 10:23 UTC run lands ahead of the 06:45 CT reassessment (11:45 UTC in summer, 12:45 in winter).
+    - cron: "23 2,10,18 * * *"
+  workflow_dispatch:
+    inputs:
+      rebuild_feeds:
+        description: Rebuild every machine-built dataset from its sources
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  VERCEL_ORG_ID: team_J1AYAuYaWSGEP7cjBp80rdJp
+  VERCEL_PROJECT_ID: prj_eISaKjcBNEHSxvuO7OvW6Nf94s5P
+  VERCEL_TELEMETRY_DISABLED: "1"
+  PUBLIC_DOMAIN: intel.kilfoycyber.com
+
+jobs:
+  site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install
+        run: |
+          python3 -m pip install --disable-pip-version-check pyyaml==6.0.2
+          npm ci
+          npm i --no-save @electric-sql/pglite@0.5.8 playwright@1.64.0
+
+      # The machine-built datasets live in the Actions cache between runs: each rebuild saves a new entry and every
+      # other run restores the newest one.
+      - name: Restore built feeds
+        id: feeds
+        uses: actions/cache/restore@v4
+        with:
+          path: feeds
+          key: feeds-${{ github.run_id }}
+          restore-keys: feeds-
+
+      # A failed rebuild leaves the restored datasets in place, so the site still deploys with the last good feeds;
+      # site_build.py stops the run when a dataset is missing altogether.
+      - name: Rebuild feeds from their sources
+        id: rebuild
+        if: github.event_name == 'schedule' || inputs.rebuild_feeds || steps.feeds.outputs.cache-matched-key == ''
+        continue-on-error: true
+        run: |
+          python3 -I pipeline/build_feeds.py "$RUNNER_TEMP/work" feeds "$(date -u +%F)"
+          rm -rf "$RUNNER_TEMP/work"
+
+      - name: Note a failed rebuild
+        if: steps.rebuild.outcome == 'failure'
+        run: echo "::warning::The feed rebuild failed; this run uses the last good feeds. See the Rebuild step log and feeds/_build.json."
+
+      - name: Save built feeds
+        if: steps.rebuild.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: feeds
+          key: feeds-${{ github.run_id }}
+
+      - name: Validate the authored datasets
+        run: python3 -I pipeline/authored_build.py data/authored --check
+
+      - name: Assemble the site data
+        run: python3 -I pipeline/site_build.py --authored data/authored --feeds feeds --out public --commit "$GITHUB_SHA"
+
+      - name: Offline tests
+        run: node test/run_all.mjs
+
+      - name: Browser check (desktop and phone, light and dark)
+        run: |
+          npx playwright install --with-deps chromium
+          node test/e2e.mjs --live-optional
+
+      # Idempotent: attaches the public domain to the Vercel project once, then reports its verification state.
+      - name: Attach the public domain
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          test -n "$VERCEL_TOKEN" || { echo "::error::Add the VERCEL_TOKEN repository secret to deploy"; exit 1; }
+          api="https://api.vercel.com"
+          q="teamId=$VERCEL_ORG_ID"
+          code=$(curl -sS -o domain.json -w '%{http_code}' -H "Authorization: Bearer $VERCEL_TOKEN" "$api/v9/projects/$VERCEL_PROJECT_ID/domains/$PUBLIC_DOMAIN?$q")
+          if [ "$code" = "404" ]; then
+            code=$(curl -sS -o domain.json -w '%{http_code}' -X POST -H "Authorization: Bearer $VERCEL_TOKEN" -H 'Content-Type: application/json' \
+              -d "{\"name\":\"$PUBLIC_DOMAIN\"}" "$api/v10/projects/$VERCEL_PROJECT_ID/domains?$q")
+          fi
+          echo "Vercel answered HTTP $code for $PUBLIC_DOMAIN"
+          python3 -c "import json; d=json.load(open('domain.json')); print(json.dumps({k: d.get(k) for k in ('name','verified','verification','error')}, indent=1))" | tee -a "$GITHUB_STEP_SUMMARY"
+          curl -sS -o config.json -H "Authorization: Bearer $VERCEL_TOKEN" "$api/v6/domains/$PUBLIC_DOMAIN/config?$q&projectIdOrName=$VERCEL_PROJECT_ID" || true
+          python3 -c "import json; d=json.load(open('config.json')); print('DNS misconfigured:', d.get('misconfigured'), '| recommended CNAME:', (d.get('recommendedCNAME') or [{}])[0].get('value'))" | tee -a "$GITHUB_STEP_SUMMARY" || true
+          rm -f domain.json config.json
+          case "$code" in 2*) ;; *) echo "::warning::Could not attach $PUBLIC_DOMAIN (HTTP $code); the deploy continues" ;; esac
+
+      - name: Deploy to production
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          test -n "$VERCEL_TOKEN" || { echo "::error::Add the VERCEL_TOKEN repository secret to deploy"; exit 1; }
+          npm i -g vercel@63.1.2
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build --prod --token="$VERCEL_TOKEN"
+          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "Deployed $url" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Until DNS for the public domain resolves to Vercel this check warns instead of failing the run.
+      - name: Check the public site
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          sleep 20
+          if getent hosts "$PUBLIC_DOMAIN" > /dev/null; then node test/smoke.mjs "https://$PUBLIC_DOMAIN"
+          else echo "::warning::$PUBLIC_DOMAIN does not resolve yet; add its DNS record to check the public site"; fi

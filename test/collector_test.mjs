@@ -1,0 +1,404 @@
+// Offline test of neon/collector.mjs: real Postgres (PGlite) behind a fake Neon SQL-over-HTTP endpoint, an in-memory
+// S3 bucket that checks SigV4 headers, mock GDELT exports, mock feeds and geolocation. Includes a parity check of the
+// store-built GDELT window against the live /api/gdelt-events handler on the same exports.
+// node test/collector_test.mjs <repository root>   (after python3 pipeline/collector_build.py .)
+import { PGlite } from '@electric-sql/pglite';
+import zlib from 'node:zlib';
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+
+const SCR = path.resolve(process.argv[2] || '.');
+const TF = SCR;
+const require = createRequire(path.join(SCR, 'node_modules', 'x.js'));
+let pass = 0;
+const ok = (c, m) => { assert.ok(c, m); pass++; };
+
+// ---------------------------------------------------------------- Postgres
+const db = await PGlite.create();
+await db.exec(fs.readFileSync(path.join(TF, 'neon', 'schema.sql'), 'utf8'));
+const RAW = Object.fromEntries(Array.from({ length: 6000 }, (_, i) => [i, (v) => v]));
+let sqlCalls = 0;
+async function runSql(q, params) { sqlCalls++; const r = await db.query(q, params, { rowMode: 'array', parsers: RAW }); return { fields: r.fields, rows: r.rows, rowCount: r.affectedRows || r.rows.length }; }
+
+// ---------------------------------------------------------------- environment
+process.env.DATABASE_URL = 'postgresql://ti_app:pw@ep-test-pooler.c-14.us-east-1.aws.neon.tech/threatintel?sslmode=require';
+process.env.AWS_ENDPOINT_URL_S3 = 'https://br-test.storage.c-14.us-east-1.aws.neon.tech';
+process.env.AWS_ACCESS_KEY_ID = 'nak_test';
+process.env.AWS_SECRET_ACCESS_KEY = 'nsk_test';
+process.env.AWS_REGION = 'us-east-1';
+process.env.TI_KEY = 'k'.repeat(48);
+process.env.ABUSECH_AUTH_KEY = 'abuse-test-key';
+const bucket = new Map();
+bucket.set('ti-docs/ref/countries-50m.json', fs.readFileSync(require.resolve('world-atlas/countries-50m.json')));
+bucket.set('ti-docs/ref/num2iso.json', fs.readFileSync(path.join(TF, 'lib', 'num2iso.json')));
+
+// ---------------------------------------------------------------- mock GDELT exports
+function zipOne(name, data) {
+  const comp = zlib.deflateRawSync(Buffer.from(data));
+  const nameB = Buffer.from(name);
+  const lh = Buffer.alloc(30); lh.writeUInt32LE(0x04034b50, 0); lh.writeUInt16LE(8, 8); lh.writeUInt16LE(nameB.length, 26);
+  const local = Buffer.concat([lh, nameB, comp]);
+  const cd = Buffer.alloc(46); cd.writeUInt32LE(0x02014b50, 0); cd.writeUInt16LE(8, 10); cd.writeUInt32LE(comp.length, 20); cd.writeUInt16LE(nameB.length, 28); cd.writeUInt32LE(0, 42);
+  const cdAll = Buffer.concat([cd, nameB]);
+  const eocd = Buffer.alloc(22); eocd.writeUInt32LE(0x06054b50, 0); eocd.writeUInt32LE(cdAll.length, 12); eocd.writeUInt32LE(local.length, 16);
+  return Buffer.concat([local, cdAll, eocd]);
+}
+const PLACES = [['Kyiv, Ukraine', 30.52, 50.45, 4], ['Gaza, Gaza Strip', 34.45, 31.5, 4], ['Beirut, Beyrouth, Lebanon', 35.5, 33.89, 4], ['Khartoum, Sudan', 32.53, 15.5, 4],
+  ['Goma, Nord-Kivu, Congo', 29.22, -1.68, 4], ['Sanaa, Yemen', 44.21, 15.35, 4], ['Ukraine', 32, 49, 1], ['Damascus, Syria', 36.29, 33.51, 4], ['Kharkiv, Ukraine', 36.25, 50.0, 4]];
+const ORIG = [['Moscow, Russia', 37.62, 55.75, 4], ['Tehran, Iran', 51.39, 35.69, 4], ['Washington, District of Columbia, United States', -77.03, 38.9, 3], ['Russia', 100, 60, 1], null, 'same'];
+const LATEST = '20261017180000';
+const latestD = new Date(Date.UTC(2026, 9, 17, 18, 0));
+const stamp = (d) => d.toISOString().replace(/[-:T]/g, '').slice(0, 14);
+const gdelt = new Map();
+for (let s = 0; s < 288; s++) {
+  const d = new Date(latestD.getTime() - s * 900000);
+  if (s === 50 || s === 201) continue; // missing exports
+  const lines = [];
+  const K = 20 + (s % 7);
+  for (let j = 0; j < K; j++) {
+    const f = new Array(61).fill('');
+    const p = PLACES[(s + j) % PLACES.length];
+    const o = ORIG[(s * 3 + j) % ORIG.length];
+    f[0] = String(100000 + s * 100 + j); f[6] = ['RUSSIA', 'ISRAEL', 'RAPID SUPPORT FORCES', 'M23'][j % 4]; f[16] = ['UKRAINE', 'HAMAS', 'SUDAN', 'CONGO'][j % 4];
+    f[12] = j % 9 === 8 ? '' : 'MIL'; f[25] = j % 13 === 12 ? '0' : '1'; f[26] = ['180', '190', '193', '200'][j % 4]; f[28] = f[26].slice(0, 2); f[29] = j % 11 === 10 ? '3' : '4';
+    f[30] = '-10'; f[31] = String(1 + s * 40 + j); f[32] = String(1 + (j % 5)); f[33] = '3';
+    if (o === 'same') { f[35] = String(p[3]); f[36] = p[0]; f[40] = String(p[2]); f[41] = String(p[1]); }
+    else if (o) { f[35] = String(o[3]); f[36] = o[0]; f[40] = String(o[2]); f[41] = String(o[1]); }
+    f[51] = String(p[3]); f[52] = p[0]; f[56] = String(p[2]); f[57] = String(p[1]); f[59] = stamp(d);
+    f[60] = `https://example.org/s${s}/e${j % 23 === 22 ? 0 : j}`;
+    lines.push(f.join('\t'));
+  }
+  gdelt.set(stamp(d), zipOne(stamp(d) + '.export.CSV', lines.join('\n') + '\n'));
+}
+
+// ---------------------------------------------------------------- mock feeds
+const FEODO = [{ ip_address: '185.220.101.7', port: 443, status: 'online', as_name: 'AS1 TEST', country: 'DE', first_seen: '2026-10-01 10:00:00', last_online: '2026-10-17', malware: 'QakBot' },
+  { ip_address: '10.0.0.5', port: 443, status: 'online', country: 'US', first_seen: '2026-10-01 10:00:00', last_online: '2026-10-17', malware: 'Emotet' },
+  { ip_address: '91.92.240.10', port: 8080, status: 'offline', country: 'NL', first_seen: '2026-09-20 10:00:00', last_online: '2026-10-10', malware: 'Pikabot' }];
+const TFOX = { 1001: [{ ioc_value: '45.137.21.9:4444', ioc_type: 'ip:port', threat_type: 'botnet_cc', malware_printable: 'Cobalt Strike', confidence_level: 100, first_seen_utc: '2026-10-17 17:10:00', tags: ['CobaltStrike'] }],
+  1002: [{ ioc_value: 'evil.example', ioc_type: 'domain', threat_type: 'botnet_cc', malware_printable: 'Lumma Stealer', confidence_level: 75, first_seen_utc: '2026-10-17 17:00:00', tags: null }],
+  1003: [{ ioc_value: '185.220.101.7:443', ioc_type: 'ip:port', threat_type: 'botnet_cc', malware_printable: 'QakBot', confidence_level: 90, first_seen_utc: '2026-10-17 16:00:00', tags: 'qakbot' }] };
+const DSHIELD = [{ rank: 1, source: '045.148.010.240', reports: 120000, targets: 45000 }, { rank: 2, source: '192.168.001.001', reports: 5, targets: 1 }];
+const URLHAUS = ['################################################################', '# abuse.ch URLhaus Database Dump (CSV - online URLs only)', '#',
+  '# id,dateadded,url,url_status,last_online,threat,tags,urlhaus_link,reporter',
+  '"3416327","2026-10-17 10:01:07","http://117.209.20.81:51183/bin.sh","online","2026-10-17 10:01:07","malware_download","32-bit,elf,mips,Mozi","https://urlhaus.abuse.ch/url/3416327/","r1"',
+  '"3416328","2026-10-17 11:01:07","http://117.209.20.81:51183/i","online","2026-10-17 11:01:07","malware_download","elf,Mozi","https://urlhaus.abuse.ch/url/3416328/","r1"',
+  '"3416329","2026-10-17 12:00:00","https://bad.example.com/x.exe","online","2026-10-17 12:00:00","malware_download","exe,AsyncRAT","https://urlhaus.abuse.ch/url/3416329/","r2"',
+  '"3416330","2026-10-17 12:30:00","http://203.0.113.9/x","online","2026-10-17 12:30:00","malware_download","elf","https://urlhaus.abuse.ch/url/3416330/","r3"',
+  '"3416331","2026-10-17 13:00:00","http://41.86.17.204:8080/arm7","online","2026-10-17 13:00:00","malware_download","elf,mirai,\\"quoted\\"","https://urlhaus.abuse.ch/url/3416331/","r4"'].join('\n') + '\n';
+const GEO = { '185.220.101.7': [52.52, 13.4, 'DE', 'Berlin'], '91.92.240.10': [52.37, 4.9, 'NL', 'Amsterdam'], '45.137.21.9': [55.75, 37.62, 'RU', 'Moscow'],
+  '45.148.10.240': [52.37, 4.9, 'NL', 'Amsterdam'], '117.209.20.81': [28.6, 77.2, 'IN', 'Delhi'] };
+let ipapiCalls = 0, geojsCalls = 0;
+
+// ---------------------------------------------------------------- fake fetch
+import { generateKeyPairSync, sign as rsaSign } from 'node:crypto';
+const { publicKey: PUB, privateKey: PRIV } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+const JWK = { ...PUB.export({ format: 'jwk' }), kid: 'test-kid', alg: 'RS256', use: 'sig' };
+const b64u = (b) => Buffer.from(b).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+function mint(over = {}, key = PRIV, kid = 'test-kid') {
+  const t = Math.floor(Date.now() / 1000);
+  const claims = { iss: 'https://oidc.vercel.com/skilfoys-projects', aud: 'https://vercel.com/skilfoys-projects', sub: 'owner:skilfoys-projects:project:threat-feeds:environment:production',
+    iat: t, nbf: t, exp: t + 3600, owner: 'skilfoys-projects', owner_id: 'team_J1AYAuYaWSGEP7cjBp80rdJp', project: 'threat-feeds', project_id: 'prj_eISaKjcBNEHSxvuO7OvW6Nf94s5P', environment: 'production', ...over };
+  const h = b64u(JSON.stringify({ typ: 'JWT', alg: 'RS256', kid })), p = b64u(JSON.stringify(claims));
+  return h + '.' + p + '.' + b64u(rsaSign('RSA-SHA256', Buffer.from(h + '.' + p), key));
+}
+let jwksCalls = 0;
+const resp = (status, body, headers = {}) => new Response(typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body), { status, headers });
+const failing = new Set();
+globalThis.fetch = async (url, opts = {}) => {
+  const u = String(url);
+  const h = Object.fromEntries(Object.entries(opts.headers || {}).map(([k, v]) => [k.toLowerCase(), v]));
+  if (u === 'https://api.c-14.us-east-1.aws.neon.tech/sql') {
+    assert.equal(h['neon-connection-string'], process.env.DATABASE_URL);
+    const body = JSON.parse(opts.body);
+    try {
+      if (body.queries) {
+        await db.exec('BEGIN');
+        try { const results = []; for (const q of body.queries) results.push(await runSql(q.query, q.params)); await db.exec('COMMIT'); return resp(200, { results }); }
+        catch (e) { await db.exec('ROLLBACK'); throw e; }
+      }
+      return resp(200, await runSql(body.query, body.params));
+    } catch (e) { return resp(400, { message: e.message, code: e.code }); }
+  }
+  if (u.startsWith(process.env.AWS_ENDPOINT_URL_S3 + '/')) {
+    assert.match(h.authorization, /^AWS4-HMAC-SHA256 Credential=nak_test\/\d{8}\/us-east-1\/s3\/aws4_request, SignedHeaders=[a-z0-9;-]+, Signature=[0-9a-f]{64}$/);
+    assert.match(h['x-amz-date'], /^\d{8}T\d{6}Z$/);
+    const key = decodeURIComponent(new URL(u).pathname.slice(1));
+    if (opts.method === 'PUT') { const b = Buffer.from(opts.body); assert.equal(h['x-amz-content-sha256'], (await import('node:crypto')).createHash('sha256').update(b).digest('hex')); bucket.set(key, b); return resp(200, ''); }
+    return bucket.has(key) ? resp(200, bucket.get(key), { 'last-modified': new Date().toUTCString() }) : resp(404, '<Error><Code>NoSuchKey</Code></Error>');
+  }
+  if (u === 'https://oidc.vercel.com/skilfoys-projects/.well-known/jwks') { jwksCalls++; return resp(200, { keys: [JWK] }); }
+  if (u === 'http://data.gdeltproject.org/gdeltv2/lastupdate.txt') return resp(200, `150383 297a16b493de7cf6ca809a7cc31d0b93 http://data.gdeltproject.org/gdeltv2/${LATEST}.export.CSV.zip\n`);
+  const gm = u.match(/gdeltv2\/(\d{14})\.export\.CSV\.zip$/);
+  if (gm) return gdelt.has(gm[1]) ? resp(200, gdelt.get(gm[1])) : resp(404, 'nope');
+  for (const f of failing) if (u.startsWith(f)) return resp(503, 'down');
+  if (u.startsWith('https://feodotracker.abuse.ch/downloads/ipblocklist.json')) return resp(200, FEODO);
+  if (u.startsWith('https://threatfox.abuse.ch/export/json/recent/') || u.startsWith('https://urlhaus.abuse.ch/downloads/')) return resp(410, 'Gone');
+  // The authenticated abuse.ch APIs (keyless exports closed 21 October 2026): the key travels in the Auth-Key header.
+  if (u === 'https://threatfox-api.abuse.ch/api/v1/') {
+    if (h['auth-key'] !== process.env.ABUSECH_AUTH_KEY) return resp(401, { query_status: 'unknown_auth_key' });
+    const q = JSON.parse(opts.body);
+    if (q.query === 'types') return resp(200, { query_status: 'ok', data: { 1: { ioc_type: 'ip:port' } } });
+    assert.equal(q.query, 'get_iocs');
+    return resp(200, { query_status: 'ok', data: Object.entries(TFOX).map(([id, [d]]) => ({ id, ioc: d.ioc_value, ioc_type: d.ioc_type, threat_type: d.threat_type, malware_printable: d.malware_printable,
+      confidence_level: d.confidence_level, first_seen: d.first_seen_utc + ' UTC', tags: d.tags })) });
+  }
+  if (u.startsWith('https://urlhaus-api.abuse.ch/v1/urls/recent/')) {
+    if (h['auth-key'] !== process.env.ABUSECH_AUTH_KEY) return resp(401, { query_status: 'unknown_auth_key' });
+    const urls = URLHAUS.split('\n').filter((l) => l && l[0] !== '#').map((l) => M.csvLine(l)).map(([id, added, url, status, , threat, tags, link]) => ({ id, date_added: added + ' UTC', url, url_status: status, threat,
+      tags: tags.split(','), urlhaus_reference: link }));
+    return resp(200, { query_status: 'ok', urls: u.includes('/limit/1/') ? urls.slice(0, 1) : urls });
+  }
+  if (u.startsWith('https://isc.sans.edu/api/topips/records/')) return resp(200, DSHIELD);
+  if (u.startsWith('https://isc.sans.edu/api/infocon')) return resp(200, { status: 'green' });
+  if (u.startsWith('http://ip-api.com/batch')) {
+    ipapiCalls++;
+    const ips = JSON.parse(opts.body);
+    return resp(200, ips.map((ip) => (GEO[ip] ? { status: 'success', query: ip, country: 'X', countryCode: GEO[ip][2], regionName: 'R', city: GEO[ip][3], lat: GEO[ip][0], lon: GEO[ip][1], isp: 'ISP', as: 'AS64500 Test Net', asname: 'TESTNET' }
+      : { status: 'fail', message: 'reserved range', query: ip })), { 'x-rl': '14', 'x-ttl': '60' });
+  }
+  if (u.startsWith('https://get.geojs.io/v1/ip/geo.json')) { geojsCalls++; const ips = new URL(u).searchParams.get('ip').split(','); return resp(200, ips.map((ip) => ({ ip, latitude: '41.0', longitude: '29.0', country_code: 'TR', city: 'Istanbul', organization_name: 'GeoOrg', asn: 64501 }))); }
+  if (u.startsWith('https://api.ransomware.live/v2/recentcyberattacks')) return resp(200, [{ added: '2026-10-18', claim_gang: 'qilin', claim_url: 'https://www.ransomware.live/id/eA==', country: 'IR',
+    date: '2026-10-17', description: '', domain: 'corbyrock.ie', has_infostealer_info: true, infostealer_data: { employees: 3, thirdparties: 243 }, link: 'https://www.ransomware.live/id/Y29yYnlyb2NrLmll',
+    summary: 'résumé à ne pas garder', title: 'Cyber attack on Corby Rock Mill hits production', url: 'https://www.farmersjournal.ie/news/corby-rock', victim: 'Corby Rock Mill' }]);
+  if (u.startsWith('https://api.ransomware.live/v2/recentvictims')) return resp(200, [{ group_name: 'Qilin', country: 'US', activity: 'Healthcare', discovered: '2026-10-17 10:00:00.123', published: '2026-10-17 09:00:00', victim: 'should be dropped' }]);
+  if (u.startsWith('https://api.first.org/data/v1/epss')) return resp(200, [{ cve: 'CVE-2026-0001', epss: '0.97', percentile: '1.0', date: '2026-10-17' }]);
+  if (u.startsWith('https://api.ioda.inetintel.cc.gatech.edu/v2/outages/events')) return resp(200, { data: [{ location: 'country/IR', location_name: 'Iran', start: 1792200000, duration: 7200, score: 25000, datasource: 'bgp' },
+    { location: 'country/IR', location_name: 'Iran', start: 1792200000, duration: 7200, score: 30000, datasource: 'bgp' }, { location: 'country/IR', location_name: 'Iran', start: 1792200000, duration: 3600, score: 900, datasource: 'gtr' },
+    { location: 'country/SD', location_name: 'Sudan', start: 1792290000, duration: 0, score: 1500, datasource: 'ping-slash24' }] });
+  // Maritime as answered on 22 October 2026: MARAD and UKMTO refuse cloud addresses, ASAM has nothing recent, and the
+  // broadcast-warning list holds warnings issued no later than May 2024.
+  if (u.startsWith('https://www.maritime.dot.gov/')) return resp(403, '<HTML><HEAD><TITLE>Access Denied</TITLE></HEAD></HTML>');
+  if (u.startsWith('https://www.ukmto.org/')) return resp(403, 'Forbidden');
+  if (u.startsWith('https://msi.nga.mil/api/publications/asam?filter=none&minOccurDate=')) return resp(200, { asam: [] });
+  if (u.startsWith('https://msi.nga.mil/api/publications/asam?filter=none&year=')) return resp(200, { asam: [{ reference: '2026-41', date: '2026-03-01', latitude: 12.9, longitude: 43.4, description: 'Suspicious approach.' }] });
+  if (u.startsWith('https://msi.nga.mil/api/publications/broadcast-warn')) return resp(200, { 'broadcast-warn': [{ msgYear: 2024, msgNumber: 1571, navArea: 'P', text: 'TAIWAN STRAIT. LIVE FIRING EXERCISES IN AREA BOUND BY 24-30.0N 118-10.0E, 24-30.0N 119-00.0E.', issueDate: '101515Z MAY 2024' }] });
+  if (u.startsWith('https://api.greynoise.io/')) return resp(404, { message: 'IP not observed' });
+  if (u === 'https://lanes.news/data/temperatures.csv') return resp(200, 'date,conflict,country_a,country_a_name,country_b,country_b_name,events,articles,goldstein_mean,tone_mean,verbal_cooperation_share,material_cooperation_share,verbal_conflict_share,material_conflict_share,temperature\n'
+    + '2026-10-06,usa-iran,IRN,Iran,USA,United States,615,3918,0.082,-3.659,0.6759,0.0151,0.2078,0.1013,0.267\n2026-10-06,russia-ukraine,RUS,Russia,UKR,Ukraine,900,5000,-4,-6,0.2,0.05,0.35,0.4,0.73\n');
+  if (u === 'https://lanes.news/feed.xml') return resp(200, '<rss><channel><item><title>Daily page</title><link>https://lanes.news/daily/usa-iran/2026-10-07</link><pubDate>Wed, 07 Oct 2026 16:00:00 GMT</pubDate></item></channel></rss>');
+  if (u === 'https://ofac.treasury.gov/recent-actions') { assert.match(h.accept, /text\/html/); return resp(200, '<div><a href="/recent-actions/20261008">Iran-related Designations; Cyber-related Designations</a> October 08, 2026 - <a href="/recent-actions/sanctions-list-updates">Sanctions List Updates</a></div>'); }
+  if (u === 'https://ofac.treasury.gov/recent-actions?page=1') return resp(403, 'denied');
+  if (/^https?:\/\//.test(u)) return resp(200, 'ok');
+  throw new Error('unexpected fetch ' + u);
+};
+
+// ---------------------------------------------------------------- tests
+const M = await import(path.join(TF, 'neon', 'collector.mjs'));
+
+// SigV4: AWS documentation example (GET Object with Range).
+{
+  const hd = M.sigv4({ method: 'GET', host: 'examplebucket.s3.amazonaws.com', path: '/test.txt', headers: { range: 'bytes=0-9' }, payloadHash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    amzDate: '20130524T000000Z', region: 'us-east-1', keyId: 'AKIAIOSFODNN7EXAMPLE', secret: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY' });
+  ok(hd.authorization === 'AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request, SignedHeaders=host;range;x-amz-content-sha256;x-amz-date, Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41', 'sigv4 vector');
+}
+
+// Topology decode and country lookup agree with topojson-client + lib/countries.js.
+{
+  const topo = JSON.parse(fs.readFileSync(require.resolve('world-atlas/countries-50m.json'), 'utf8'));
+  const G = M.buildGeo(topo, JSON.parse(fs.readFileSync(path.join(TF, 'lib', 'num2iso.json'), 'utf8')));
+  const { isoAt } = require(path.join(TF, 'lib', 'countries.js'));
+  let same = 0, n = 0, seed = 7;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  for (let i = 0; i < 20000; i++) { const lon = -180 + rnd() * 360, lat = -60 + rnd() * 135; n++; if (M.isoAt(G, lon, lat) === isoAt(lon, lat)) same++; }
+  ok(same === n, `isoAt parity ${same}/${n}`);
+  ok(M.isoAt(G, 35.5, 33.89) === 'LB' && M.isoAt(G, 34.45, 31.5) === 'PS' && M.isoAt(G, -40, 30) === '', 'isoAt spot checks');
+}
+
+// Parsers.
+{
+  ok(M.normIp('045.148.010.240') === '45.148.10.240' && M.normIp('1.2.3') === '' && M.normIp('256.1.1.1') === '', 'normIp');
+  ok(!M.publicV4('10.1.1.1') && !M.publicV4('198.51.100.7') && !M.publicV4('203.0.113.9') && M.publicV4('8.8.8.8'), 'publicV4 excludes private and documentation ranges');
+  const u = M.parseUrlhaus(URLHAUS);
+  ok(u.length === 2 && u[0].ip === '117.209.20.81' && u[0].count === 2 && u[0].family === 'Mozi' && u[0].port === 51183, 'urlhaus fold ' + JSON.stringify(u[0]));
+  ok(u[1].ip === '41.86.17.204' && u[1].family === 'Mirai', 'urlhaus family from tags ' + u[1].family);
+  ok(!M.publicV4('198.51.100.7') && !M.publicV4('203.0.113.9') && !M.publicV4('192.0.2.1') && !M.publicV4('100.64.1.1') && M.publicV4('192.0.78.9') && M.publicV4('203.0.178.4')
+    && M.publicV4('198.51.4.4') && M.publicV4('8.8.8.8'), 'special-purpose ranges exact');
+  ok(M.familyOf('ua-wget,dropped-by-amadey,connectwise') === 'ScreenConnect' && M.familyOf('elf,None,gitlab') === 'unattributed' && M.familyOf('32-bit,gafgyt') === 'Gafgyt'
+    && M.familyOf('elf,SomeNewFamily') === 'SomeNewFamily', 'family normalization');
+  ok(M.parseDShield(DSHIELD).length === 1 && M.parseDShield(DSHIELD)[0].ip === '45.148.10.240', 'dshield');
+  ok(M.parseThreatFox(TFOX).length === 2, 'threatfox ip:port only');
+  ok(M.parseFeodo(FEODO).length === 2, 'feodo drops private');
+  ok(JSON.stringify(M.csvLine('"a","b,c","d""e"')) === '["a","b,c","d\\"e"]', 'csv quoting');
+}
+
+// GDELT backfill to completion, then parity with the live endpoint.
+{
+  let r, guard = 0;
+  do { r = await M.runJob('gdelt', { backfill: true, budgetMs: 600000 }); guard++; ok(r.ok, 'gdelt run ok ' + JSON.stringify(r).slice(0, 300)); } while (r.remaining > 0 && guard < 6);
+  ok(r.remaining === 0, 'backfill complete');
+  const files = (await db.query(`SELECT status, count(*)::int AS n FROM ti.gdelt_file GROUP BY 1 ORDER BY 1`)).rows;
+  ok(files.find((f) => f.status === 'missing').n === 2 && files.find((f) => f.status === 'ok').n === 286, 'file statuses ' + JSON.stringify(files));
+  const again = await M.runJob('gdelt', {});
+  ok(again.ok && again.processed === 0, 'incremental run finds nothing new');
+  const doc = M.gdeltSeries ? JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/gdelt-w24b48.json.gz')).toString()) : null;
+  ok(doc && doc.coverage === 1 && doc.coverage_live === 1 && doc.files_ok === 286 && doc.files_missing === 2, 'window coverage ' + JSON.stringify({ c: doc.coverage, l: doc.coverage_live }));
+
+  // Live endpoint on the same exports.
+  const live = await new Promise((resolve) => {
+    const handler = require(path.join(TF, 'api', 'gdelt-events.js'));
+    const res = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, status(c) { this.code = c; return this; }, send(b) { resolve(JSON.parse(b)); }, end() {} };
+    handler({ method: 'GET', query: { hours: '24', baseline: '48' }, url: '/api/gdelt-events?hours=24&baseline=48' }, res);
+  });
+  const idx = (rows, kind, key, val) => new Map(rows.filter((x) => x.kind === kind).map((x) => [key(x), val(x)]));
+  const cmp = (kind, key, val) => {
+    const a = idx(live.rows, kind, key, val), b = idx(doc.rows, kind, key, val);
+    let diff = 0; for (const [k, v] of a) if (JSON.stringify(b.get(k)) !== JSON.stringify(v)) { diff++; if (diff < 4) console.log('  diff', kind, k, v, b.get(k)); }
+    ok(a.size === b.size && diff === 0, `${kind}: live ${a.size} store ${b.size} diff ${diff}`);
+  };
+  cmp('cell', (x) => `${x.lat}|${x.lon}|${x.h}`, (x) => [x.n, x.m]);
+  cmp('country', (x) => `${x.iso2}|${x.h}`, (x) => [x.n, x.m]);
+  cmp('base', (x) => x.iso2, (x) => [x.n, x.m]);
+  cmp('event', (x) => String(x.id), (x) => [x.h, x.lat, x.lon, x.iso2, x.root, x.mentions, x.url]);
+  cmp('flow', (x) => `${Math.round(x.src_lat)}|${Math.round(x.src_lon)}>${Math.round(x.dst_lat)}|${Math.round(x.dst_lon)}`, (x) => [x.n, x.m, x.articles, x.h, x.hours_seen, x.root, x.id, x.src_iso2, x.dst_iso2]);
+  ok(doc.rows.filter((x) => x.kind === 'flow').every((x) => x.articles >= 1), 'flows carry article counts');
+  ok(live.events_kept === doc.events_kept && live.events_scanned === doc.events_scanned, `kept ${live.events_kept}/${doc.events_kept} scanned ${live.events_scanned}/${doc.events_scanned}`);
+  // 30-day history: country rows only for slots older than the window, then base30 covers complete days.
+  for (let s2 = 288; s2 < 288 + 96 * 8; s2++) { const d = new Date(latestD.getTime() - s2 * 900000); gdelt.set(stamp(d), gdelt.get(stamp(new Date(latestD.getTime() - (s2 % 288) * 900000))) || gdelt.get(LATEST)); }
+  let hr, hg = 0;
+  do { hr = await M.runJob('gdelt', { backfill: true, historyDays: 11, budgetMs: 600000 }); hg++; } while (hr.remaining > 0 && hg < 6);
+  ok(hr.ok && hr.remaining === 0 && hr.history_days === 11, 'history backfill ' + JSON.stringify(hr).slice(0, 200));
+  const oldCells = (await db.query(`SELECT count(*)::int AS n FROM ti.gdelt_cell WHERE slot <= $1::timestamptz - interval '72 hours'`, [latestD.toISOString()])).rows[0].n;
+  ok(oldCells === 0, 'history keeps country counts only');
+  const doc2 = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/gdelt-w24b48.json.gz')).toString());
+  ok(doc2.base30_days >= 8, 'base30 covers the backfilled days ' + doc2.base30_days);
+  const rp = await M.runJob('gdelt', { reprocess: true, budgetMs: 600000 });
+  ok(rp.ok && rp.reprocess && rp.processed === 96, 'reprocess re-reads the live window ' + JSON.stringify(rp).slice(0, 160));
+  const series = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/gdelt-series30.json.gz')).toString());
+  ok(series.rows.some((x) => x.kind === 'series' && x.iso2 === 'UA') && series.rows.some((x) => x.kind === 'day'), 'series doc');
+}
+
+// Infra: feeds, geolocation, cache, nodes; then a second run uses the cache and keeps first_obs.
+{
+  const r = await M.runJob('infra', {});
+  ok(r.ok, 'infra ok ' + JSON.stringify(r).slice(0, 400));
+  const tm = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/threatmap.json.gz')).toString());
+  const nodes = tm.rows.filter((x) => x.kind === 'node');
+  ok(tm.layers.c2.listed === 2 && tm.layers.ioc.listed === 2 && tm.layers.src.listed === 1 && tm.layers.url.listed === 2, 'layer counts ' + JSON.stringify(tm.layers));
+  ok(nodes.length === 7 && nodes.every((n) => isFinite(n.lat) && isFinite(n.lon)), 'all nodes geolocated ' + nodes.length);
+  ok(nodes.find((n) => n.ip === '41.86.17.204').cc === 'TR', 'geojs fallback used');
+  ok(tm.rows.some((x) => x.kind === 'country' && x.cc === 'DE' && x.c2 === 1 && x.ioc === 1), 'country rollup');
+  ok(tm.rows.some((x) => x.kind === 'trend'), 'trend rows');
+  ok(nodes.every((n) => /^AS\d+$/.test(n.asn) && !('first_obs' in n) && Object.values(n).every((v) => v !== '' && v !== null)), 'node rows compact, with the AS number');
+  ok(nodes.find((n) => n.ip === '41.86.17.204').asn === 'AS64501', 'AS number from the geojs fallback');
+  ok(tm.layers.ioc.drawn === 2 && tm.layers.url.drawn === 2, 'drawn counts');
+  const calls = ipapiCalls;
+  failing.add('https://urlhaus-api.abuse.ch/');
+  const r2 = await M.runJob('infra', {});
+  failing.clear();
+  const tm2 = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/threatmap.json.gz')).toString());
+  ok(r2.ok && ipapiCalls === calls, 'second run served from geo cache');
+  ok(tm2.layers.url.ok === false && tm2.rows.filter((x) => x.kind === 'node' && x.layer === 'url').every((x) => x.stale), 'failed feed keeps its nodes, flagged stale');
+  const fo = (await db.query(`SELECT count(DISTINCT first_obs)::int AS n FROM ti.infra`)).rows[0].n;
+  ok(fo === 1, 'first_obs preserved across runs');
+  // Without a key the two abuse.ch layers report the gate and fetch nothing.
+  delete process.env.ABUSECH_AUTH_KEY;
+  const r4 = await M.runJob('infra', {});
+  const tm4 = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/threatmap.json.gz')).toString());
+  process.env.ABUSECH_AUTH_KEY = 'abuse-test-key';
+  ok(r4.ok && tm4.layers.ioc.gated && tm4.layers.url.gated && /Auth-Key/.test(tm4.layers.ioc.note) && tm4.layers.c2.ok && !tm4.layers.c2.note, 'no key: ThreatFox and URLhaus report the abuse.ch gate');
+}
+
+// New in 24 hours: source-dated listings until the collector has watched for a day, then first observations too.
+{
+  const tm = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/threatmap.json.gz')).toString());
+  const gen = Date.parse(tm.generated);
+  ok(tm.new_basis === 'source' && isFinite(Date.parse(tm.observing_since)), 'young baseline counts source listings only ' + tm.new_basis + ' ' + tm.observing_since);
+  ok(tm.rows.filter((x) => x.kind === 'node' && x.new).every((x) => x.first_seen && gen - Date.parse(x.first_seen) < 864e5), 'only source-dated listings are new before the baseline');
+  await db.query(`UPDATE ti.infra SET first_obs = first_obs - interval '2 days' WHERE NOT (layer = 'ioc' AND ip = '45.137.21.9'::inet)`);
+  const r3 = await M.runJob('infra', {});
+  const tm3 = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/threatmap.json.gz')).toString());
+  const fresh = tm3.rows.filter((x) => x.kind === 'node' && x.new).map((x) => x.layer + ':' + x.ip);
+  ok(r3.ok && tm3.new_basis === 'source+collector' && Date.parse(tm3.generated) - Date.parse(tm3.observing_since) >= 864e5, 'baseline complete after a day of observation ' + tm3.observing_since);
+  ok(fresh.includes('ioc:45.137.21.9') && tm3.layers.ioc.new_24h >= 1, 'a first observation in the last 24 hours counts once the baseline is complete ' + fresh);
+  ok(!fresh.includes('c2:185.220.101.7'), 'an older observation of an older listing is not new');
+  // The same rule on synthetic nodes, and the live fallback (no observations).
+  const now = Date.now(), iso = (h) => new Date(now - h * 3600e3).toISOString();
+  const mk = (ip, fs, fo) => ({ layer: 'ioc', ip, port: 1, lat: 1, lon: 1, cc: 'DE', family: 'X', first_seen: fs, first_obs: fo });
+  const fetched = Object.fromEntries(['c2', 'ioc', 'src', 'url'].map((l) => [l, { ok: true, status: 200, rows: [] }]));
+  const nodes = [mk('1.1.1.1', iso(2), iso(1)), mk('2.2.2.2', iso(72), iso(1)), mk('3.3.3.3', null, iso(30)), mk('4.4.4.4', null, iso(3))];
+  const a = M.buildThreatmap({ nodes, fetched, trend: [], geoStats: {}, obsSince: iso(3) });
+  ok(a.new_basis === 'source' && a.layers.ioc.new_24h === 1, 'young baseline: the source-dated listing alone is new ' + a.layers.ioc.new_24h);
+  const b = M.buildThreatmap({ nodes, fetched, trend: [], geoStats: {}, obsSince: iso(30) });
+  ok(b.new_basis === 'source+collector' && b.layers.ioc.new_24h === 3, 'complete baseline: listed or first observed in 24 hours ' + b.layers.ioc.new_24h);
+  const c = M.buildThreatmap({ nodes: nodes.map((n) => ({ ...n, first_obs: null })), fetched, trend: [], geoStats: {} });
+  ok(c.new_basis === 'source' && c.observing_since === null && c.layers.ioc.new_24h === 1, 'live fallback: source times only');
+}
+
+// Health, snapshots, IODA, retention.
+{
+  failing.add('https://api.first.org/');
+  const h = await M.runJob('health', {});
+  failing.clear();
+  ok(h.ok && h.down.includes('epss') && h.infocon === 'green', 'health ' + JSON.stringify(h).slice(0, 300));
+  const hd = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/health.json.gz')).toString());
+  ok(hd.rows.find((x) => x.kind === 'feed' && x.feed === 'epss').failing_streak === 1 && hd.rows.find((x) => x.feed === 'greynoise').ok === true, 'health doc');
+  ok(hd.rows.some((x) => x.kind === 'job' && x.job === 'gdelt'), 'health doc lists jobs');
+  const s = await M.runJob('snap', {});
+  ok(s.ok && s['snap-ransomware'].ok && s['snap-cyberattacks'].ok && s['snap-epss'].ok && s['snap-threatfox'].ok && s['snap-lanes'].ok && s['snap-ofac'].ok, 'snap ' + JSON.stringify(s).slice(0, 400));
+  const ln = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/snap-lanes.json.gz')).toString());
+  ok(ln.type === 'lanes' && ln.count === 2 && ln.rows[0].conflict === 'russia-ukraine' && ln.rows.find((r) => r.conflict === 'usa-iran').daily_title === 'Daily page' && ln.license === 'CC BY 4.0', 'snap-lanes');
+  const of = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/snap-ofac.json.gz')).toString());
+  ok(of.type === 'ofac' && of.count === 1 && of.pages_read === 1 && of.rows[0].cyber === 'Yes' && of.rows[0].theaters === 'T-HRM' && of.rows[0].category_slug === 'sanctions-list-updates', 'snap-ofac reads the first page when the second is refused');
+  const ca = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/snap-cyberattacks.json.gz')).toString());
+  ok(ca.type === 'recentcyberattacks' && ca.rows[0].cc === 'IE' && ca.rows[0].cc_basis === 'code+domain' && ca.rows[0].claimed_by === 'qilin' && ca.placed === 1
+    && !/infostealer|ne pas garder|corbyrock\.ie/.test(JSON.stringify(ca)), 'snap-cyberattacks settles IR as Ireland and drops domain, summary and infostealer data');
+  const rw = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/snap-ransomware.json.gz')).toString());
+  ok(rw.rows[0].group === 'qilin' && !JSON.stringify(rw).includes('should be dropped'), 'snap drops victim names');
+  const io = await M.runJob('ioda', {});
+  ok(io.ok && io.events === 3, 'ioda keeps one row per signal ' + JSON.stringify(io));
+  const mt = await M.runJob('maritime', {});
+  const md = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/maritime.json.gz')).toString());
+  const src = Object.fromEntries(md.sources.map((x) => [x.id, x]));
+  ok(mt.ok && src.MARAD.status === 403 && /Akamai/.test(src.MARAD.error) && /Cloudflare/.test(src.UKMTO.error), 'maritime: refusals recorded as refusals ' + JSON.stringify(mt));
+  ok(src.NAVWARN.stale && /2024-05-10/.test(src.NAVWARN.error) && !md.rows.some((r) => r.kind === 'navwarn') && !md.navwarn, 'maritime: a frozen warning list is reported stale and kept off the map');
+  ok(src.ASAM.stale && src.ASAM.newest === '2026-03-01' && md.asam_90d === 0 && md.stale_sources.length === 2, 'maritime: an empty ASAM window is checked against the newest report');
+  const ret = await M.runJob('retention', {});
+  ok(ret.ok && ret.db_bytes > 0, 'retention');
+}
+
+// Leases: a held lease skips.
+{
+  await db.query(`UPDATE ti.lease SET holder = 'other', until = now() + interval '1 minute' WHERE job = 'snap'`);
+  const r = await M.runJob('snap', {});
+  ok(!r.ok && r.skipped, 'lease respected');
+  await db.query(`UPDATE ti.lease SET until = 'epoch' WHERE job = 'snap'`);
+}
+
+// HTTP surface: Vercel OIDC bearer tokens.
+{
+  delete process.env.TI_KEY;
+  const call = (p, init = {}) => M.default.fetch(new Request('https://fn.example' + p, init));
+  const bearer = (t) => ({ headers: { authorization: 'Bearer ' + t } });
+  ok((await call('/doc/threatmap')).status === 401, 'doc requires a caller identity');
+  const d = await call('/doc/threatmap', bearer(mint()));
+  ok(d.status === 200 && JSON.parse(zlib.gunzipSync(Buffer.from(await d.arrayBuffer()))).rows.length > 0, 'doc served gzipped to a verified Vercel token');
+  ok((await call('/doc/threatmap', bearer(mint({ project_id: 'prj_other' })))).status === 401, 'other project refused');
+  ok((await call('/doc/threatmap', bearer(mint({ environment: 'development' })))).status === 401, 'development environment refused');
+  ok((await call('/doc/threatmap', bearer(mint({ exp: Math.floor(Date.now() / 1000) - 600 })))).status === 401, 'expired token refused');
+  ok((await call('/doc/threatmap', bearer(mint({ iss: 'https://evil.example' })))).status === 401, 'foreign issuer refused without fetching its keys');
+  ok((await call('/doc/threatmap', bearer(mint({ aud: 'https://vercel.com/other-team' })))).status === 401, 'wrong audience refused');
+  const { privateKey: OTHER } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  ok((await call('/doc/threatmap', bearer(mint({}, OTHER)))).status === 401, 'token signed by another key refused');
+  ok((await call('/doc/threatmap', bearer(mint({}, OTHER, 'unknown-kid')))).status === 401, 'unknown kid refused');
+  const tok = mint(), parts = tok.split('.');
+  const tampered = parts[0] + '.' + b64u(JSON.stringify({ ...JSON.parse(Buffer.from(parts[1], 'base64')), project_id: 'prj_eISaKjcBNEHSxvuO7OvW6Nf94s5P', environment: 'production', owner_id: 'team_x' })) + '.' + parts[2];
+  ok((await call('/doc/threatmap', bearer(tampered))).status === 401, 'tampered claims refused');
+  ok(jwksCalls >= 1 && jwksCalls <= 3, 'JWKS cached ' + jwksCalls);
+  ok((await call('/doc/../x', bearer(mint()))).status !== 200, 'doc name validated');
+  ok((await call('/doc/nothing', bearer(mint()))).status === 404, 'missing doc 404');
+  ok((await call('/', { method: 'POST', body: '{}' })).status === 403, 'unsigned trigger refused');
+  process.env.TI_KEY = 'k'.repeat(48);
+  ok((await call('/status', { headers: { 'x-ti-key': 'k'.repeat(48) } })).status === 200, 'operator key accepted when configured');
+  const t = await call('/', { method: 'POST', headers: { 'x-neon-trigger-invocation-id': 'abc', 'content-type': 'application/json' }, body: JSON.stringify({ version: 1, trigger: { type: 'schedule' }, data: { scheduled_at: '2026-10-17T18:15:00Z' } }) });
+  const tj = await t.json();
+  ok(t.status === 200 && tj.jobs.map((j) => j.job).join() === 'gdelt,health,ioda,lists,leaksites,links', 'trigger plan at :15 ' + tj.jobs.map((j) => j.job));
+  const st = await (await call('/status', bearer(mint()))).json();
+  ok(st.gdelt_files.files >= 288 && st.version === M.VERSION && st.runs.length > 0, 'status ' + JSON.stringify(st.gdelt_files));
+  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:00:00Z'))) === '["gdelt","infra","snap"]' && JSON.stringify(M.plan(new Date('2026-10-17T18:45:00Z'))) === '["gdelt","health","ioda","retention","fires","maritime","blogs"]', 'plan');
+}
+
+console.log(`PASS ${pass} checks; sql calls ${sqlCalls}; ip-api calls ${ipapiCalls}; geojs calls ${geojsCalls}; bucket objects ${bucket.size}`);
+for (const [k, v] of bucket) if (k.includes('/docs/')) console.log('  ', k, v.length, 'bytes gz');
