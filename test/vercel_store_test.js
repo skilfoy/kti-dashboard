@@ -152,6 +152,13 @@ function call(file, query, headers = { 'x-vercel-oidc-token': 'test.oidc.token' 
   r = await call('health.js', {});
   ok(r.code === 200 && r.body.collector.ok && r.body.collector.infocon === 'green' && r.body.collector.feeds.length === 1 && r.body.oidc === true && r.body.upstreams.feodo && !('gdelt_doc_api' in r.body.upstreams)
     && r.body.upstreams.threatfox.status === 410 && /21 Oct 2026/.test(r.body.upstreams.threatfox.error), 'health with collector, no DOC API probe, ThreatFox closure stated');
+  docs.health.rows.push({ kind: 'feed', feed: 'threatfox', ok: true, status: 200, ms: 240, last_ok: iso(3), failing_streak: 0 });
+  r = await call('health.js', {});
+  ok(r.body.upstreams.threatfox.ok === true && r.body.upstreams.threatfox.via === 'collector (Auth-Key)', 'ThreatFox status from the collector\'s authenticated check');
+  docs.health.checked_at = iso(200);
+  r = await call('health.js', {});
+  ok(r.body.upstreams.threatfox.ok === false && r.body.upstreams.threatfox.status === 410, 'a stale collector check falls back to the closure note');
+  docs.health.checked_at = iso(3); docs.health.rows.pop();
 
   // Stale fallbacks for the dashboard's default live calls.
   state.upstreamDown.add('api.ransomware.live'); state.upstreamDown.add('api.first.org'); state.upstreamDown.add('threatfox.abuse.ch');

@@ -38,13 +38,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -59,7 +59,7 @@ jobs:
       # other run restores the newest one.
       - name: Restore built feeds
         id: feeds
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: feeds
           key: feeds-${{ github.run_id }}
@@ -81,7 +81,7 @@ jobs:
 
       - name: Save built feeds
         if: steps.rebuild.outcome == 'success'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: feeds
           key: feeds-${{ github.run_id }}

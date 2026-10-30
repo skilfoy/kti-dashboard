@@ -28,5 +28,12 @@ module.exports = handle(async (req, res) => {
         feeds: (s.doc.rows || []).filter((r) => r.kind === 'feed'), jobs: (s.doc.rows || []).filter((r) => r.kind === 'job'),
         volume: (s.doc.rows || []).filter((r) => r.kind === 'volume') }
     : { ok: false, reason: s.reason };
+  // ThreatFox answers only with an Auth-Key, which the collector holds: report its authenticated check (every 30 minutes)
+  // when it is recent, so the page counts ThreatFox as up while the collector reads it.
+  const tf = collector.ok && collector.feeds.find((r) => r.feed === 'threatfox');
+  if (tf && tf.last_ok && Date.now() - Date.parse(collector.checked_at) < 90 * 60000) {
+    out.threatfox = { ok: !!tf.ok, status: tf.status, ms: tf.ms, ttl: 300, via: 'collector (Auth-Key)', checked_at: collector.checked_at,
+      failing_streak: tf.failing_streak || 0 };
+  }
   sendJson(res, 200, { service: 'threat-feeds', at: new Date().toISOString(), upstreams: out, collector, oidc: store.hasToken(req) }, 30, 120);
 });
