@@ -1,5 +1,5 @@
 # Build, test and deploy the site and the threat-feeds service to Vercel (production).
-#   push to main       validate, assemble with the last built feeds, test, deploy
+#   push to main       validate, assemble with the last built feeds (rebuilt first when over nine hours old), test, deploy
 #   pull request       validate, assemble, test (no deploy)
 #   schedule           three times a day: rebuild every machine-built dataset from its sources first, then as a push
 #   manual run         as a push; tick "rebuild_feeds" to rebuild the feeds too
@@ -65,11 +65,29 @@ jobs:
           key: feeds-${{ github.run_id }}
           restore-keys: feeds-
 
+      # GitHub starts scheduled runs on a best-effort basis and can start one hours late or skip a slot under load, so a
+      # push to main rebuilds the feeds itself when the last rebuild attempt is more than nine hours old.
+      - name: Check the age of the built feeds
+        id: age
+        run: |
+          python3 -I - >> "$GITHUB_OUTPUT" <<'EOF'
+          import datetime as dt, json
+          try:
+              at = json.load(open("feeds/_build.json"))["attempted"]
+              hours = (dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(at.replace("Z", "+00:00"))).total_seconds() / 3600
+          except (OSError, ValueError, KeyError, TypeError):
+              hours = float("inf")
+          print(f"hours={hours:.1f}")
+          print("stale=" + ("true" if hours > 9 else "false"))
+          EOF
+
       # A failed rebuild leaves the restored datasets in place, so the site still deploys with the last good feeds;
       # site_build.py stops the run when a dataset is missing altogether.
       - name: Rebuild feeds from their sources
         id: rebuild
-        if: github.event_name == 'schedule' || inputs.rebuild_feeds || steps.feeds.outputs.cache-matched-key == ''
+        if: >-
+          github.event_name == 'schedule' || inputs.rebuild_feeds || steps.feeds.outputs.cache-matched-key == '' ||
+          (github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.age.outputs.stale == 'true')
         continue-on-error: true
         run: |
           python3 -I pipeline/build_feeds.py "$RUNNER_TEMP/work" feeds "$(date -u +%F)"

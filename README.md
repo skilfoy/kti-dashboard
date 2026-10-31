@@ -54,7 +54,7 @@ Tests: `npm i --no-save @electric-sql/pglite@0.5.8 playwright@1.64.0`, then `nod
 
 Set up once: the `VERCEL_TOKEN` Actions secret (a Vercel token scoped to the skilfoys-projects team) and a CNAME for `intel` at Squarespace, kilfoycyber.com's DNS host, pointing to the target the workflow's "Attach the public domain" step reports. That step attaches the domain to the Vercel project if it is missing.
 
-Every push to `main` deploys, and the schedule rebuilds the feeds and redeploys three times a day. Run "Site" by hand with "rebuild_feeds" ticked to rebuild out of schedule. Roll back from the Vercel dashboard (Instant Rollback) or by reverting the commit.
+Every push to `main` deploys, and the schedule rebuilds the feeds and redeploys three times a day. GitHub starts scheduled runs on a best-effort basis and can run one late or skip it, so a push to `main` also rebuilds the feeds first when the last rebuild attempt is more than nine hours old. Run "Site" by hand with "rebuild_feeds" ticked to rebuild out of schedule. Roll back from the Vercel dashboard (Instant Rollback) or by reverting the commit.
 
 ## Daily reassessment
 
