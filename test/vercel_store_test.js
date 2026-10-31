@@ -69,14 +69,14 @@ global.fetch = async (url, opts = {}) => {
   throw new Error('unexpected ' + u);
 };
 
-function call(file, query, headers = { 'x-vercel-oidc-token': 'test.oidc.token' }, host = OPERATOR) {
+function call(file, query, headers = { 'x-vercel-oidc-token': 'test.oidc.token' }, host = OPERATOR, method = 'GET') {
   headers = { host, ...headers };
   for (const k of Object.keys(require.cache)) if (k.startsWith(TF) && !k.endsWith('countries.js')) delete require.cache[k];
   const handler = require(path.join(TF, 'api', file));
   const qs = new URLSearchParams(query).toString();
   return new Promise((resolve) => {
     const res = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, status(c) { this.code = c; return this; }, send(b) { resolve({ code: this.code, headers: this.headers, body: JSON.parse(b) }); }, end() { resolve({ code: this.code }); } };
-    handler({ method: 'GET', query, headers, url: '/api/' + file.replace('.js', '') + (qs ? '?' + qs : '') }, res);
+    handler({ method, query, headers, url: '/api/' + file.replace('.js', '') + (qs ? '?' + qs : '') }, res);
   });
 }
 
@@ -159,6 +159,11 @@ function call(file, query, headers = { 'x-vercel-oidc-token': 'test.oidc.token' 
   r = await call('health.js', {});
   ok(r.body.upstreams.threatfox.ok === false && r.body.upstreams.threatfox.status === 410, 'a stale collector check falls back to the closure note');
   docs.health.checked_at = iso(3); docs.health.rows.pop();
+  // Uptime monitors probe with HEAD; it answers as GET does (Node drops the body), and writes stay refused.
+  r = await call('health.js', {}, undefined, OPERATOR, 'HEAD');
+  ok(r.code === 200 && r.body.service === 'threat-feeds', 'HEAD on health answers as GET');
+  r = await call('health.js', {}, undefined, OPERATOR, 'POST');
+  ok(r.code === 405 && r.body.error === 'method_not_allowed', 'POST is refused with 405');
 
   // Stale fallbacks for the dashboard's default live calls.
   state.upstreamDown.add('api.ransomware.live'); state.upstreamDown.add('api.first.org'); state.upstreamDown.add('threatfox.abuse.ch');

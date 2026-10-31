@@ -4,7 +4,7 @@ const UA = 'threat-feeds/1.0 (+https://github.com/skilfoy; OSINT dashboard proxy
 // Open to any origin: the data is public and any page or tool may read it.
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
@@ -62,7 +62,8 @@ function handle(fn) {
   return async (req, res) => {
     res.__req = req;
     if (req.method === 'OPTIONS') { cors(res); res.status(204).end(); return; }
-    if (req.method !== 'GET') { sendJson(res, 405, { error: 'method_not_allowed' }, 0); return; }
+    // HEAD runs the GET handler; Node's HTTP server sends the headers and drops the body.
+    if (req.method !== 'GET' && req.method !== 'HEAD') { sendJson(res, 405, { error: 'method_not_allowed' }, 0); return; }
     try {
       await fn(req, res);
     } catch (e) {
