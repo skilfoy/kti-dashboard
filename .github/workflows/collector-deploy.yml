@@ -1,0 +1,98 @@
+# Collector deploy preparation. On a change to the collector (neon/, its part list or its build script) and by hand:
+# build neon/collector.mjs, run the offline suite, and keep the build with its deploy plan as an artifact. On main, a
+# second job in the protected environment "collector-production" (required reviewer: Sean) checks the artifact's
+# SHA-256 and writes the exact production steps to the run summary once he approves. Neither job touches production:
+# no secret is read, no bucket upload, no function deploy, no environment change. Those steps stay Sean's (runbook 8).
+name: Collector deploy
+
+on:
+  push:
+    branches: [main]
+    paths: ["neon/**", "lib/collector.js", "pipeline/collector_build.py", ".github/workflows/collector-deploy.yml"]
+  pull_request:
+    paths: ["neon/**", "lib/collector.js", "pipeline/collector_build.py", ".github/workflows/collector-deploy.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: collector-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      sha256: ${{ steps.build.outputs.sha256 }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install
+        run: |
+          python3 -m pip install --disable-pip-version-check pyyaml==6.0.2
+          npm ci
+          npm i --no-save @electric-sql/pglite@0.5.8
+
+      - name: Build the collector
+        id: build
+        run: |
+          python3 pipeline/collector_build.py . | tee build.txt
+          sha=$(awk '/^collector.mjs sha256/ {print $3}' build.txt)
+          test ${#sha} -eq 64
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+          echo "$sha  collector.mjs" > neon/collector.mjs.sha256
+
+      - name: Offline tests
+        run: node test/run_all.mjs
+
+      - name: Deploy plan
+        run: |
+          node neon/deploy_plan.mjs . "$GITHUB_SHA" > neon/deploy-plan.md
+          cat neon/deploy-plan.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: collector-${{ steps.build.outputs.sha256 }}
+          path: |
+            neon/collector.mjs
+            neon/collector.mjs.sha256
+            neon/loader.mjs
+            neon/deploy-plan.md
+          retention-days: 30
+          if-no-files-found: error
+
+  # Approval gate. Configure the environment once (Settings, Environments, "collector-production": required reviewer
+  # Sean, deployment branch main). Approval releases this job, which verifies the artifact and prints the plan; the
+  # production steps in it are then run by Sean with the Neon connector and the operator endpoint.
+  prepare-production:
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: collector-production
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: collector-${{ needs.build.outputs.sha256 }}
+          path: bundle
+
+      - name: Verify the bundle and print the production steps
+        env:
+          WANT: ${{ needs.build.outputs.sha256 }}
+        run: |
+          got=$(sha256sum bundle/collector.mjs | cut -d' ' -f1)
+          echo "built $WANT, artifact $got"
+          test "$got" = "$WANT"
+          (cd bundle && sha256sum -c collector.mjs.sha256)
+          { echo "Approved for production preparation. Bundle verified: \`$got\`."; echo; cat bundle/deploy-plan.md; } >> "$GITHUB_STEP_SUMMARY"

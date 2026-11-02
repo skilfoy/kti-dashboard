@@ -13,3 +13,5 @@ test-results/
 e2e_shots/
 .DS_Store
 .env*
+neon/collector.mjs.sha256
+neon/deploy-plan.md
