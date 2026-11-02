@@ -107,9 +107,11 @@ function mint(over = {}, key = PRIV, kid = 'test-kid') {
 let jwksCalls = 0;
 const resp = (status, body, headers = {}) => new Response(typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body), { status, headers });
 const failing = new Set();
+let EXTRA = null; // per-test upstream overrides: (url, opts, headers) => Response | null
 globalThis.fetch = async (url, opts = {}) => {
   const u = String(url);
   const h = Object.fromEntries(Object.entries(opts.headers || {}).map(([k, v]) => [k.toLowerCase(), v]));
+  if (EXTRA) { const x = await EXTRA(u, opts, h); if (x) return x; }
   if (u === 'https://api.c-14.us-east-1.aws.neon.tech/sql') {
     assert.equal(h['neon-connection-string'], process.env.DATABASE_URL);
     const body = JSON.parse(opts.body);
@@ -229,10 +231,42 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   let r, guard = 0;
   do { r = await M.runJob('gdelt', { backfill: true, budgetMs: 600000 }); guard++; ok(r.ok, 'gdelt run ok ' + JSON.stringify(r).slice(0, 300)); } while (r.remaining > 0 && guard < 6);
   ok(r.remaining === 0, 'backfill complete');
+  // The two exports GDELT never served answer 404: pending (stored failed) at first, missing only once settled and
+  // asked three times, each ask after its back-off. Clock movement is simulated by moving processed_at back.
+  const st = async () => Object.fromEntries((await db.query(`SELECT status, count(*)::int AS n FROM ti.gdelt_file GROUP BY 1`)).rows.map((x) => [x.status, x.n]));
+  ok((await st()).failed === 2 && !(await st()).missing, 'a first 404 is pending, not missing ' + JSON.stringify(await st()));
+  const wait = await M.runJob('gdelt', {});
+  ok(wait.ok && wait.processed === 0 && wait.retry.waiting === 2, 'pending slots wait out their back-off ' + JSON.stringify(wait.retry));
+  for (let k = 0; k < 2; k++) {
+    await db.query(`UPDATE ti.gdelt_file SET processed_at = processed_at - interval '7 hours' WHERE status = 'failed'`);
+    const rr = await M.runJob('gdelt', {});
+    ok(rr.ok && rr.processed === 2 && (k === 0 ? rr.files_pending === 2 && rr.retry.pending_slots.length === 2 : rr.files_missing === 2 && rr.retry.missing_slots.length === 2),
+      'retry ' + (k + 2) + ': ' + JSON.stringify({ p: rr.files_pending, m: rr.files_missing }));
+  }
+  ok(M.gdeltStatus({ ok: false, status: 404 }, new Date(Date.now() - 3600000), 5) === 'pending' && M.gdeltStatus({ ok: false, status: 404 }, new Date(Date.now() - 7 * 3600000), 1) === 'pending'
+    && M.gdeltStatus({ ok: false, status: 404 }, new Date(Date.now() - 7 * 3600000), 2) === 'missing' && M.gdeltStatus({ ok: false, status: 503 }, new Date(0), 7) === 'failed', 'settle rule');
+  ok(M.gdeltBackoffMs(1) === 900000 && M.gdeltBackoffMs(3) === 3600000 && M.gdeltBackoffMs(9) === 21600000, 'back-off doubles to six hours');
   const files = (await db.query(`SELECT status, count(*)::int AS n FROM ti.gdelt_file GROUP BY 1 ORDER BY 1`)).rows;
   ok(files.find((f) => f.status === 'missing').n === 2 && files.find((f) => f.status === 'ok').n === 286, 'file statuses ' + JSON.stringify(files));
   const again = await M.runJob('gdelt', {});
   ok(again.ok && again.processed === 0, 'incremental run finds nothing new');
+  // Recheck: a slot recorded missing by the earlier first-404 rule that GDELT now serves is recovered, a few per run.
+  const lateSlot = stamp(new Date(latestD.getTime() - 50 * 900000));
+  gdelt.set(lateSlot, gdelt.get(LATEST));
+  await db.query(`UPDATE ti.gdelt_file SET processed_at = processed_at - interval '7 hours' WHERE status = 'missing'`);
+  const heal = await M.runJob('gdelt', {});
+  ok(heal.ok && heal.retry.rechecked === 2 && heal.retry.recovered === 1 && heal.retry.still_missing === 1 && heal.processed === 2, 'recheck recovers a served slot ' + JSON.stringify(heal.retry));
+  const healed = (await db.query(`SELECT status, attempts FROM ti.gdelt_file WHERE slot = $1::timestamptz`, [new Date(latestD.getTime() - 50 * 900000).toISOString()])).rows[0];
+  ok(healed.status === 'ok' && healed.attempts === 4, 'recovered slot stored ok ' + JSON.stringify(healed));
+  const still = await M.runJob('gdelt', {});
+  ok(still.ok && still.retry.rechecked === 0, 'a slot just rechecked waits out its back-off');
+  gdelt.delete(lateSlot);
+  await db.query(`UPDATE ti.gdelt_file SET status = 'missing', scanned = 0, kept = 0 WHERE slot = $1::timestamptz`, [new Date(latestD.getTime() - 50 * 900000).toISOString()]);
+  await db.query(`DELETE FROM ti.gdelt_country WHERE slot = $1::timestamptz`, [new Date(latestD.getTime() - 50 * 900000).toISOString()]);
+  await db.query(`DELETE FROM ti.gdelt_cell WHERE slot = $1::timestamptz`, [new Date(latestD.getTime() - 50 * 900000).toISOString()]);
+  await db.query(`DELETE FROM ti.gdelt_event WHERE slot = $1::timestamptz`, [new Date(latestD.getTime() - 50 * 900000).toISOString()]);
+  await db.query(`DELETE FROM ti.gdelt_flow WHERE slot = $1::timestamptz`, [new Date(latestD.getTime() - 50 * 900000).toISOString()]);
+  await M.runJob('gdelt', { rebuild: true });
   const doc = M.gdeltSeries ? JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/gdelt-w24b48.json.gz')).toString()) : null;
   ok(doc && doc.coverage === 1 && doc.coverage_live === 1 && doc.files_ok === 286 && doc.files_missing === 2, 'window coverage ' + JSON.stringify({ c: doc.coverage, l: doc.coverage_live }));
 
@@ -330,12 +364,25 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
 // Health, snapshots, IODA, retention.
 {
   failing.add('https://api.first.org/');
+  EXTRA = async (u) => (u.startsWith('https://api.gdeltproject.org/api/v2/doc/') ? resp(429, 'Please limit requests') : null);
   const h = await M.runJob('health', {});
   failing.clear();
+  EXTRA = null;
   ok(h.ok && h.down.includes('epss') && h.infocon === 'green', 'health ' + JSON.stringify(h).slice(0, 300));
+  // Documented gaps (MARAD 403, UKMTO 403, NGA warnings 200 but frozen, GDELT DOC API 429) stay out of the down list.
+  const GAPS = ['gdelt_doc_api', 'marad_msci', 'nga_msi', 'ukmto'];
+  ok(JSON.stringify(h.known_gaps.slice().sort()) === JSON.stringify(GAPS) && !h.down.some((f) => GAPS.includes(f)) && h.down.includes('epss'),
+    'known gaps kept out of the down list ' + JSON.stringify({ down: h.down, gaps: h.known_gaps }));
   const hd = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/health.json.gz')).toString());
   ok(hd.rows.find((x) => x.kind === 'feed' && x.feed === 'epss').failing_streak === 1 && hd.rows.find((x) => x.feed === 'greynoise').ok === true, 'health doc');
   ok(hd.rows.some((x) => x.kind === 'job' && x.job === 'gdelt'), 'health doc lists jobs');
+  const fr = Object.fromEntries(hd.rows.filter((x) => x.kind === 'feed').map((x) => [x.feed, x]));
+  ok(fr.marad_msci.state === 'known_gap' && fr.marad_msci.ok === false && /Akamai/.test(fr.marad_msci.gap) && fr.nga_msi.state === 'known_gap' && fr.nga_msi.ok === true
+    && /2024-05-10/.test(fr.nga_msi.gap) && fr.epss.state === 'down' && fr.feodo.state === 'up' && JSON.stringify(hd.down) === JSON.stringify(h.down) && hd.known_gaps.length === 4 && hd.infocon === 'green',
+    'health doc: state per feed, ok unchanged, down and known_gaps lists');
+  ok(M.feedState({ feed: 'marad_msci', ok: true, status: 200 }) === 'up' && M.feedState({ feed: 'marad_msci', ok: false, status: 404 }) === 'down'
+    && M.feedState({ feed: 'ukmto', ok: false, status: 403 }) === 'known_gap' && M.feedState({ feed: 'gdelt_doc_api', ok: false, status: 0 }) === 'down'
+    && M.feedState({ feed: 'nga_msi', ok: false, status: 503 }) === 'down' && M.feedState({ feed: 'epss', ok: false, status: 403 }) === 'down', 'a changed answer leaves the gap');
   const s = await M.runJob('snap', {});
   ok(s.ok && s['snap-ransomware'].ok && s['snap-cyberattacks'].ok && s['snap-epss'].ok && s['snap-threatfox'].ok && s['snap-lanes'].ok && s['snap-ofac'].ok, 'snap ' + JSON.stringify(s).slice(0, 400));
   const ln = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/snap-lanes.json.gz')).toString());
@@ -355,8 +402,71 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(mt.ok && src.MARAD.status === 403 && /Akamai/.test(src.MARAD.error) && /Cloudflare/.test(src.UKMTO.error), 'maritime: refusals recorded as refusals ' + JSON.stringify(mt));
   ok(src.NAVWARN.stale && /2024-05-10/.test(src.NAVWARN.error) && !md.rows.some((r) => r.kind === 'navwarn') && !md.navwarn, 'maritime: a frozen warning list is reported stale and kept off the map');
   ok(src.ASAM.stale && src.ASAM.newest === '2026-03-01' && md.asam_90d === 0 && md.stale_sources.length === 2, 'maritime: an empty ASAM window is checked against the newest report');
+  const h2 = await M.runJob('health', {});
+  const vr = Object.fromEntries(JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/health.json.gz')).toString()).rows.filter((x) => x.kind === 'volume').map((x) => [x.feed, x]));
+  ok(h2.ok && vr.marad.state === 'known_gap' && vr.asam.state === 'known_gap' && vr.navwarn_security.state === 'known_gap' && !vr['snap-epss'].state, 'gap sources\' zero volumes marked known_gap');
   const ret = await M.runJob('retention', {});
   ok(ret.ok && ret.db_bytes > 0, 'retention');
+}
+
+// Blogs: per-source deadline, one retry of a transient failure, a capped pool, per-source failures in the run detail, and
+// a document materially smaller than the last good one is held.
+{
+  const N = 60, BL = (i) => `https://blog${i}.example/`;
+  const readme = '<table><tr><td>Name</td><td>Type</td><td>Subscribe</td></tr>' + Array.from({ length: N }, (_, i) => `<tr><td>Blog ${i}</td><td>Vendor</td><td><a href='${BL(i)}'>x</a></td></tr>`).join('') + '</table>';
+  const day = new Date(Date.now() - 86400000).toUTCString();
+  const rss = (i) => `<rss><channel><item><title>Post ${i}</title><link>${BL(i)}p/${i}</link><pubDate>${day}</pubDate></item><item><title>Post ${i}b</title><link>${BL(i)}p/${i}b</link><pubDate>${day}</pubDate></item></channel></rss>`;
+  const hits = new Map(), inflight = { now: 0, max: 0 };
+  let mode = 'normal', flaky = false;
+  const slow = (signal, ms) => new Promise((res, rej) => { const t = setTimeout(res, ms); signal && signal.addEventListener('abort', () => { clearTimeout(t); const e = new Error('aborted'); e.name = 'AbortError'; rej(e); }); });
+  EXTRA = async (u, opts) => {
+    if (u === M.BLOG_LIST) return resp(200, readme);
+    const m = u.match(/^https:\/\/blog(\d+)\.example\/(.*)$/);
+    if (!m) return null;
+    const i = +m[1], rest = m[2];
+    hits.set(u, (hits.get(u) || 0) + 1);
+    inflight.now++; inflight.max = Math.max(inflight.max, inflight.now);
+    try {
+      await slow(opts.signal, 20);
+      if (mode === 'down' && i < 30) return resp(503, 'down');
+      if (i === 1) { await slow(opts.signal, 5000); return resp(200, rss(i)); }      // hangs past the per-source deadline
+      if (i === 2 && rest === 'feed' && flaky) { flaky = false; return resp(503, 'busy'); } // transient: one retry succeeds
+      if (i === 3) return resp(404, 'gone');                                          // no feed anywhere
+      if (rest === '') return resp(200, `<html><head><link rel="alternate" type="application/rss+xml" href="/feed"></head></html>`);
+      if (rest === 'feed') return resp(200, rss(i));
+      return resp(404, 'no');
+    } finally { inflight.now--; }
+  };
+  const lim = { PER_SOURCE_MS: 1500, CONCURRENCY: 4, BUDGET_MS: 8000, RETRY_DELAY_MS: 30 };
+  const b1 = await M.runJob('blogs', { blogLimits: lim });
+  ok(b1.ok && b1.read === 40 && b1.with_feed === 38 && b1.failed === 2, 'blogs first run ' + JSON.stringify({ read: b1.read, wf: b1.with_feed, f: b1.failed, held: b1.held }));
+  ok(inflight.max <= 4, 'blogs pool capped at the concurrency limit ' + inflight.max);
+  const why = Object.fromEntries(b1.failures.map((f) => [f.name, f.why]));
+  ok(why['Blog 1'] === 'source deadline' && /home page 404|no feed found/.test(why['Blog 3']) && b1.failures.every((f) => f.ms < 2500), 'per-source failures recorded with their reason ' + JSON.stringify(why));
+  const doc1 = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/blogs.json.gz')).toString());
+  ok(doc1.blogs_ok === 38 && b1.published, 'first blogs document published');
+  // Blog 2's stored feed answers 503 once: retried once, read on the second ask.
+  hits.clear();
+  flaky = true;
+  const b2 = await M.runJob('blogs', { blogLimits: lim });
+  ok(b2.ok && b2.retried >= 1 && hits.get('https://blog2.example/feed') === 2 && !b2.failures.some((f) => f.name === 'Blog 2'), 'one retry of a transient feed failure ' + JSON.stringify({ r: b2.retried, h: hits.get('https://blog2.example/feed') }));
+  ok(b2.ms < lim.BUDGET_MS + lim.PER_SOURCE_MS + 1000, 'run ends within budget plus one source deadline ' + b2.ms);
+  // Half the sources fail with their stored feeds already given up on (fails >= 3): the new document would lose 27
+  // working feeds, so it is held, the run fails with the reason, and the last good document stays.
+  await db.query(`UPDATE ti.blog SET fails = 3`);
+  const before = bucket.get('ti-docs/docs/blogs.json.gz');
+  mode = 'down';
+  const b3 = await M.runJob('blogs', { blogLimits: lim });
+  ok(!b3.ok && /held/.test(b3.error) && b3.held && /working feed fell from 38 to \d+/.test(b3.held.reason) && b3.failures.length >= 25 && !b3.published,
+    'shrunken document held ' + JSON.stringify({ ok: b3.ok, e: b3.error, held: b3.held }));
+  ok(bucket.get('ti-docs/docs/blogs.json.gz') === before, 'the last good blogs document stays in place');
+  const lastRun = (await db.query(`SELECT ok, detail FROM ti.run WHERE job = 'blogs' ORDER BY id DESC LIMIT 1`)).rows[0];
+  ok(lastRun.ok === false && lastRun.detail.held && lastRun.detail.failures.length > 0, 'held run recorded with its per-source failures');
+  ok(M.blogsShrink({ blogs_ok: 40, rows: [] }, { blogs_ok: 37, rows: [] }) === null && /fell from 40 to 30/.test(M.blogsShrink({ blogs_ok: 40, rows: [] }, { blogs_ok: 30, rows: [] }))
+    && /items .* fell from 100 to 50/.test(M.blogsShrink({ blogs_ok: 40, rows: Array(100).fill({ kind: 'item' }) }, { blogs_ok: 40, rows: Array(50).fill({ kind: 'item' }) }))
+    && M.blogsShrink(null, { blogs_ok: 1 }) === null, 'shrink rule');
+  mode = 'normal';
+  EXTRA = null;
 }
 
 // Leases: a held lease skips.

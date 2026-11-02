@@ -86,33 +86,68 @@ export function parseBlogsReadme(md) {
   while ((m = re.exec(String(md || '')))) { const name = ixText(m[1]), type = ixText(m[2]); if (name && name !== 'Name' && /^https?:/.test(m[3])) rows.push({ name, type, url: m[3] }); }
   return rows;
 }
+// Blogs job limits (2 November 2026: the 18:49 UTC run read 26 sources in 73 seconds, one hour after 36 in 7.5 seconds,
+// because a slow blog could spend 12 seconds on its feed and 10 on each of six discovery guesses while the pool waited).
+// Each source now has one deadline for all of its requests, one retry of a transient feed failure, and the pool is
+// capped; sources the run budget leaves unread go first next run (oldest check first).
+export const BLOG_LIMITS = { PER_SOURCE_MS: 15000, CONCURRENCY: 6, BUDGET_MS: 40000, RETRY_DELAY_MS: 1500, MAX_GUESSES: 4, OVERDUE_H: 7, MAX_PER_RUN: 60 };
+const transient = (r) => !r.ok && (r.status === 0 || r.status === 429 || r.status >= 500);
+// Whether a new blogs document is materially smaller than the last good one: fewer blogs with a working feed (more than
+// 15 percent and at least 4 fewer) or fewer recent items (more than 40 percent, judged once the last one held 50).
+export function blogsShrink(prev, next) {
+  if (!prev) return null;
+  const items = (d) => (d.rows || []).filter((r) => r.kind === 'item').length;
+  const po = +prev.blogs_ok || 0, no = +next.blogs_ok || 0, pi = items(prev), ni = items(next);
+  if (po - no >= 4 && no < po * 0.85) return `blogs with a working feed fell from ${po} to ${no}`;
+  if (pi >= 50 && ni < pi * 0.6) return `items in the last 7 days fell from ${pi} to ${ni}`;
+  return null;
+}
 export async function jobBlogs(opts = {}) {
-  const t0 = Date.now();
+  const t0 = Date.now(), L = { ...BLOG_LIMITS, ...(opts.blogLimits || {}) };
   const md = await get(BLOG_LIST, { timeout: 20000 });
   const seen = new Set();
   const blogs = md.ok ? parseBlogsReadme(md.text).filter((b) => !seen.has(b.url) && seen.add(b.url)) : [];
   if (blogs.length < 50) throw new Error('blog list: ' + (md.ok ? blogs.length + ' rows parsed' : 'HTTP ' + md.status));
-  const known = new Map((await sql(`SELECT url, feed, status, fails FROM ti.blog`)).map((b) => [b.url, b]));
+  const known = new Map((await sql(`SELECT url, feed, status, fails, checked_at FROM ti.blog`)).map((b) => [b.url, b]));
   const slot = new Date().getUTCHours() % 6;
-  const todo = opts.holder === 'cron' ? blogs.filter((b) => ixHash(b.url) % 6 === slot) : blogs.slice(0, 40);
-  const items = [], upd = [];
-  const budget = t0 + 45000;
-  await pool(todo, 8, async (b) => {
-    if (Date.now() > budget) return;
+  // This hour's sixth of the list plus any blog not read for OVERDUE_H hours, oldest check first.
+  const checked = (b) => { const k = known.get(b.url); return k && k.checked_at ? Date.parse(k.checked_at) : 0; };
+  const due = opts.holder === 'cron'
+    ? blogs.filter((b) => ixHash(b.url) % 6 === slot || Date.now() - checked(b) > L.OVERDUE_H * 3600000)
+    : blogs.slice(0, 40);
+  const todo = due.slice().sort((a, b) => checked(a) - checked(b)).slice(0, L.MAX_PER_RUN);
+  const items = [], upd = [], failures = [], took = [];
+  let unread = due.length - todo.length, retried = 0;
+  const budget = t0 + L.BUDGET_MS;
+  await pool(todo, L.CONCURRENCY, async (b) => {
+    if (Date.now() > budget - 1000) { unread++; return; }
+    const s0 = Date.now(), deadline = Math.min(s0 + L.PER_SOURCE_MS, budget);
+    const left = () => deadline - Date.now();
+    const ask = (u, accept) => (left() < 500 ? Promise.resolve({ ok: false, status: 0, error: 'source deadline' })
+      : get(u, { timeout: Math.min(12000, left()), headers: { accept: accept || 'application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5' } }));
     const k = known.get(b.url) || {};
     let feed = k.feed || null, parsed = null, status = 'ok', note = null;
-    if (feed) { const r = await get(feed, { timeout: 12000, headers: { accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5' } }); parsed = r.ok ? parseFeedItems(r.text) : null; if (!parsed) { note = 'feed ' + (r.status || r.error); feed = null; } }
-    if (!feed) {
-      const h = await get(b.url, { timeout: 12000, headers: { accept: 'text/html' } });
+    if (feed) {
+      let r = await ask(feed);
+      if (transient(r) && left() > L.RETRY_DELAY_MS + 1000) { retried++; await new Promise((ok) => setTimeout(ok, L.RETRY_DELAY_MS)); r = await ask(feed); }
+      parsed = r.ok ? parseFeedItems(r.text) : null;
+      if (!parsed) { note = 'feed ' + (r.status || r.error); feed = null; }
+    }
+    if (!feed && left() > 1000) {
+      const h = await ask(b.url, 'text/html');
       const cands = h.ok ? discoverFeed((h.text || '').slice(0, 400000), b.url) : [];
       for (const g of FEED_GUESS) { try { cands.push(new URL(g, b.url.endsWith('/') ? b.url : b.url + '/').href); } catch { /* skip */ } }
-      for (const c of [...new Set(cands)].slice(0, 6)) {
-        const r = await get(c, { timeout: 10000 });
+      for (const c of [...new Set(cands)].slice(0, L.MAX_GUESSES)) {
+        if (left() < 1000) break;
+        const r = await ask(c);
         const p = r.ok ? parseFeedItems(r.text) : null;
         if (p) { feed = c; parsed = p; break; }
       }
-      if (!feed) { status = h.ok ? 'no feed found' : 'home page ' + (h.status || h.error); }
-    }
+      if (!feed) status = left() < 1000 ? 'source deadline' : h.ok ? 'no feed found' : 'home page ' + (h.status || h.error);
+    } else if (!feed) status = 'source deadline';
+    const ms = Date.now() - s0;
+    took.push(ms);
+    if (!feed) failures.push({ url: b.url, name: b.name, why: status, note: note || undefined, ms });
     const fresh = (parsed || []).filter((i) => i.published && Date.now() - Date.parse(i.published) < 14 * IX_DAY);
     for (const i of fresh) items.push({ ...i, blog_url: b.url });
     upd.push({ url: b.url, name: b.name, type: b.type, feed, status: feed ? 'ok' : status, note, items: (parsed || []).length, newest: (parsed || []).map((i) => i.published).filter(Boolean).sort().pop() || null });
@@ -134,8 +169,16 @@ export async function jobBlogs(opts = {}) {
     terms: 'List: CC BY 4.0. Items: titles and links only, each to its publisher.', method: 'Feeds are discovered from each blog\'s home page (link rel=alternate), with common feed paths as a fallback. Each blog is read every six hours; items from the last 7 days are candidates for the daily run, which fetches and confirms any item it cites.',
     blogs: bl.length, blogs_ok: bl.filter((b) => b.feed).length, listed: blogs.length, generated: new Date().toISOString(), served_from: 'store',
     count: bl.length + it.length, rows: bl.map((b) => ({ kind: 'blog', ...b })).concat(it.map((i) => ({ kind: 'item', ...i }))) };
+  // Never publish a document materially smaller than the last good one: the run is recorded, the old document stays.
+  let prev = null;
+  try { prev = await getDoc('blogs'); } catch { /* no previous document readable: publish */ }
+  const shrink = blogsShrink(prev, doc);
+  const run = { due: due.length, read: upd.length, unread, with_feed: upd.filter((u) => u.feed).length, retried, failed: failures.length,
+    failures: failures.sort((a, b) => b.ms - a.ms).slice(0, 25), items: items.length, slowest_ms: Math.max(0, ...took) };
+  // A held document fails the run (run_failed), so the health record and the alerting workflow see it.
+  if (shrink) return { ...run, held: { reason: shrink, last_good: prev && prev.generated }, published: null, run_failed: 'blogs document held: ' + shrink, ms: Date.now() - t0 };
   await recordVolume([['blog_items_7d', it.length]]);
-  return { read: upd.length, with_feed: upd.filter((u) => u.feed).length, items: items.length, published: await putDoc('blogs', doc), ms: Date.now() - t0 };
+  return { ...run, published: await putDoc('blogs', doc), ms: Date.now() - t0 };
 }
 
 // ---------------------------------------------------------------- link health (G62)

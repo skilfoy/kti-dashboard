@@ -86,7 +86,8 @@
       const ttlLabel = (t) => (t == null ? '' : t < 60 ? t + ' s' : t < 3600 ? Math.round(t / 60) + ' min' : Math.round(t / 3600) + ' h');
       const rows = Object.entries(up).map(([feed, v]) => ({ kind: 'upstream', feed, ok: v.ok ? 'Up' : 'Down', status: v.status ?? '', ms: v.ms ?? null, cache: ttlLabel(v.ttl), note: v.error || '' }));
       const c = b.collector || {};
-      for (const f of c.feeds || []) rows.push({ kind: 'feed', feed: f.feed, ok: f.ok === true ? 'Up' : f.ok === false ? 'Down' : '', status: f.status ?? '', ms: f.ms ?? null,
+      // A documented gap (state known_gap, collector 2026-11-02.1 on) reads "Known gap" rather than "Down".
+      for (const f of c.feeds || []) rows.push({ kind: 'feed', feed: f.feed, ok: f.state === 'known_gap' ? 'Known gap' : f.ok === true ? 'Up' : f.ok === false ? 'Down' : '', status: f.status ?? '', ms: f.ms ?? null, note: f.gap || '',
         uptime_24h: f.uptime_24h, uptime_7d: f.uptime_7d, p50_ms: f.p50_ms, failing_streak: f.failing_streak || 0, last_ok: f.last_ok || '', last_fail: f.last_fail || '' });
       for (const j of c.jobs || []) rows.push({ kind: 'job', feed: 'job:' + j.job, job: j.job, ok: j.ok ? 'Up' : 'Down', last_run: j.last_run || '', ms: j.ms ?? null, runs_24h: j.runs_24h || 0, failed_24h: j.failed_24h || 0, note: j.error || '' });
       // Each feed's latest snapshot size against its 30-day median, from the collector's volume baseline (B5).

@@ -26,7 +26,7 @@
 import { createHash, createHmac, createPublicKey, timingSafeEqual, verify } from 'node:crypto';
 import { gzipSync, gunzipSync, inflateRawSync } from 'node:zlib';
 
-export const VERSION = '2026-10-22.2';
+export const VERSION = '2026-11-02.1';
 const UA = 'threat-feeds-collector/1.0 (+https://github.com/skilfoy; OSINT dashboard collector)';
 const ENV = () => process.env;
 const BUCKET = () => ENV().TI_BUCKET || 'ti-docs';

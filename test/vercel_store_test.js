@@ -152,6 +152,14 @@ function call(file, query, headers = { 'x-vercel-oidc-token': 'test.oidc.token' 
   r = await call('health.js', {});
   ok(r.code === 200 && r.body.collector.ok && r.body.collector.infocon === 'green' && r.body.collector.feeds.length === 1 && r.body.oidc === true && r.body.upstreams.feodo && !('gdelt_doc_api' in r.body.upstreams)
     && r.body.upstreams.threatfox.status === 410 && /21 Oct 2026/.test(r.body.upstreams.threatfox.error), 'health with collector, no DOC API probe, ThreatFox closure stated');
+  ok(r.body.collector.down === null && r.body.collector.known_gaps === null, 'a collector record without the gap lists reads null for both');
+  docs.health.down = ['epss']; docs.health.known_gaps = ['marad_msci'];
+  docs.health.rows.push({ kind: 'feed', feed: 'marad_msci', ok: false, status: 403, state: 'known_gap', gap: 'refused (HTTP 403)' });
+  r = await call('health.js', {});
+  ok(JSON.stringify(r.body.collector.down) === '["epss"]' && JSON.stringify(r.body.collector.known_gaps) === '["marad_msci"]'
+    && r.body.collector.feeds.find((f) => f.feed === 'marad_msci').state === 'known_gap' && r.body.collector.feeds.find((f) => f.feed === 'epss').ok === true,
+    'health passes the down and known_gaps lists and feed states through, other fields unchanged');
+  docs.health.rows = docs.health.rows.filter((f) => f.feed !== 'marad_msci'); delete docs.health.down; delete docs.health.known_gaps;
   docs.health.rows.push({ kind: 'feed', feed: 'threatfox', ok: true, status: 200, ms: 240, last_ok: iso(3), failing_streak: 0 });
   r = await call('health.js', {});
   ok(r.body.upstreams.threatfox.ok === true && r.body.upstreams.threatfox.via === 'collector (Auth-Key)', 'ThreatFox status from the collector\'s authenticated check');
