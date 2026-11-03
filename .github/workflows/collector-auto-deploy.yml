@@ -1,0 +1,90 @@
+# Automated collector deploy. After the Site workflow deploys a main commit that changes the collector (neon/**, the
+# loader, lib/collector.js or the build script), this builds neon/collector.mjs, runs the offline suite, and switches the
+# Neon function to the new bundle between trigger runs: OLD from the bucket (confirmed by the loader's kept copy), push
+# through the service, TI_CODE_SHA256 = NEW and TI_CODE_SHA256_PREV = OLD (environment only), then a gdelt run, op=status
+# and the probation copy must all show the new bundle. Any failed check restores OLD and opens "Collector deploy failed";
+# success comments on the merged pull request. Steps and secrets: .github/scripts/collector_deploy.mjs and
+# docs/collector-auto-deploy.md. Without the secrets it skips with a notice. Run by hand with dry_run to see every step
+# without a production write.
+name: Collector auto-deploy
+
+on:
+  workflow_run:
+    workflows: [Site]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Read everything and print each production write without making it
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: collector-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+          fetch-depth: 2
+
+      - name: Collector changed?
+        id: scope
+        run: |
+          files=$(git diff --name-only HEAD^1 HEAD 2>/dev/null || true)
+          { echo "files<<EOF"; echo "$files"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+          if echo "$files" | grep -qE '^(neon/|lib/collector\.js$|pipeline/collector_build\.py$)' || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Collector auto-deploy: $DEPLOY_SHA changes no collector file; nothing to deploy"
+          fi
+          git show HEAD^1:neon/loader.mjs > "$RUNNER_TEMP/prev-loader.mjs" 2>/dev/null || rm -f "$RUNNER_TEMP/prev-loader.mjs"
+
+      - uses: actions/setup-python@v7
+        if: steps.scope.outputs.run == 'true'
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v7
+        if: steps.scope.outputs.run == 'true'
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Build and run the offline suite
+        if: steps.scope.outputs.run == 'true'
+        run: |
+          python3 -m pip install --disable-pip-version-check pyyaml==6.0.2
+          npm ci
+          npm i --no-save @electric-sql/pglite@0.5.8
+          python3 pipeline/collector_build.py . | tail -1
+          node test/run_all.mjs
+
+      - name: Deploy the collector
+        if: steps.scope.outputs.run == 'true'
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_STORAGE_KEY_ID: ${{ secrets.NEON_STORAGE_KEY_ID }}
+          NEON_STORAGE_SECRET: ${{ secrets.NEON_STORAGE_SECRET }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run && '1' || '' }}
+          CHANGED_FILES: ${{ steps.scope.outputs.files }}
+          PREV_LOADER: ${{ runner.temp }}/prev-loader.mjs
+        run: node .github/scripts/collector_deploy.mjs

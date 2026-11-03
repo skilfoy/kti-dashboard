@@ -15,6 +15,7 @@ const steps = [
   ...(has('@electric-sql/pglite') ? [['collector jobs (PGlite)', process.execPath, ['test/collector_test.mjs', '.']]] : []),
   ['collector loader and deploy plan', process.execPath, ['test/loader_test.mjs', '.']],
   ['collector alert workflow', process.execPath, ['test/alert_test.mjs', '.']],
+  ['collector auto-deploy', process.execPath, ['test/auto_deploy_test.mjs', '.']],
   ['intel, lists and enrichment parts', process.execPath, ['test/intel_test.mjs', '.']],
   ['press-reported attacks part', process.execPath, ['test/cyber_test.mjs', '.']],
   ['context feeds part', process.execPath, ['test/context_test.mjs', '.']],

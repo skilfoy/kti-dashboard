@@ -1,0 +1,38 @@
+# Collector auto-deploy: setup
+
+The workflow `.github/workflows/collector-auto-deploy.yml` deploys the collector after the Site workflow deploys a main
+commit that changes it. It does what the manual procedure in `pipeline/RUNBOOK.md` section 8 does, in the same order, and
+skips with a notice until the secrets below exist. Add them in GitHub: repository **Settings > Secrets and variables >
+Actions > New repository secret**. Never paste a value into an issue, a commit or a chat.
+
+| Secret | Where to create it | Minimum permission | What the workflow does with it |
+| --- | --- | --- | --- |
+| `NEON_API_KEY` | Neon Console, **Organization settings > API keys > Create new API key**, project-scoped to `square-breeze-55687399` | A project-scoped key (access to that one project only) | Reads function `ti` (deployment status and variable names, never values); environment-only deploys of `TI_CODE_SHA256` and `TI_CODE_SHA256_PREV`; a code deploy of `neon/loader.mjs` only when the loader changed, and its restore |
+| `NEON_STORAGE_KEY_ID` and `NEON_STORAGE_SECRET` | Neon Console, project **Settings > Credentials > Create credential**, branch `br-summer-scene-b8t048y2` (main), scopes `storage:read` and `storage:write` | `storage:read` and `storage:write` on that branch (write is needed for the upload URL and the rollback) | Reads `ti-docs/code/collector.mjs` and `code/by-sha/<sha>.mjs` (OLD and the probation check), signs the presigned upload URL the service uses for `op=push`, and puts the OLD bundle back on a rollback |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | Vercel, project **threat-feeds > Settings > Deployment Protection > Protection Bypass for Automation > Generate** | The bypass reaches protected deployments of this project only; Vercel Authentication stays on | Sent as `x-vercel-protection-bypass` to the deployment's own `*.vercel.app` URL for `/api/admin` (`op=sha`, `op=push`, `op=run&job=gdelt`, `op=status`). Treat it as the operator credential |
+| `VERCEL_TOKEN` | Already a repository secret (the Site workflow uses it) | Unchanged | Read only here: finds the production deployment URL for the commit (`GET /v6/deployments?sha=`), so the push never goes through an alias that still points at the previous deployment |
+
+`GITHUB_TOKEN` is the workflow's own token (`issues: write`, `pull-requests: write`, `contents: read`): it opens "Collector
+deploy failed" and comments on the merged pull request.
+
+## First run
+
+1. Add the four new secret values above.
+2. Actions > **Collector auto-deploy** > Run workflow, `dry_run` ticked (the default). The log shows OLD, the service
+   hash, the window and each write it would make; nothing changes.
+3. From then on every merged collector change deploys itself. A failure restores OLD and opens an issue; the manual
+   procedure stays the fallback.
+
+## What it does, in order
+
+1. Build `neon/collector.mjs` and run `node test/run_all.mjs`; a failure stops here.
+2. OLD: the SHA-256 of `ti-docs/code/collector.mjs`, accepted only when the loader's copy `code/by-sha/OLD.mjs` exists with
+   that hash (the loader writes it after a good run of the pinned bundle; the Neon API does not return variable values).
+3. The service deployment for the commit must report the built hash at `op=sha`.
+4. Loader (only when `neon/loader.mjs` changed): code deploy, then the next scheduled run must be good.
+5. Wait until 2 to 9 minutes after a trigger minute (:04, :19, :34, :49), then push the bundle through the service, read
+   it back, and deploy the environment `{TI_CODE_SHA256: NEW, TI_CODE_SHA256_PREV: OLD}`; the other variables carry
+   over. The upload waits for the window too, so the bucket and the pin disagree for seconds, not minutes.
+6. `op=run&job=gdelt` and `op=status` must report the new version, and `code/by-sha/NEW.mjs` must exist (probation passed
+   without fallback). Otherwise the bucket object and the pin go back to OLD (and the loader to its previous code), and
+   an issue opens with the evidence.
