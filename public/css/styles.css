@@ -286,6 +286,7 @@
 
 .ti-up[data-up="Up"] { color: var(--color-ok); }
 .ti-up[data-up="Down"] { color: var(--color-bad); }
+.ti-up[data-up="Known gap"] { color: var(--color-fg-muted); }
 .ti-stack { display: grid; gap: var(--cds-gap-md); }
 
 /* Map layer controls and overlays */

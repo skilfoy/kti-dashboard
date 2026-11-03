@@ -30,6 +30,26 @@ const PROBES = [
   ['geojs', 'https://get.geojs.io/v1/ip/country/8.8.8.8.json'],
   ['ioda', null],
 ];
+// Documented gaps (runbook section 6): sources that refuse or no longer publish, recorded so they stay out of the down
+// list. Each names the answer it gives while the gap holds; a feed whose answer departs from it is classed by its check
+// again ("up" when it answers, "down" otherwise), so a lifted block or a new failure shows. Volume rows of the same
+// sources hold at zero while the gap stands.
+export const KNOWN_GAPS = {
+  marad_msci: { expect: [403], note: "MARAD's Akamai edge refuses cloud addresses with HTTP 403 (since 22 Oct 2026); never worked around" },
+  ukmto: { expect: [403], note: "UKMTO's Cloudflare rule refuses cloud addresses with HTTP 403 (since 22 Oct 2026); never worked around" },
+  nga_msi: { expect: [200, 206], stale: true, note: 'NGA broadcast warnings answer HTTP 200, but the newest warning listed in force was issued 2024-05-10; the maritime job counts the list as stale and keeps it off the map' },
+  gdelt_doc_api: { expect: [429], note: 'The GDELT DOC API rate-limits cloud egress (HTTP 429) and feeds no layer' },
+};
+export const KNOWN_GAP_VOLUME = { marad: 'marad_msci', asam: 'nga_asam', navwarn_security: 'nga_msi' };
+// up | down | known_gap for one feed check ({feed, ok, status}). A known-gap feed whose check passes while the gap
+// expects a refusal is "up" (the block lifted); one that fails with an unexpected answer is "down".
+export function feedState(c) {
+  const g = KNOWN_GAPS[c.feed];
+  if (g && g.expect.includes(c.status) && (g.stale || !c.ok)) return 'known_gap';
+  if (c.ok === true) return 'up';
+  if (c.ok === false) return 'down';
+  return null;
+}
 export async function jobHealth() {
   const t0 = Date.now(), at = new Date().toISOString();
   const now = Math.floor(Date.now() / 1000);
@@ -57,7 +77,8 @@ export async function jobHealth() {
   await sql(`INSERT INTO ti.feed_check (at, feed, ok, status, ms, error) SELECT $2::timestamptz, feed, ok, status, ms, error
     FROM jsonb_to_recordset($1::jsonb) AS x(feed text, ok boolean, status int, ms int, error text) ON CONFLICT DO NOTHING`, [checks, at]);
   const doc = await buildHealth({ checks, at, infocon });
-  return { checked: checks.length, down: checks.filter((c) => !c.ok).map((c) => c.feed), infocon, published: await putDoc('health', doc), ms: Date.now() - t0 };
+  // Infocon is DShield's own published level, read from its API; no check of ours feeds it, so known gaps cannot move it.
+  return { checked: checks.length, down: doc.down, known_gaps: doc.known_gaps, infocon, published: await putDoc('health', doc), ms: Date.now() - t0 };
 }
 // Spike when the latest snapshot is at least five times the 30-day median, silence when it is empty or under a fifth of
 // it (Arici 3.5.1, 7.3.1; Kuhn p80); judged once a feed has seven days of runs.
@@ -92,7 +113,17 @@ export async function buildHealth({ checks, at, infocon }) {
     checks_24h: u.n24, p50_ms: u.p50_ms, last_ok: u.last_ok, last_fail: u.last_fail, failing_streak: (streak.get(u.feed) || { n: 0 }).n }))
     .concat(runs.map((r) => ({ kind: 'job', job: r.job, last_run: r.started_at, ms: r.ms, ok: r.ok, error: r.error, runs_24h: (fmap.get(r.job) || {}).runs_24h || 0, failed_24h: (fmap.get(r.job) || {}).failed_24h || 0 })))
     .concat((vol || []).map((v) => ({ kind: 'volume', ...volumeFlag(v) })));
-  return { source: 'threat-feeds collector health checks', generated: new Date().toISOString(), checked_at: at, infocon, served_from: 'store', count: rows.length, rows };
+  // Additive fields: "state" on feed rows (up, down, known_gap) and on volume rows of gap sources, a "gap" note, and the
+  // down and known_gaps lists. "ok" keeps its meaning (the raw check), so readers of the earlier shape are unaffected.
+  for (const r of rows) {
+    if (r.kind === 'feed') {
+      r.state = feedState(r);
+      if (r.state === 'known_gap') r.gap = KNOWN_GAPS[r.feed].note;
+    } else if (r.kind === 'volume' && KNOWN_GAP_VOLUME[r.feed] && !(r.n > 0)) { r.state = 'known_gap'; r.gap = 'held at zero by a documented gap (' + KNOWN_GAP_VOLUME[r.feed] + ')'; }
+  }
+  const down = rows.filter((r) => r.kind === 'feed' && r.state === 'down').map((r) => r.feed);
+  const known_gaps = rows.filter((r) => r.kind === 'feed' && r.state === 'known_gap').map((r) => r.feed);
+  return { source: 'threat-feeds collector health checks', generated: new Date().toISOString(), checked_at: at, infocon, served_from: 'store', down, known_gaps, count: rows.length, rows };
 }
 
 // ---------------------------------------------------------------- last-good copies of the live endpoints

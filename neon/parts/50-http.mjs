@@ -16,6 +16,8 @@ export async function runJob(job, opts = {}) {
   if (!lease.length) return { job, ok: false, skipped: true, error: 'another run holds the lease' };
   let result, ok = true;
   try { result = await fn(opts); } catch (e) { ok = false; result = { error: String((e && e.message) || e) }; }
+  // A job can finish its work yet fail the run (the blogs job holding a shrunken document): it keeps its detail.
+  if (ok && result && result.run_failed) { ok = false; result.error = String(result.run_failed); delete result.run_failed; }
   const ms = Date.now() - started.getTime();
   try {
     await sqlTx([

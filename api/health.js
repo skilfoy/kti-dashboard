@@ -4,7 +4,8 @@ const store = require('../lib/store');
 // Whether the upstreams behind the proxied routes answer right now, with latency (short timeouts), plus what the collector
 // has recorded: uptime over 24 hours and 7 days for every feed it checks every 30 minutes (the GDELT DOC API among them, which
 // rate-limits cloud egress and feeds no layer, so it is not probed live), failing streaks, its own job runs and Infocon,
-// and each feed's latest snapshot size against its 30-day median (spike and silence flags).
+// and each feed's latest snapshot size against its 30-day median (spike and silence flags). Feed rows carry a state (up,
+// down or known_gap); documented gaps (runbook section 6) stay out of the down list.
 module.exports = handle(async (req, res) => {
   const checks = {
     epss: 'https://api.first.org/data/v1/epss?envelope=false&limit=1',
@@ -26,7 +27,9 @@ module.exports = handle(async (req, res) => {
   const collector = s.ok
     ? { ok: true, generated: s.doc.generated, checked_at: s.doc.checked_at, infocon: s.doc.infocon,
         feeds: (s.doc.rows || []).filter((r) => r.kind === 'feed'), jobs: (s.doc.rows || []).filter((r) => r.kind === 'job'),
-        volume: (s.doc.rows || []).filter((r) => r.kind === 'volume') }
+        volume: (s.doc.rows || []).filter((r) => r.kind === 'volume'),
+        // From collector 2026-11-02.1: feeds failing outside the documented gaps, and the gaps themselves (null before).
+        down: Array.isArray(s.doc.down) ? s.doc.down : null, known_gaps: Array.isArray(s.doc.known_gaps) ? s.doc.known_gaps : null }
     : { ok: false, reason: s.reason };
   // ThreatFox answers only with an Auth-Key, which the collector holds: report its authenticated check (every 30 minutes)
   // when it is recent, so the page counts ThreatFox as up while the collector reads it.

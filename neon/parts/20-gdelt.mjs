@@ -76,34 +76,70 @@ async function gdeltLatest() {
   return { latest: n, fromFile: false };
 }
 
+// A 404 is "not yet published" until the slot has settled: GDELT can name a later export in lastupdate.txt before an
+// earlier one is served, and on 2 November 2026 every slot of the previous 48 hours answered 200 although the store had
+// recorded about one in seven as missing. So a 404 stays a retryable failure (pending) until the slot is SETTLE_H hours
+// old and has been asked MISSING_AFTER times; only then is it recorded missing. Failed slots are retried with a doubling
+// back-off (15 minutes up to 6 hours) for up to MAX_ATTEMPTS asks. A recheck pass re-asks a few slots recorded missing
+// in the trailing RECHECK_DAYS days (the earlier rule marked a slot missing on its first 404), oldest check first.
+export const GDELT_RETRY = { SETTLE_H: 6, MISSING_AFTER: 3, MAX_ATTEMPTS: 8, RECHECK_DAYS: 30, RECHECK_PER_RUN: 4, BACKFILL_RECHECK: 48, CONCURRENCY: 4 };
+export const gdeltBackoffMs = (attempts) => Math.min(900000 * 2 ** Math.max(0, (attempts || 1) - 1), 6 * 3600000);
+// Status for one fetch result: ok, pending (a 404 not yet settled, stored as failed), missing, or failed.
+export function gdeltStatus({ status, ok }, slot, priorAttempts, now = Date.now()) {
+  if (ok) return 'ok';
+  if (status !== 404) return 'failed';
+  const settled = now - slot.getTime() >= GDELT_RETRY.SETTLE_H * 3600000 && (priorAttempts || 0) + 1 >= GDELT_RETRY.MISSING_AFTER;
+  return settled ? 'missing' : 'pending';
+}
 // historyDays (up to 35) fills country counts for slots older than the 72-hour window, for the 30-day baseline;
 // cells, events and flows are not kept that far back. reprocess re-reads the 72-hour window and overwrites its rows.
 export async function jobGdelt({ backfill = false, budgetMs = 40000, rebuild = false, historyDays = 0, reprocess = false } = {}) {
   const t0 = Date.now();
   const G = await geo();
-  const { latest, fromFile } = await gdeltLatest();
+  const { latest } = await gdeltLatest();
   const span = W_HOURS + W_BASE;
   const hist = Math.max(0, Math.min(35, +historyDays || 0));
   const want = [];
   for (let i = hist ? span * 4 : 0; i < (hist ? hist * 96 : span * 4); i++) want.push(new Date(latest.getTime() - i * 900000));
   const lookback = hist ? hist * 24 : span;
-  const done = new Set(reprocess && !hist ? [] : (await sql(`SELECT slot FROM ti.gdelt_file WHERE slot > $1::timestamptz - make_interval(hours => $2) AND (status IN ('ok','missing') OR attempts >= 3)`,
-    [latest, lookback])).map((r) => r.slot));
-  const todo = want.filter((d) => !done.has(d.toISOString())).slice(0, backfill || reprocess ? (hist ? 400 : 96) : 16);
+  const known = new Map((await sql(`SELECT slot, status, attempts, processed_at FROM ti.gdelt_file WHERE slot > $1::timestamptz - make_interval(hours => $2)`,
+    [latest, lookback])).map((r) => [r.slot, r]));
+  const now = Date.now(), R = GDELT_RETRY;
+  let waiting = 0, gaveUp = 0;
+  const isDone = (k) => {
+    if (!k) return false;
+    if (k.status === 'ok' || k.status === 'missing') return true;
+    if (k.attempts >= R.MAX_ATTEMPTS) { gaveUp++; return true; }
+    if (now - Date.parse(k.processed_at) < gdeltBackoffMs(k.attempts)) { waiting++; return true; }
+    return false;
+  };
+  const done = new Set(reprocess && !hist ? [] : want.map((d) => d.toISOString()).filter((s2) => isDone(known.get(s2))));
+  const cap = backfill || reprocess ? (hist ? 400 : 96) : 16;
+  const todo = want.filter((d) => !done.has(d.toISOString())).slice(0, cap).map((d) => ({ slot: d, prior: (known.get(d.toISOString()) || {}).attempts || 0 }));
+  // Recheck: slots recorded missing in the trailing window, asked again on the same back-off, a few per run.
+  const recheck = reprocess ? [] : (await sql(`SELECT slot, attempts FROM ti.gdelt_file WHERE status = 'missing' AND slot > now() - make_interval(days => $1) AND attempts < $2
+      AND processed_at < now() - make_interval(secs => least(900 * power(2, greatest(attempts, 1) - 1), 21600)) ORDER BY processed_at, slot LIMIT $3`,
+    [R.RECHECK_DAYS, R.MAX_ATTEMPTS, backfill ? R.BACKFILL_RECHECK : R.RECHECK_PER_RUN]))
+    .map((r) => ({ slot: new Date(r.slot), prior: r.attempts, recheck: true })).filter((r) => !todo.some((x) => x.slot.getTime() === r.slot.getTime()));
+  const liveFrom = latest.getTime() - span * 3600000;
   const results = [];
-  await pool(todo, 8, async (slot) => {
+  await pool(todo.concat(recheck), backfill || reprocess ? 8 : R.CONCURRENCY, async ({ slot, prior, recheck: re }) => {
     if (Date.now() - t0 > budgetMs) return;
     const s0 = Date.now();
     const r = await get(GDELT + stamp(slot) + '.export.CSV.zip', { as: 'buf', timeout: 20000 });
-    if (!r.ok) {
-      const gone = r.status === 404 && (fromFile || latest - slot > 1800000);
-      results.push({ slot, status: gone ? 'missing' : 'failed', ms: Date.now() - s0 });
+    const historyOnly = !!hist || slot.getTime() <= liveFrom;
+    const st = gdeltStatus(r, slot, prior);
+    if (st !== 'ok') {
+      // A recheck that is still not served keeps the slot missing (its attempts and check time advance); a pending 404
+      // is stored as failed so the regular pass asks again after its back-off.
+      const status = re ? 'missing' : st;
+      results.push({ slot, status: status === 'pending' ? 'failed' : status, pending: status === 'pending', recheck: !!re, http: r.status, ms: Date.now() - s0 });
       return;
     }
     try {
       const agg = aggregateSlot(firstEntry(r.buf).toString('utf8'), G);
-      results.push({ slot, status: 'ok', ms: Date.now() - s0, ...agg, historyOnly: !!hist });
-    } catch (e) { results.push({ slot, status: 'failed', ms: Date.now() - s0, error: String(e.message || e) }); }
+      results.push({ slot, status: 'ok', recovered: !!re, recheck: !!re, ms: Date.now() - s0, ...agg, historyOnly });
+    } catch (e) { results.push({ slot, status: 'failed', recheck: !!re, ms: Date.now() - s0, error: String(e.message || e) }); }
   });
   // Write in batches of 8 slots, one transaction each, so a large backfill stays under the request size limit.
   for (let i = 0; i < results.length; i += 8) {
@@ -139,11 +175,19 @@ export async function jobGdelt({ backfill = false, budgetMs = 40000, rebuild = f
     ]);
   }
   const counts = { ok: 0, missing: 0, failed: 0 };
-  for (const r of results) counts[r.status]++;
+  const main = results.filter((r) => !r.recheck);
+  for (const r of main) counts[r.status]++;
+  const pend = main.filter((r) => r.pending), hard = main.filter((r) => r.status === 'failed' && !r.pending);
   const remaining = want.length - done.size - counts.ok - counts.missing;
-  const files = { files_ok: counts.ok, files_missing: counts.missing, files_failed: counts.failed };
+  const iso = (rs) => rs.slice(0, 6).map((r) => r.slot.toISOString());
+  const re = results.filter((r) => r.recheck);
+  const files = { files_ok: counts.ok, files_missing: counts.missing, files_pending: pend.length, files_failed: hard.length,
+    // Retry and recheck detail for the run record: pending = a 404 not yet settled (asked again later), waiting = failed
+    // slots inside their back-off, gave_up = slots asked MAX_ATTEMPTS times, recovered = recorded missing, now served.
+    retry: { pending: pend.length, waiting, gave_up: gaveUp, rechecked: re.length, recovered: re.filter((r) => r.recovered).length, still_missing: re.filter((r) => r.status === 'missing').length,
+      pending_slots: iso(pend), missing_slots: iso(main.filter((r) => r.status === 'missing')), failed: hard.slice(0, 4).map((r) => ({ slot: r.slot.toISOString(), http: r.http, error: r.error })) } };
   let published = null;
-  if (counts.ok || counts.missing || rebuild || !(await s3Get('docs/gdelt-w24b48.json.gz'))) {
+  if (counts.ok || counts.missing || re.some((r) => r.recovered) || rebuild || !(await s3Get('docs/gdelt-w24b48.json.gz'))) {
     published = [await putDoc('gdelt-w24b48', await gdeltWindow(latest, W_HOURS, W_BASE)), await putDoc('gdelt-series30', await gdeltSeries())];
   }
   return { latest: latest.toISOString(), history_days: hist || undefined, reprocess: reprocess || undefined, processed: results.length, ...files,

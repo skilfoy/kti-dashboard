@@ -13,6 +13,8 @@ const steps = [
   ['authored data validator', py, ['-I', 'pipeline/authored_build.py', 'data/authored', '--check']],
   ['collector build', py, ['pipeline/collector_build.py', '.']],
   ...(has('@electric-sql/pglite') ? [['collector jobs (PGlite)', process.execPath, ['test/collector_test.mjs', '.']]] : []),
+  ['collector loader and deploy plan', process.execPath, ['test/loader_test.mjs', '.']],
+  ['collector alert workflow', process.execPath, ['test/alert_test.mjs', '.']],
   ['intel, lists and enrichment parts', process.execPath, ['test/intel_test.mjs', '.']],
   ['press-reported attacks part', process.execPath, ['test/cyber_test.mjs', '.']],
   ['context feeds part', process.execPath, ['test/context_test.mjs', '.']],

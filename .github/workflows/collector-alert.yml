@@ -1,0 +1,195 @@
+# Collector alerts without a model. Every 30 minutes: read the public /api/health record, apply the problem rules of
+# pipeline/RUNBOOK.md section 6c, and keep one GitHub issue per problem titled "Collector: <job or feed> failing"
+# (documented gaps whose answer changes: "Collector: <feed> answer changed"). An issue is commented when its detail
+# changes and closed with a comment when the problem clears. The script sits inside this file so the job needs no
+# checkout: GITHUB_TOKEN carries issues: write and nothing else. test/alert_test.mjs runs the same script offline.
+name: Collector alerts
+
+on:
+  schedule:
+    # The collector's health job writes at :19 and :49; these runs read the record a few minutes later.
+    - cron: "26,56 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print the issue actions without taking them
+        type: boolean
+        default: false
+
+permissions:
+  issues: write
+
+concurrency:
+  group: collector-alert
+  cancel-in-progress: false
+
+jobs:
+  alert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check the collector record and reconcile issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: |
+          cat > "$RUNNER_TEMP/collector_alert.mjs" <<'SCRIPT'
+          // Collector alerts without a model: reads /api/health, applies the problem rules of runbook section 6c, and keeps one
+          // GitHub issue per problem ("Collector: <job or feed> failing"), commented when its detail changes and closed with a
+          // comment when it clears. Needs GITHUB_TOKEN (issues: write) and GITHUB_REPOSITORY; DRY_RUN=1 prints the actions only.
+          import { pathToFileURL } from 'node:url';
+
+          export const HEALTH_URL = process.env.HEALTH_URL || 'https://intel.kilfoycyber.com/api/health';
+          export const LABEL = 'collector-alert';
+          // Minutes between scheduled runs of each job (neon/parts/50-http.mjs plan()). A job is silent when its last run is
+          // older than 90 minutes, or for a job slower than hourly, older than its own interval plus 90 minutes.
+          export const CADENCE_MIN = { gdelt: 15, infra: 30, snap: 30, health: 30, ioda: 30, lists: 60, leaksites: 60, links: 60, retention: 60, fires: 60, maritime: 60, blogs: 60,
+            unit42: 1440, genioc: 1440, lanesreg: 1440, sec8k: 840, ransompay: 10080 };
+          export const silentAfterMin = (job) => { const c = CADENCE_MIN[job] || 15; return c <= 60 ? 90 : c + 90; };
+          // Feeds the map or the store-first endpoints depend on (runbook 6c); a failing streak of 4 checks (2 hours) is a problem.
+          export const MAP_FEEDS = ['feodo', 'threatfox', 'urlhaus', 'dshield', 'gdelt_exports', 'ioda', 'epss', 'ransomware_live', 'cisa_kev', 'lanes', 'ofac_recent_actions',
+            'threatcluster', 'sec_edgar', 'blocklist_de', 'spamhaus_drop'];
+          // Documented gaps (runbook 6): reported only when their answer changes. The collector marks them state "known_gap"
+          // from 2026-11-02.1; before that the expected HTTP answer decides. Volume rows of the maritime gaps hold at zero.
+          export const KNOWN_GAPS = { marad_msci: { expect: [403] }, ukmto: { expect: [403] }, nga_msi: { expect: [200, 206], stale: true }, gdelt_doc_api: { expect: [429] } };
+          export const GAP_VOLUME = ['marad', 'asam', 'navwarn_security'];
+          const STREAK = 4, FAILS_24H = 3, STALE_RECORD_MIN = 90;
+
+          const mins = (now, t) => Math.round((now - Date.parse(t)) / 60000);
+          const gapHolds = (f) => (f.state ? f.state === 'known_gap' : KNOWN_GAPS[f.feed].expect.includes(f.status) && (KNOWN_GAPS[f.feed].stale || !f.ok));
+
+          // Problems in one health answer. complete is false when the record could not be judged in full (endpoint or collector
+          // record unreachable, or stale), so problems not seen this time are left open; closable lists titles that may close.
+          export function evaluate(answer, now = Date.now()) {
+            const problems = [];
+            const add = (title, kind, lines, fp) => problems.push({ title, kind, lines, fingerprint: fp });
+            if (!answer || answer.error) {
+              add('Collector: api/health failing', 'endpoint', [`${HEALTH_URL} did not answer: ${(answer && answer.error) || 'no answer'}`], 'endpoint:' + String((answer && answer.error) || '').replace(/\d+/g, '#'));
+              return { problems, complete: false, closable: [] };
+            }
+            const c = answer.collector || {};
+            const closable = ['Collector: api/health failing'];
+            if (!c.ok) {
+              add('Collector: collector record failing', 'collector', [`The service could not read the collector's health record: ${c.reason || 'no reason given'}`], 'collector:' + String(c.reason || ''));
+              return { problems, complete: false, closable };
+            }
+            closable.push('Collector: collector record failing');
+            const age = mins(now, c.checked_at || c.generated);
+            if (!(age <= STALE_RECORD_MIN)) {
+              add('Collector: health failing', 'job', [`The health record was last written ${age} minutes ago (checked_at ${c.checked_at}); the health job runs every 30 minutes, so the other checks cannot be judged.`], 'job:health:stale');
+              return { problems, complete: false, closable };
+            }
+            // Jobs: last run failed, silent against its cadence, or 3 or more failures in 24 hours.
+            const jobs = new Map((c.jobs || []).map((j) => [j.job, j]));
+            for (const job of Object.keys(CADENCE_MIN)) {
+              const j = jobs.get(job), why = [], fp = [];
+              if (!j) { why.push('no run recorded in the last 30 days'); fp.push('none'); }
+              else {
+                const quiet = mins(now, j.last_run);
+                if (j.ok === false) { why.push(`last run failed (${j.last_run}): ${j.error || 'no error text'}`); fp.push('failed:' + String(j.error || '').replace(/\d+/g, '#').slice(0, 120)); }
+                if (quiet > silentAfterMin(job)) { why.push(`silent for ${quiet} minutes (last run ${j.last_run}; expected every ${CADENCE_MIN[job]} minutes, alert after ${silentAfterMin(job)})`); fp.push('silent'); }
+                if ((j.failed_24h || 0) >= FAILS_24H) { why.push(`${j.failed_24h} of ${j.runs_24h} runs failed in 24 hours`); fp.push('fails24'); }
+              }
+              if (why.length) add(`Collector: ${job} failing`, 'job', why, 'job:' + job + ':' + fp.join('|'));
+            }
+            const feeds = new Map((c.feeds || []).map((f) => [f.feed, f]));
+            for (const feed of MAP_FEEDS) {
+              const f = feeds.get(feed);
+              if (f && (f.failing_streak || 0) >= STREAK) {
+                add(`Collector: ${feed} failing`, 'feed', [`failing streak of ${f.failing_streak} checks (every 30 minutes); last answer HTTP ${f.status ?? 'none'}${f.error ? ': ' + f.error : ''}; last good check ${f.last_ok || 'never in 7 days'}; uptime ${f.uptime_24h ?? '-'}% over 24 hours`],
+                  'feed:' + feed + ':' + (f.status ?? '') + ':' + String(f.error || '').replace(/\d+/g, '#').slice(0, 120));
+              }
+            }
+            for (const feed of Object.keys(KNOWN_GAPS)) {
+              const f = feeds.get(feed);
+              if (f && !gapHolds(f)) {
+                add(`Collector: ${feed} answer changed`, 'gap', [`Documented gap whose answer changed: now ok=${f.ok} HTTP ${f.status ?? 'none'}${f.error ? ' (' + f.error + ')' : ''}; the gap expects HTTP ${KNOWN_GAPS[feed].expect.join(' or ')}. Check the source and update the known gaps (runbook section 6, neon/parts/40-ops.mjs KNOWN_GAPS).`],
+                  'gap:' + feed + ':' + f.ok + ':' + (f.status ?? ''));
+              }
+            }
+            for (const v of c.volume || []) {
+              if (GAP_VOLUME.includes(v.feed) && v.n > 0) {
+                add(`Collector: ${v.feed} answer changed`, 'gap', [`Documented gap whose answer changed: the ${v.feed} snapshot now holds ${v.n} rows (held at zero while the gap stood). Check the maritime document and update the known gaps.`], 'gapvol:' + v.feed);
+              }
+            }
+            return { problems, complete: true, closable };
+          }
+
+          const marker = (fp) => `<!-- ${LABEL} fingerprint: ${encodeURIComponent(fp)} -->`;
+          const fpOf = (body) => { const m = String(body || '').match(new RegExp(`<!-- ${LABEL} fingerprint: (\\S+) -->`)); return m ? decodeURIComponent(m[1]) : null; };
+          export function issueBody(p, at) {
+            return [`**${p.title}**`, '', `First recorded by the collector alert workflow at ${at}.`, '', ...p.lines.map((l) => '- ' + l), '',
+              `Source: ${HEALTH_URL} (\`collector.jobs\`, \`collector.feeds\`, \`collector.volume\`). Rules: pipeline/RUNBOOK.md section 6c. This issue closes with a comment when the problem clears.`, '', marker(p.fingerprint)].join('\n');
+          }
+
+          // What to do with the open issues given this evaluation: create, comment (detail changed), close (cleared).
+          export function plan(result, open, at) {
+            const actions = [];
+            const byTitle = new Map(open.map((i) => [i.title, i]));
+            for (const p of result.problems) {
+              const i = byTitle.get(p.title);
+              if (!i) { actions.push({ op: 'create', title: p.title, body: issueBody(p, at) }); continue; }
+              if (fpOf(i.body) !== p.fingerprint) {
+                actions.push({ op: 'update', number: i.number, title: p.title, body: issueBody(p, at).replace(/^First recorded .*$/m, `Detail updated at ${at}.`),
+                  comment: [`Detail changed at ${at}:`, '', ...p.lines.map((l) => '- ' + l)].join('\n') });
+              }
+            }
+            const now = new Set(result.problems.map((p) => p.title));
+            for (const i of open) {
+              if (now.has(i.title) || !(i.labels || []).some((l) => (l.name || l) === LABEL)) continue;
+              if (!result.complete && !result.closable.includes(i.title)) continue;
+              actions.push({ op: 'close', number: i.number, title: i.title, comment: `Cleared at ${at}: the health record no longer shows this problem.` });
+            }
+            return actions;
+          }
+
+          async function gh(method, path, body) {
+            const r = await fetch('https://api.github.com/repos/' + process.env.GITHUB_REPOSITORY + path, { method, body: body ? JSON.stringify(body) : undefined,
+              headers: { authorization: 'Bearer ' + process.env.GITHUB_TOKEN, accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28', 'content-type': 'application/json', 'user-agent': 'kti-collector-alert' } });
+            if (!r.ok) throw new Error(`GitHub ${method} ${path}: HTTP ${r.status} ${(await r.text()).slice(0, 300)}`);
+            return r.status === 204 ? null : r.json();
+          }
+          export async function openIssues() {
+            const out = [];
+            for (let page = 1; page <= 5; page++) {
+              const rows = await gh('GET', `/issues?state=open&per_page=100&page=${page}`);
+              for (const i of rows) if (!i.pull_request && String(i.title).startsWith('Collector: ')) out.push({ number: i.number, title: i.title, body: i.body, labels: i.labels });
+              if (rows.length < 100) break;
+            }
+            return out;
+          }
+          export async function apply(actions) {
+            for (const a of actions) {
+              if (a.op === 'create') await gh('POST', '/issues', { title: a.title, body: a.body, labels: [LABEL] });
+              else if (a.op === 'update') { await gh('PATCH', `/issues/${a.number}`, { body: a.body }); await gh('POST', `/issues/${a.number}/comments`, { body: a.comment }); }
+              else if (a.op === 'close') { await gh('POST', `/issues/${a.number}/comments`, { body: a.comment }); await gh('PATCH', `/issues/${a.number}`, { state: 'closed', state_reason: 'completed' }); }
+            }
+          }
+          // Three tries, 10 and 30 seconds apart, before the endpoint counts as failing.
+          export async function readHealth(url = HEALTH_URL, waits = [10000, 30000]) {
+            let last = '';
+            for (let k = 0; k <= waits.length; k++) {
+              try {
+                const r = await fetch(url, { headers: { accept: 'application/json', 'user-agent': 'kti-collector-alert' }, signal: AbortSignal.timeout(30000) });
+                if (r.ok) return await r.json();
+                last = 'HTTP ' + r.status;
+              } catch (e) { last = String((e && e.message) || e); }
+              if (k < waits.length) await new Promise((ok) => setTimeout(ok, waits[k]));
+            }
+            return { error: last };
+          }
+
+          export async function main() {
+            const at = new Date().toISOString();
+            const result = evaluate(await readHealth(), Date.now());
+            console.log(`${at}: ${result.problems.length} problem(s)${result.complete ? '' : ' (record not judged in full)'}`);
+            for (const p of result.problems) console.log(`  ${p.title}: ${p.lines.join(' | ')}`);
+            if (process.env.DRY_RUN === '1' && !process.env.GITHUB_TOKEN) { console.log('dry run without a token: issue actions not planned'); return result; }
+            const actions = plan(result, await openIssues(), at);
+            for (const a of actions) console.log(`  ${process.env.DRY_RUN === '1' ? 'would ' : ''}${a.op} ${a.number ? '#' + a.number + ' ' : ''}${a.title}`);
+            if (process.env.DRY_RUN !== '1') await apply(actions);
+            return result;
+          }
+          if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((e) => { console.error(e); process.exit(1); });
+          SCRIPT
+          node "$RUNNER_TEMP/collector_alert.mjs"
