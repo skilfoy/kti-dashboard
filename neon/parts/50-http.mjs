@@ -119,6 +119,8 @@ const PROBE_TARGETS = (t) => ({
   ioda_events: `https://api.ioda.inetintel.cc.gatech.edu/v2/outages/events?from=${t - 2 * 86400}&until=${t}&entityType=country&includeAlerts=false&format=codf&limit=5`,
   ioda_summary: `https://api.ioda.inetintel.cc.gatech.edu/v2/outages/summary?from=${t - 86400}&until=${t}&entityType=country&limit=5`,
   ioda_alerts: `https://api.ioda.inetintel.cc.gatech.edu/v2/outages/alerts?from=${t - 86400}&until=${t}&entityType=country&limit=5`,
+  // Diagnostic probes only, never a data source: the planned submarine cable layer (lease 'cables', reserved) uses open
+  // data only, since TeleGeography's geocoded data is an annual paid licence. See docs/cables-open-data.md.
   cables: 'https://www.submarinecablemap.com/api/v3/cable/cable-geo.json',
   landing: 'https://www.submarinecablemap.com/api/v3/landing-point/landing-point-geo.json',
   gdelt_last: 'http://data.gdeltproject.org/gdeltv2/lastupdate.txt',
