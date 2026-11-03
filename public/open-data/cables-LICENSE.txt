@@ -1,0 +1,29 @@
+Submarine cables and landing stations: derived open dataset
+=============================================================
+
+Files:   /open-data/cables.geojson  (GeoJSON FeatureCollection)
+         /api/context?type=cables   (the same data as the dashboard's JSON document)
+
+Licence: Open Database License (ODbL) 1.0
+         https://opendatacommons.org/licenses/odbl/1-0/
+
+Attribution (required): © OpenStreetMap contributors
+         https://www.openstreetmap.org/copyright
+
+This dataset is derived from OpenStreetMap: ways tagged communication=line with location=underwater, and nodes tagged
+telecom=cable_landing_station, read weekly through the Overpass API. Geometry is simplified to a bounded size and split
+at the antimeridian; OpenStreetMap user names, user ids and edit metadata are not kept. Coverage is partial: on
+2 November 2026 OpenStreetMap held 374 such ways (189 named) and 12 landing stations, far fewer than the cables in
+service.
+
+Share-alike: because this is a derived database of OpenStreetMap data, it is offered under the ODbL 1.0. If you
+publicly use an adapted version of it, you must offer that adapted database under the ODbL as well, and keep the
+attribution above. Produced works (maps, charts) need only the attribution.
+
+Some cables carry a "wikidata" record (owner, length, service entry or inception date) from Wikidata, which is CC0
+(public domain dedication). It is attached only where the OpenStreetMap name and the Wikidata label match exactly after
+case, accents and punctuation are removed; other cables carry none.
+
+Not included: TeleGeography's Submarine Cable Map data, which is licensed and is not used here.
+
+Published by the Kilfoy Threat Intelligence platform (https://intel.kilfoycyber.com/data-sources).

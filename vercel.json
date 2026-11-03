@@ -12,7 +12,9 @@
     { "source": "/api/gdelt", "destination": "/api/index?route=gdelt" },
     { "source": "/api/cisa-kev", "destination": "/api/index?route=cisa-kev" },
     { "source": "/api/context", "destination": "/api/index?route=context" },
-    { "source": "/api/enrich", "destination": "/api/index?route=enrich" }
+    { "source": "/api/enrich", "destination": "/api/index?route=enrich" },
+    { "source": "/open-data/cables.geojson", "destination": "/api/index?route=context&type=cables&format=geojson" },
+    { "source": "/data-sources", "destination": "/data-sources.html" }
   ],
   "headers": [
     {

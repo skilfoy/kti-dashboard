@@ -61,3 +61,11 @@ CREATE TABLE IF NOT EXISTS ti.link_check (url text PRIMARY KEY, label text, kind
 CREATE TABLE IF NOT EXISTS ti.enrich (type text NOT NULL, q text NOT NULL, analyzer text NOT NULL, ok boolean, result jsonb, error text, at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (type, q, analyzer));
 INSERT INTO ti.lease (job) VALUES ('lists'),('fires'),('maritime'),('leaksites'),('ransompay'),('unit42'),('genioc'),('lanesreg'),('blogs'),('links'),('sec8k') ON CONFLICT DO NOTHING;
 -- ti_app's DML on these tables comes from the schema's default privileges (checked with has_table_privilege after creation).
+-- Added 2026-11-03: submarine cables from OpenStreetMap (ODbL 1.0, "© OpenStreetMap contributors"), joined with Wikidata
+-- (CC0) by exact name. Snapshot tables, replaced whole by the weekly cables job; no OSM user or edit metadata is kept.
+-- Metadata (osm_base, counts, source URL, licence, attribution) lives in ti.kv under 'cables:meta'.
+CREATE TABLE IF NOT EXISTS ti.cable (osm_id bigint PRIMARY KEY, name text, tags jsonb NOT NULL DEFAULT '{}', parts jsonb NOT NULL, points int NOT NULL,
+  wikidata jsonb, seen_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS ti.cable_station (osm_id bigint PRIMARY KEY, name text, lat real NOT NULL, lon real NOT NULL, cc text, tags jsonb NOT NULL DEFAULT '{}',
+  seen_at timestamptz NOT NULL DEFAULT now());
+INSERT INTO ti.lease (job) VALUES ('cables') ON CONFLICT DO NOTHING;

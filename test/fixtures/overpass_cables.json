@@ -1,0 +1,186 @@
+{
+ "version": 0.6,
+ "generator": "Overpass API (fixture)",
+ "osm3s": {
+  "timestamp_osm_base": "2026-11-02T18:40:12Z",
+  "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+ },
+ "elements": [
+  {
+   "type": "way",
+   "id": 1001,
+   "user": "mapper_one",
+   "uid": 42,
+   "version": 7,
+   "changeset": 99,
+   "timestamp": "2025-01-01T00:00:00Z",
+   "tags": {
+    "communication": "line",
+    "location": "underwater",
+    "name": "SEA-ME-WE 3",
+    "operator": "Consortium",
+    "fixme": "check",
+    "note": "x"
+   },
+   "geometry": [
+    {
+     "lat": 1.3,
+     "lon": 103.8
+    },
+    {
+     "lat": 2.0,
+     "lon": 100.0
+    },
+    {
+     "lat": 5.9,
+     "lon": 95.0
+    },
+    {
+     "lat": 6.5,
+     "lon": 80.0
+    },
+    {
+     "lat": 12.5,
+     "lon": 45.0
+    }
+   ]
+  },
+  {
+   "type": "way",
+   "id": 1002,
+   "tags": {
+    "communication": "line",
+    "location": "underwater",
+    "name": "Southern Cross"
+   },
+   "geometry": [
+    {
+     "lat": -17.0,
+     "lon": 178.0
+    },
+    {
+     "lat": -16.5,
+     "lon": 179.5
+    },
+    {
+     "lat": -16.0,
+     "lon": -179.5
+    },
+    {
+     "lat": -15.5,
+     "lon": -178.0
+    }
+   ]
+  },
+  {
+   "type": "way",
+   "id": 1003,
+   "tags": {
+    "communication": "line",
+    "location": "underwater"
+   },
+   "geometry": [
+    {
+     "lat": 95,
+     "lon": 10
+    },
+    {
+     "lat": "x",
+     "lon": 11
+    },
+    {
+     "lat": 40.0,
+     "lon": 12.0
+    },
+    {
+     "lat": 40.5,
+     "lon": 13.0
+    },
+    {
+     "lat": 41.0,
+     "lon": 14.0
+    }
+   ]
+  },
+  {
+   "type": "way",
+   "id": 1004,
+   "tags": {
+    "communication": "line",
+    "location": "underwater",
+    "name": "Asia-America Gateway"
+   },
+   "geometry": [
+    {
+     "lat": 10.0,
+     "lon": 110.0
+    },
+    {
+     "lat": 15.0,
+     "lon": 130.0
+    }
+   ]
+  },
+  {
+   "type": "way",
+   "id": 1005,
+   "tags": {
+    "communication": "line",
+    "location": "underwater",
+    "name": "Lonely"
+   },
+   "geometry": [
+    {
+     "lat": 0,
+     "lon": 0
+    }
+   ]
+  },
+  {
+   "type": "way",
+   "id": 1006,
+   "tags": {
+    "communication": "line",
+    "location": "underwater",
+    "name": "MAREA"
+   },
+   "geometry": [
+    {
+     "lat": 36.9,
+     "lon": -76.0
+    },
+    {
+     "lat": 40.0,
+     "lon": -40.0
+    },
+    {
+     "lat": 43.3,
+     "lon": -2.9
+    }
+   ]
+  },
+  {
+   "type": "node",
+   "id": 2001,
+   "lat": -3.7,
+   "lon": -38.5,
+   "user": "mapper_two",
+   "uid": 7,
+   "tags": {
+    "telecom": "cable_landing_station",
+    "name": "Fortaleza CLS",
+    "operator": "Op"
+   }
+  },
+  {
+   "type": "node",
+   "id": 2002,
+   "lat": 120.0,
+   "lon": 0,
+   "tags": {
+    "telecom": "cable_landing_station",
+    "name": "Broken"
+   }
+  }
+ ]
+}
