@@ -88,3 +88,11 @@ site = {"title": "Global threat intelligence", "built": now, "commit": a.commit[
 json.dump(site, open(os.path.join(a.out, "site.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 print(f"site.json: {sum(1 for d in catalog.values() if d['kind'] == 'file')} files ({total / 1e6:.1f} MB), "
       f"{sum(1 for d in catalog.values() if d['kind'] == 'query')} queries" + (f"; missing: {', '.join(missing)}" if missing else ""))
+
+# The data sources registry (data/data_sources.json, checked by pipeline/check_data_sources.mjs) is published as is at the
+# site root for the /data-sources page, outside /data so its URL stays stable.
+reg_src = os.path.join(os.path.dirname(os.path.abspath(a.authored)), "data_sources.json")
+if os.path.exists(reg_src):
+    reg = json.load(open(reg_src, encoding="utf-8"))
+    json.dump(reg, open(os.path.join(a.out, "data-sources.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    print(f"data-sources.json: {len(reg.get('rows', []))} sources")
