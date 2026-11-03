@@ -53,6 +53,15 @@ jobs:
           // from 2026-11-02.1; before that the expected HTTP answer decides. Volume rows of the maritime gaps hold at zero.
           export const KNOWN_GAPS = { marad_msci: { expect: [403] }, ukmto: { expect: [403] }, nga_msi: { expect: [200, 206], stale: true }, gdelt_doc_api: { expect: [429] } };
           export const GAP_VOLUME = ['marad', 'asam', 'navwarn_security'];
+          // Answer classes (3 November 2026): for the GDELT DOC API and GreyNoise, HTTP 429, a timeout and a failed fetch
+          // (status 0) are one answer, refused at cloud egress; another answer (an HTTP 200 among them) lifts the gap.
+          // GreyNoise is intermittent: a passing check keeps the gap until 24-hour uptime holds at 95 percent or more.
+          for (const f of ['gdelt_doc_api', 'greynoise']) KNOWN_GAPS[f] = { intermittent: f === 'greynoise', ...KNOWN_GAPS[f], expect: [429, 0] };
+          const holdsWhileIntermittent = (f) => !!KNOWN_GAPS[f.feed].intermittent && f.ok === true && (f.uptime_24h ?? 0) < 95;
+          // Submarine cables (weekly, Sundays 05:19 UTC): silent after a week plus 90 minutes.
+          CADENCE_MIN.cables = 10080;
+          // Jobs added after the alert workflow: no "no run recorded" problem until their first run is in the record.
+          export const NEW_JOBS = ['cables'];
           const STREAK = 4, FAILS_24H = 3, STALE_RECORD_MIN = 90;
 
           const mins = (now, t) => Math.round((now - Date.parse(t)) / 60000);
@@ -83,7 +92,8 @@ jobs:
             const jobs = new Map((c.jobs || []).map((j) => [j.job, j]));
             for (const job of Object.keys(CADENCE_MIN)) {
               const j = jobs.get(job), why = [], fp = [];
-              if (!j) { why.push('no run recorded in the last 30 days'); fp.push('none'); }
+              if (!j && NEW_JOBS.includes(job)) continue;
+            if (!j) { why.push('no run recorded in the last 30 days'); fp.push('none'); }
               else {
                 const quiet = mins(now, j.last_run);
                 if (j.ok === false) { why.push(`last run failed (${j.last_run}): ${j.error || 'no error text'}`); fp.push('failed:' + String(j.error || '').replace(/\d+/g, '#').slice(0, 120)); }
@@ -102,7 +112,7 @@ jobs:
             }
             for (const feed of Object.keys(KNOWN_GAPS)) {
               const f = feeds.get(feed);
-              if (f && !gapHolds(f)) {
+              if (f && !gapHolds(f) && !holdsWhileIntermittent(f)) {
                 add(`Collector: ${feed} answer changed`, 'gap', [`Documented gap whose answer changed: now ok=${f.ok} HTTP ${f.status ?? 'none'}${f.error ? ' (' + f.error + ')' : ''}; the gap expects HTTP ${KNOWN_GAPS[feed].expect.join(' or ')}. Check the source and update the known gaps (runbook section 6, neon/parts/40-ops.mjs KNOWN_GAPS).`],
                   'gap:' + feed + ':' + f.ok + ':' + (f.status ?? ''));
               }

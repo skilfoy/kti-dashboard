@@ -91,6 +91,30 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
   ok(!re.complete && JSON.stringify(titles(re)) === '["Collector: api/health failing"]' && re.closable.length === 0, 'endpoint down');
 }
 
+// Answer classes (3 November 2026): the GDELT DOC API alternates between 429 and timeouts; both hold the gap, 200 lifts it.
+{
+  const g = (o) => { const h = clone(); Object.assign(feed(h, 'gdelt_doc_api'), o); return titles(A.evaluate(h, NOW)); };
+  ok(g({ ok: false, status: 0, error: 'timeout', failing_streak: 24 }).length === 0 && g({ ok: false, status: 429 }).length === 0, 'gdelt_doc_api: timeout and 429 are one answer class');
+  ok(JSON.stringify(g({ ok: true, status: 200, failing_streak: 0 })) === '["Collector: gdelt_doc_api answer changed"]', 'a 200 lifts the gap and is reported');
+  const gn = (o) => { const h = clone(); Object.assign(feed(h, 'greynoise'), o); return titles(A.evaluate(h, NOW)); };
+  ok(gn({ ok: false, status: 0, error: 'fetch failed' }).length === 0 && gn({ ok: true, status: 404, uptime_24h: 81 }).length === 0, 'greynoise: refused or intermittent keeps the gap');
+  ok(JSON.stringify(gn({ ok: true, status: 200, uptime_24h: 99 })) === '["Collector: greynoise answer changed"]', 'greynoise steady recovery reported');
+}
+// Weekly cables job: no problem before its first run; silent after a week plus 90 minutes; a held snapshot is a failure.
+{
+  ok(A.CADENCE_MIN.cables === 10080 && A.silentAfterMin('cables') === 10170, 'cables cadence weekly');
+  const h = clone();
+  ok(!titles(A.evaluate(h, NOW)).includes('Collector: cables failing'), 'no cables run yet: nothing raised');
+  h.collector.jobs.push({ kind: 'job', job: 'cables', last_run: minAgo(6 * 1440), ok: true, runs_24h: 0, failed_24h: 0 });
+  ok(!titles(A.evaluate(h, NOW)).includes('Collector: cables failing'), 'six days quiet is within a weekly cadence');
+  h.collector.jobs.find((j) => j.job === 'cables').last_run = minAgo(7 * 1440 + 120);
+  ok(titles(A.evaluate(h, NOW)).includes('Collector: cables failing'), 'a week and two hours quiet is silent');
+  Object.assign(h.collector.jobs.find((j) => j.job === 'cables'), { last_run: minAgo(60), ok: false, error: 'cables snapshot held: 100 ways against 374' });
+  const p = A.evaluate(h, NOW).problems.find((x) => x.title === 'Collector: cables failing');
+  ok(p && /held: 100 ways/.test(p.lines[0]), 'a held snapshot is reported with its reason');
+  ok(!A.MAP_FEEDS.includes('overpass') && !A.MAP_FEEDS.includes('wikidata'), 'overpass and wikidata are not map feeds');
+}
+
 // ---------------------------------------------------------------- plan
 {
   const lab = [{ name: A.LABEL }];

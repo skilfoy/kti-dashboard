@@ -41,6 +41,23 @@ export const KNOWN_GAPS = {
   gdelt_doc_api: { expect: [429], note: 'The GDELT DOC API rate-limits cloud egress (HTTP 429) and feeds no layer' },
 };
 export const KNOWN_GAP_VOLUME = { marad: 'marad_msci', asam: 'nga_asam', navwarn_security: 'nga_msi' };
+// Answer classes (3 November 2026). Some sources refuse cloud egress in more than one way: the GDELT DOC API alternates
+// between HTTP 429 and a timeout, and GreyNoise's free lookup answers 429. A 429, a timeout or a failed fetch (status 0)
+// is one answer, "refused at cloud egress", so the gap holds while the answer stays in that class; any other answer, an
+// HTTP 200 among them, lifts it. An entry already defined above keeps its own note and fields.
+export const EGRESS_REFUSED = [429, 0];
+KNOWN_GAPS.gdelt_doc_api = { ...KNOWN_GAPS.gdelt_doc_api, expect: EGRESS_REFUSED, answer_class: 'refused at cloud egress (429, timeout or failed fetch)' };
+KNOWN_GAPS.greynoise = { note: "GreyNoise's free lookup rate-limits cloud egress (HTTP 429); needs a GreyNoise API key (tracked in the KTI work tracker)", intermittent: true,
+  ...KNOWN_GAPS.greynoise, expect: EGRESS_REFUSED, answer_class: 'refused at cloud egress (429, timeout or failed fetch)' };
+// Open-data sources of the cables job (37e-cables.mjs): Overpass's status page and a one-line Wikidata SPARQL ASK, sent
+// with the same identifying User-Agent and an Accept header (overpass-api.de answers a bare request with HTTP 406).
+const OPEN_DATA_HEADERS = (accept) => () => ({ accept, 'user-agent': cableUserAgent(ENV().SEC_USER_AGENT || 'contact not set') });
+PROBES.push(['overpass', 'https://overpass-api.de/api/status', [200], OPEN_DATA_HEADERS('text/plain')],
+  ['wikidata', WIKIDATA_SPARQL + '?format=json&query=' + encodeURIComponent('ASK {}'), [200], OPEN_DATA_HEADERS('application/sparql-results+json')]);
+// GreyNoise: with GREYNOISE_API_KEY in the function environment the probe sends it (header "key"); without it the
+// keyless community lookup is used as before. The key lives only here, in the collector's Neon environment.
+export const greynoiseHeaders = () => (ENV().GREYNOISE_API_KEY ? { key: ENV().GREYNOISE_API_KEY, accept: 'application/json' } : { accept: 'application/json' });
+PROBES.find((p) => p[0] === 'greynoise')[3] = greynoiseHeaders;
 // up | down | known_gap for one feed check ({feed, ok, status}). A known-gap feed whose check passes while the gap
 // expects a refusal is "up" (the block lifted); one that fails with an unexpected answer is "down".
 export function feedState(c) {
@@ -54,7 +71,7 @@ export async function jobHealth() {
   const t0 = Date.now(), at = new Date().toISOString();
   const now = Math.floor(Date.now() / 1000);
   let infocon = null;
-  const checks = await pool(PROBES, 8, async ([feed, url, okc]) => {
+  const checks = await pool(PROBES, 8, async ([feed, url, okc, hdrs]) => {
     // ThreatFox and URLhaus: the authenticated API with the key, else the gate (21 October 2026) without a request.
     if (url && url.startsWith('abuse:')) {
       const r = await abuseProbe(url.slice(6));
@@ -69,7 +86,7 @@ export async function jobHealth() {
       return { feed, ok: r.ok, status: r.status, ms: r.ms, error: r.ok ? null : (r.error || `HTTP ${r.status}`) };
     }
     const u = url || `https://api.ioda.inetintel.cc.gatech.edu/v2/outages/events?from=${now - 3600}&until=${now}&entityType=country&limit=1`;
-    const r = await get(u, { timeout: 12000, headers: { range: 'bytes=0-4095' } });
+    const r = await get(u, { timeout: 12000, headers: { range: 'bytes=0-4095', ...(typeof hdrs === 'function' ? hdrs() : hdrs || {}) } });
     const ok = okc ? okc.includes(r.status) : (r.status >= 200 && r.status < 300);
     if (feed === 'dshield' && ok) { try { infocon = JSON.parse(r.text).status || null; } catch { /* left null */ } }
     return { feed, ok, status: r.status, ms: r.ms, error: ok ? null : (r.error || `HTTP ${r.status}`) };
@@ -247,3 +264,5 @@ export async function jobRetention() {
   return { db_bytes: r[r.length - 1][0] && r[r.length - 1][0].bytes, ms: Date.now() - t0 };
 }
 
+// The ids of every upstream the health job checks (for the data sources registry check, pipeline/check_data_sources.mjs).
+export const HEALTH_FEED_IDS = () => PROBES.map((p) => p[0]);
