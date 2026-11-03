@@ -190,6 +190,7 @@ function world({ serveSha = NEW, fallback = false, keptOld = true, start = at('1
   const wf = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'collector-auto-deploy.yml'), 'utf8');
   ok(/concurrency:\n  group: collector-production-deploy\n  cancel-in-progress: false/.test(wf), 'one deploy at a time');
   ok(/workflow_run:\n    workflows: \[Site\]\n    types: \[completed\]\n    branches: \[main\]/.test(wf) && /dry_run:/.test(wf), 'runs after the Site workflow on main, and by hand with dry_run');
+  ok(/\n    environment: collector-production\n/.test(wf), 'deploy job runs in the collector-production environment');
   ok(/node test\/run_all\.mjs/.test(wf) && wf.indexOf('node test/run_all.mjs') < wf.indexOf('run: node .github/scripts/collector_deploy.mjs'), 'offline suite before the deploy step');
   ok(/workflow_run\.conclusion == 'success'/.test(wf), 'only after a successful Site run');
   for (const s of D.SECRETS) ok(wf.includes(`secrets.${s}`), 'workflow passes ' + s);

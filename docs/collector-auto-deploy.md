@@ -2,22 +2,26 @@
 
 The workflow `.github/workflows/collector-auto-deploy.yml` deploys the collector after the Site workflow deploys a main
 commit that changes it. It does what the manual procedure in `pipeline/RUNBOOK.md` section 8 does, in the same order, and
-skips with a notice until the secrets below exist. Add them in GitHub: repository **Settings > Secrets and variables >
-Actions > New repository secret**. Never paste a value into an issue, a commit or a chat.
+skips with a notice until the secrets below exist. The deploy job runs in the GitHub environment `collector-production`,
+so the four new values are **environment secrets** of that environment, not repository secrets: **Settings >
+Environments > collector-production > Environment secrets > Add environment secret**. In the same place, set
+**Deployment branches and tags** to **Selected branches** with `main` only, so no other branch's workflow can read them.
+Never paste a value into an issue, a commit or a chat.
 
 | Secret | Where to create it | Minimum permission | What the workflow does with it |
 | --- | --- | --- | --- |
-| `NEON_API_KEY` | Neon Console, **Organization settings > API keys > Create new API key**, project-scoped to `square-breeze-55687399` | A project-scoped key (access to that one project only) | Reads function `ti` (deployment status and variable names, never values); environment-only deploys of `TI_CODE_SHA256` and `TI_CODE_SHA256_PREV`; a code deploy of `neon/loader.mjs` only when the loader changed, and its restore |
+| `NEON_API_KEY` | Neon Console, **Organization settings > API keys > Create new API key**, project-scoped to `square-breeze-55687399`. Creating a project-scoped key needs an organization admin; if the account has no organization admin role, fall back to a personal API key (Account settings > API keys), which carries the account's full access | A project-scoped key (access to that one project only); a personal key only as the fallback | Reads function `ti` (deployment status and variable names, never values); environment-only deploys of `TI_CODE_SHA256` and `TI_CODE_SHA256_PREV`; a code deploy of `neon/loader.mjs` only when the loader changed, and its restore |
 | `NEON_STORAGE_KEY_ID` and `NEON_STORAGE_SECRET` | Neon Console, project **Settings > Credentials > Create credential**, branch `br-summer-scene-b8t048y2` (main), scopes `storage:read` and `storage:write` | `storage:read` and `storage:write` on that branch (write is needed for the upload URL and the rollback) | Reads `ti-docs/code/collector.mjs` and `code/by-sha/<sha>.mjs` (OLD and the probation check), signs the presigned upload URL the service uses for `op=push`, and puts the OLD bundle back on a rollback |
-| `VERCEL_AUTOMATION_BYPASS_SECRET` | Vercel, project **threat-feeds > Settings > Deployment Protection > Protection Bypass for Automation > Generate** | The bypass reaches protected deployments of this project only; Vercel Authentication stays on | Sent as `x-vercel-protection-bypass` to the deployment's own `*.vercel.app` URL for `/api/admin` (`op=sha`, `op=push`, `op=run&job=gdelt`, `op=status`). Treat it as the operator credential |
-| `VERCEL_TOKEN` | Already a repository secret (the Site workflow uses it) | Unchanged | Read only here: finds the production deployment URL for the commit (`GET /v6/deployments?sha=`), so the push never goes through an alias that still points at the previous deployment |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | Vercel, project **threat-feeds > Settings > Deployment Protection > Protection Bypass for Automation > Generate** (available on the Hobby plan) | The bypass reaches protected deployments of this project only; Vercel Authentication stays on | Sent as `x-vercel-protection-bypass` to the deployment's own `*.vercel.app` URL for `/api/admin` (`op=sha`, `op=push`, `op=run&job=gdelt`, `op=status`). Treat it as the operator credential |
+| `VERCEL_TOKEN` | Already a repository secret (the Site workflow uses it); a job in an environment still reads repository secrets, so it stays where it is | Unchanged | Read only here: finds the production deployment URL for the commit (`GET /v6/deployments?sha=`), so the push never goes through an alias that still points at the previous deployment |
 
 `GITHUB_TOKEN` is the workflow's own token (`issues: write`, `pull-requests: write`, `contents: read`): it opens "Collector
 deploy failed" and comments on the merged pull request.
 
 ## First run
 
-1. Add the four new secret values above.
+1. Add the four new values above as environment secrets of `collector-production`, and limit its deployment branches to
+   `main`.
 2. Actions > **Collector auto-deploy** > Run workflow, `dry_run` ticked (the default). The log shows OLD, the service
    hash, the window and each write it would make; nothing changes.
 3. From then on every merged collector change deploys itself. A failure restores OLD and opens an issue; the manual

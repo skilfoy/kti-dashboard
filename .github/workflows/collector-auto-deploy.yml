@@ -34,6 +34,9 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    # The four deploy secrets are environment secrets of collector-production (restrict its deployment branches to main),
+    # so only this job on main can read them.
+    environment: collector-production
     env:
       DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
     steps:
