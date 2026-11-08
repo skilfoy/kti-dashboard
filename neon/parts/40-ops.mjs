@@ -39,6 +39,11 @@ export const KNOWN_GAPS = {
   ukmto: { expect: [403], note: "UKMTO's Cloudflare rule refuses cloud addresses with HTTP 403 (since 22 Oct 2026); never worked around" },
   nga_msi: { expect: [200, 206], stale: true, note: 'NGA broadcast warnings answer HTTP 200, but the newest warning listed in force was issued 2024-05-10; the maritime job counts the list as stale and keeps it off the map' },
   gdelt_doc_api: { expect: [429], note: 'The GDELT DOC API rate-limits cloud egress (HTTP 429) and feeds no layer' },
+  // Intermittent: the free lookup sometimes answers (uptime about 80 percent), so a passing check reads "up" and the
+  // alert workflow reports a change only once the feed passes steadily (24-hour uptime of 95 percent or more). To lift
+  // it: set GREYNOISE_API_KEY as a Neon function variable, send it from the probe and the exposure lookups, then remove
+  // this entry and the matching one in .github/workflows/collector-alert.yml (runbook section 6).
+  greynoise: { expect: [429], intermittent: true, note: "GreyNoise's free lookup rate-limits cloud egress (HTTP 429); needs a GreyNoise API key (tracked in the KTI work tracker)" },
 };
 export const KNOWN_GAP_VOLUME = { marad: 'marad_msci', asam: 'nga_asam', navwarn_security: 'nga_msi' };
 // Answer classes (3 November 2026). Some sources refuse cloud egress in more than one way: the GDELT DOC API alternates
@@ -97,16 +102,37 @@ export async function jobHealth() {
   // Infocon is DShield's own published level, read from its API; no check of ours feeds it, so known gaps cannot move it.
   return { checked: checks.length, down: doc.down, known_gaps: doc.known_gaps, infocon, published: await putDoc('health', doc), ms: Date.now() - t0 };
 }
-// Spike when the latest snapshot is at least five times the 30-day median, silence when it is empty or under a fifth of
-// it (Arici 3.5.1, 7.3.1; Kuhn p80); judged once a feed has seven days of runs.
+// Volume baseline per feed over 30 days of ti.feed_volume: the all-hours median (median_30d) and the median of the runs
+// in one UTC hour of the day (median_hour, hour_samples). The hour is $2 when given (a job judging the count it holds
+// now), else the hour of the feed's latest row, whose own row is then left out of the hour median. $1 limits the feeds
+// (null for all).
+export const VOLUME_BASELINE_SQL = `WITH v AS (SELECT feed, at, n FROM ti.feed_volume WHERE at > now() - interval '30 days' AND ($1::text[] IS NULL OR feed = ANY($1::text[]))),
+    last AS (SELECT DISTINCT ON (feed) feed, at, n, coalesce($2::int, extract(hour FROM at AT TIME ZONE 'UTC')::int) AS hour_utc FROM v ORDER BY feed, at DESC),
+    allh AS (SELECT feed, (percentile_cont(0.5) WITHIN GROUP (ORDER BY n))::real AS median_30d, count(*)::int AS runs, min(at) AS first_at FROM v GROUP BY feed),
+    hr AS (SELECT v.feed, (percentile_cont(0.5) WITHIN GROUP (ORDER BY v.n))::real AS median_hour, count(*)::int AS hour_samples FROM v JOIN last l ON l.feed = v.feed
+      AND extract(hour FROM v.at AT TIME ZONE 'UTC')::int = l.hour_utc AND ($2::int IS NOT NULL OR v.at < l.at) GROUP BY v.feed)
+  SELECT l.feed, l.n, l.at, a.median_30d, a.runs, a.first_at, l.hour_utc, h.median_hour, coalesce(h.hour_samples, 0)::int AS hour_samples
+  FROM last l JOIN allh a USING (feed) LEFT JOIN hr h USING (feed) ORDER BY l.feed`;
+export const HOUR_SAMPLES_MIN = 5;
+// Spike when the latest snapshot is at least five times its baseline, silence when it is under a fifth of it (Arici
+// 3.5.1, 7.3.1; Kuhn p80); judged once a feed has seven days of runs. The baseline is the median of the same UTC hour
+// once that hour has HOUR_SAMPLES_MIN earlier runs (feeds that follow the clock, such as FIRMS detections that track
+// satellite passes, are judged against their own hour), else the all-hours median. An empty snapshot is silence against
+// the all-hours median; against an hour whose median is zero it is normal. median_30d keeps its earlier meaning (all
+// hours); ratio is n over the baseline used, named in basis and baseline.
 export function volumeFlag(v, now = Date.now()) {
   const days = v.first_at ? (now - Date.parse(v.first_at)) / 86400000 : 0;
-  const med = v.median_30d == null ? null : Number(v.median_30d), n = v.n == null ? null : Number(v.n);
+  const num = (x) => (x == null ? null : Number(x));
+  const med = num(v.median_30d), medH = num(v.median_hour), n = num(v.n), samples = +v.hour_samples || 0;
+  const basis = medH != null && samples >= HOUR_SAMPLES_MIN ? 'hour' : 'all';
+  const base = basis === 'hour' ? medH : med;
   let flag = 'normal';
   if (days < 7) flag = 'baseline building';
-  else if (n === 0 || (med > 0 && n < med / 5)) flag = 'silence';
-  else if (med > 0 && n >= med * 5) flag = 'spike';
-  return { feed: v.feed, n, at: v.at, median_30d: med == null ? null : Math.round(med * 10) / 10, ratio: med ? Math.round((n / med) * 100) / 100 : null, runs: v.runs, baseline_days: Math.floor(days), flag };
+  else if (base > 0 ? n < base / 5 : basis === 'all' && n === 0) flag = 'silence';
+  else if (base > 0 && n >= base * 5) flag = 'spike';
+  const r1 = (x) => (x == null ? null : Math.round(x * 10) / 10);
+  return { feed: v.feed, n, at: v.at, median_30d: r1(med), ratio: base ? Math.round((n / base) * 100) / 100 : null, runs: v.runs, baseline_days: Math.floor(days), flag,
+    basis, baseline: r1(base), hour_utc: v.hour_utc == null ? null : +v.hour_utc, median_hour: r1(medH), hour_samples: samples };
 }
 export async function buildHealth({ checks, at, infocon }) {
   const [up, recent, runs, fails, vol] = await sqlTx([
@@ -117,9 +143,8 @@ export async function buildHealth({ checks, at, infocon }) {
     [`SELECT feed, ok FROM ti.feed_check WHERE at > now() - interval '12 hours' ORDER BY feed, at DESC`],
     [`SELECT DISTINCT ON (job) job, started_at, ms, ok, detail->>'error' AS error FROM ti.run ORDER BY job, started_at DESC`],
     [`SELECT job, count(*) FILTER (WHERE NOT ok)::int AS failed_24h, count(*)::int AS runs_24h FROM ti.run WHERE started_at > now() - interval '24 hours' GROUP BY job`],
-    // Volume baseline (B5): latest snapshot size per feed against the median of its last 30 days of runs.
-    [`SELECT feed, (array_agg(n ORDER BY at DESC))[1] AS n, max(at) AS at, (percentile_cont(0.5) WITHIN GROUP (ORDER BY n))::real AS median_30d,
-        count(*)::int AS runs, min(at) AS first_at FROM ti.feed_volume WHERE at > now() - interval '30 days' GROUP BY feed ORDER BY feed`],
+    // Volume baseline (B5): latest snapshot size per feed against its 30-day median, by UTC hour once that hour has history.
+    [VOLUME_BASELINE_SQL, [null, null]],
   ]);
   const streak = new Map();
   for (const r of recent) { const s = streak.get(r.feed) || { n: 0, done: false }; if (!s.done) { if (r.ok) s.done = true; else s.n++; } streak.set(r.feed, s); }

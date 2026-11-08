@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS ti.disruption (source text NOT NULL, entity text NOT 
 CREATE TABLE IF NOT EXISTS ti.run (id bigserial PRIMARY KEY, job text NOT NULL, started_at timestamptz NOT NULL, ms int, ok boolean, detail jsonb);
 CREATE INDEX IF NOT EXISTS run_job_started ON ti.run (job, started_at);
 CREATE TABLE IF NOT EXISTS ti.lease (job text PRIMARY KEY, holder text, until timestamptz NOT NULL DEFAULT 'epoch');
+-- 'cables' (reserved since G26) runs the weekly submarine cable job (neon/parts/37e-cables.mjs) on open data only;
+-- TeleGeography's geocoded data is an annual paid licence and is not used. Keep the row.
 INSERT INTO ti.lease (job) VALUES ('gdelt'),('infra'),('health'),('snap'),('ioda'),('cables'),('retention') ON CONFLICT DO NOTHING;
 
 -- Added 2026-10-22 (collector 2026-10-22.1). Small key-value state for jobs that cache upstream reads (Unit 42 notes, Gen Threat

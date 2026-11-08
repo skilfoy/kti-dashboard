@@ -469,6 +469,69 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   EXTRA = null;
 }
 
+// Volume baseline by UTC hour: FIRMS-like counts follow satellite passes (0 at night, thousands by day). A night-time
+// zero is normal against its own hour; a daytime collapse is silence; a feed without five same-hour samples falls back
+// to the all-hours median.
+{
+  const day0 = new Date(); day0.setUTCHours(0, 0, 0, 0);
+  const hourly = (h) => (h < 3 ? 0 : h < 6 ? 136 : h >= 19 ? 5400 : 900);
+  const rows = [];
+  for (let d = 10; d >= 1; d--) for (let h = 0; h < 24; h++) {
+    const at = new Date(day0.getTime() - d * 864e5 + h * 3600e3 + 49 * 60e3).toISOString();
+    rows.push(['vol_night', at, hourly(h)], ['vol_day', at, hourly(h)]);
+  }
+  // Latest rows (today, after ten days of history): vol_night at 01:49 UTC with 0 detections; vol_day at 20:50 UTC with
+  // 50 (a real collapse).
+  rows.push(['vol_night', new Date(day0.getTime() + 1 * 3600e3 + 49 * 60e3).toISOString(), 0]);
+  rows.push(['vol_day', new Date(day0.getTime() + 20 * 3600e3 + 50 * 60e3).toISOString(), 50]);
+  // vol_young: ten days of runs but only three at the latest hour, so the all-hours median judges it.
+  for (let d = 10; d >= 1; d--) for (const h of [7, 8, 9]) rows.push(['vol_young', new Date(day0.getTime() - d * 864e5 + h * 3600e3).toISOString(), 100]);
+  for (const d of [3, 2, 1]) rows.push(['vol_young', new Date(day0.getTime() - d * 864e5 + 22 * 3600e3).toISOString(), 100]);
+  rows.push(['vol_young', new Date(day0.getTime() - 864e5 + 22.5 * 3600e3).toISOString(), 10]);
+  for (const [feed, at, n] of rows) await db.query(`INSERT INTO ti.feed_volume (feed, at, n) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, [feed, at, n]);
+  const hd = await M.buildHealth({ checks: [], at: new Date().toISOString() });
+  const vr = Object.fromEntries(hd.rows.filter((r) => r.kind === 'volume').map((r) => [r.feed, r]));
+  const night = vr.vol_night, dayc = vr.vol_day, young = vr.vol_young;
+  ok(night.flag === 'normal' && night.basis === 'hour' && night.hour_utc === 1 && night.baseline === 0 && night.hour_samples === 10 && night.median_30d > 0,
+    'night-time zero is normal against its own hour ' + JSON.stringify(night));
+  ok(dayc.flag === 'silence' && dayc.basis === 'hour' && dayc.hour_utc === 20 && dayc.baseline === 5400 && dayc.ratio < 0.02, 'daytime collapse is silence ' + JSON.stringify(dayc));
+  ok(young.basis === 'all' && young.hour_utc === 22 && young.hour_samples === 3 && young.baseline === 100 && young.flag === 'silence',
+    'three same-hour samples are too few: judged against the all-hours median ' + JSON.stringify(young));
+  // The old all-hours rule would have called the night zero silence.
+  ok(M.volumeFlag({ feed: 'x', n: 0, median_30d: night.median_30d, runs: 240, first_at: new Date(Date.now() - 10 * 864e5).toISOString() }).flag === 'silence', 'all-hours rule (the false alarm) for comparison');
+  ok(['feed', 'n', 'at', 'median_30d', 'ratio', 'runs', 'baseline_days', 'flag'].every((k) => k in night), 'earlier volume fields kept');
+  await db.query(`DELETE FROM ti.feed_volume WHERE feed LIKE 'vol_%'`);
+}
+
+// Infra collapse guard: URLhaus answers with a handful of hosts against a baseline near 100 at this hour. The layer keeps
+// its hosts from the last 3 hours (flagged stale) beside the new ones, names the collapse, and records what the answer held.
+{
+  const hour = new Date(); hour.setUTCMinutes(4, 0, 0);
+  for (let d = 9; d >= 1; d--) for (let k = 0; k < 24; k++) {
+    const at = new Date(hour.getTime() - d * 864e5 - k * 3600e3).toISOString();
+    await db.query(`INSERT INTO ti.feed_volume (feed, at, n) VALUES ('infra_url', $1, 100) ON CONFLICT DO NOTHING`, [at]);
+  }
+  await db.query(`UPDATE ti.infra SET last_obs = now() - interval '1 hour' WHERE layer = 'url'`);
+  await db.query(`INSERT INTO ti.infra (layer, ip, port, family, first_obs, last_obs) VALUES ('url', '91.92.240.10', 80, 'Mozi', now() - interval '2 hours', now() - interval '2 hours') ON CONFLICT DO NOTHING`);
+  const r = await M.runJob('infra', {});
+  ok(r.ok && JSON.stringify(r.collapsed) === '["url"]' && r.layers.url.collapsed.baseline === 100 && r.layers.url.collapsed.basis === 'hour' && r.layers.url.rows === 2,
+    'collapsed URLhaus layer named in the run ' + JSON.stringify(r.layers.url));
+  ok(r.layers.url.answer && r.layers.url.answer.records === 5 && r.layers.url.answer.online === 5 && r.layers.url.answer.ip_literal === 3 && /^2026-10-17T13:00/.test(r.layers.url.answer.newest_added),
+    'run detail records what the URLhaus answer held ' + JSON.stringify(r.layers.url.answer));
+  const tm = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/threatmap.json.gz')).toString());
+  const urlNodes = tm.rows.filter((x) => x.kind === 'node' && x.layer === 'url');
+  ok(tm.layers.url.collapsed && /kept, flagged stale/.test(tm.layers.url.note) && urlNodes.some((x) => x.stale) && urlNodes.some((x) => !x.stale), 'collapsed layer keeps recent hosts, flagged stale');
+  ok(!r.collapsed || !r.collapsed.includes('c2'), 'layers within baseline are not flagged');
+  await db.query(`DELETE FROM ti.feed_volume WHERE feed = 'infra_url'`);
+  await db.query(`DELETE FROM ti.infra WHERE layer = 'url' AND ip = '91.92.240.10'`);
+  const r2 = await M.runJob('infra', {});
+  ok(r2.ok && !r2.collapsed, 'without seven days of baseline nothing is called collapsed');
+}
+
+// GreyNoise: a known gap while it answers 429; a passing check reads up; another failure is down.
+ok(M.feedState({ feed: 'greynoise', ok: false, status: 429 }) === 'known_gap' && M.feedState({ feed: 'greynoise', ok: true, status: 404 }) === 'up'
+  && M.feedState({ feed: 'greynoise', ok: false, status: 401 }) === 'down' && /API key/.test(M.KNOWN_GAPS.greynoise.note), 'greynoise known gap');
+
 // Leases: a held lease skips.
 {
   await db.query(`UPDATE ti.lease SET holder = 'other', until = now() + interval '1 minute' WHERE job = 'snap'`);

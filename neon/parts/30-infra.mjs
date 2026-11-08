@@ -79,14 +79,24 @@ export function csvLine(line) {
 }
 // URLhaus online URLs whose host is an IPv4 literal, folded to one row per IP. Records come from the retired CSV export
 // or the authenticated API (urls/recent): { id, added, url, status, threat, tags, link }.
-export function foldUrlhaus(records, max = 600) {
+// stats (optional) receives what the answer held before the fold: records, online, ip_literal (online with a public
+// IPv4 host) and the newest and oldest date_added, so a shrinking layer can be traced to the answer itself.
+export function foldUrlhaus(records, max = 600, stats = null) {
   const by = new Map();
+  const st = stats || {};
+  Object.assign(st, { records: 0, online: 0, ip_literal: 0, newest_added: null, oldest_added: null });
   for (const { id, added, url, status, threat, tags, link } of records) {
+    st.records++;
+    const at = ts(added);
+    if (at && (!st.newest_added || at > st.newest_added)) st.newest_added = at;
+    if (at && (!st.oldest_added || at < st.oldest_added)) st.oldest_added = at;
     if (status && status !== 'online') continue;
+    st.online++;
     let host = '', port = 0;
     try { const u = new URL(url); host = u.hostname; port = +u.port || (u.protocol === 'https:' ? 443 : 80); } catch { continue; }
     const ip = normIp(host);
     if (!ip || !publicV4(ip) || ip !== host) continue;
+    st.ip_literal++;
     const r = by.get(ip) || { layer: 'url', ip, port: 0, ports: new Map(), family: 'unattributed', threat: threat || 'malware_download', status: status || 'online', confidence: null,
       count: 0, tagc: new Map(), cc_feed: '', as_feed: '', first_seen: null, last_seen: null, ref: link || `https://urlhaus.abuse.ch/url/${id}/` };
     r.count++;
@@ -114,10 +124,10 @@ export function parseUrlhaus(text, max = 600) {
   }
   return foldUrlhaus(recs, max);
 }
-export function parseUrlhausApi(j, max = 600) {
+export function parseUrlhausApi(j, max = 600, stats = null) {
   const arr = j && Array.isArray(j.urls) ? j.urls : [];
   return foldUrlhaus(arr.map((u) => ({ id: u.id, added: u.date_added, url: u.url, status: u.url_status, threat: u.threat, tags: Array.isArray(u.tags) ? u.tags.join(',') : String(u.tags || ''),
-    link: u.urlhaus_reference })), max);
+    link: u.urlhaus_reference })), max, stats);
 }
 
 // abuse.ch closed its keyless ThreatFox and URLhaus exports: both answer HTTP 410 Gone from 21 October 2026, the day
@@ -146,7 +156,7 @@ const FEEDS = {
   c2: { url: 'https://feodotracker.abuse.ch/downloads/ipblocklist.json', as: 'json', parse: (r) => parseFeodo(r.json), name: 'abuse.ch Feodo Tracker' },
   ioc: { url: ABUSE_API.ioc, fetch: () => abuseFetch('ioc'), parse: (r) => parseThreatFox(r.json), name: 'abuse.ch ThreatFox' },
   src: { url: 'https://isc.sans.edu/api/topips/records/100?json', as: 'json', parse: (r) => parseDShield(r.json), name: 'SANS ISC DShield' },
-  url: { url: ABUSE_API.url, fetch: () => abuseFetch('url'), parse: (r) => parseUrlhausApi(r.json), name: 'abuse.ch URLhaus' },
+  url: { url: ABUSE_API.url, fetch: () => abuseFetch('url'), parse: (r) => parseUrlhausApi(r.json, 600, (r.answer = {})), name: 'abuse.ch URLhaus' },
 };
 
 // Geolocation: ip-api.com batch (100 per request; the free tier allows 15 batch requests a minute and reports the
@@ -196,8 +206,9 @@ export async function jobInfra() {
     // The abuse.ch APIs answer 200 with query_status set when the key is refused or nothing matched.
     if (r.ok && r.json && r.json.query_status && !['ok', 'no_results'].includes(r.json.query_status)) { r.ok = false; r.error = 'abuse.ch query_status ' + String(r.json.query_status).slice(0, 60); }
     try { rows = r.ok ? f.parse(r) : []; } catch (e) { r.ok = false; r.error = String(e.message || e); }
-    fetched[layer] = { ok: r.ok && rows.length > 0, status: r.status, ms: r.ms, error: r.error || (r.ok && !rows.length ? 'no rows' : undefined), gated: !!r.gated, rows };
+    fetched[layer] = { ok: r.ok && rows.length > 0, status: r.status, ms: r.ms, error: r.error || (r.ok && !rows.length ? 'no rows' : undefined), gated: !!r.gated, rows, answer: r.answer };
   }));
+  const collapsed = await infraCollapse(fetched);
   // Geolocate what the cache does not hold (failures retried after a day), C2 first.
   const all = LAYERS.flatMap((l) => fetched[l].rows);
   const uniq = [...new Set(all.map((x) => x.ip))];
@@ -234,7 +245,9 @@ export async function jobInfra() {
         last_seen = coalesce(EXCLUDED.last_seen, ti.infra.last_seen), last_obs = $2::timestamptz`, [infraRows, seenAt]],
   ]);
   // Current set: what each feed listed this run; a feed that failed keeps its last 3 hours of rows, flagged stale.
-  const failed = LAYERS.filter((l) => !fetched[l].ok);
+  // A collapsed layer (below a fifth of its baseline) keeps the same 3 hours of earlier rows, flagged stale, beside what it
+  // listed now: one thin answer does not empty the layer, and a lasting drop shows once those rows age out.
+  const failed = LAYERS.filter((l) => !fetched[l].ok || collapsed[l]);
   const nodes = await sql(`SELECT i.layer, host(i.ip) AS ip, i.port, i.family, i.threat, i.status, i.confidence, i.count, i.tags, i.ref, i.first_seen, i.last_seen, i.first_obs,
       coalesce(nullif(g.cc, ''), nullif(i.cc_feed, '')) AS cc, g.lat, g.lon, g.city, g.asn, g.as_name, (i.last_obs < $1::timestamptz) AS stale,
       l.lists, l.ipsum, l.tor
@@ -253,11 +266,29 @@ export async function jobInfra() {
   ]);
   const trend = tr[2];
   const obsSince = tr[3] && tr[3][0] ? tr[3][0].since : null;
-  const doc = buildThreatmap({ nodes, fetched, trend, obsSince, geoStats: { cached: cached.size, looked_up: g.geo.size, ipapi_calls: g.ipapi_calls, rate_limited: g.limited, pending: need.length - g.geo.size } });
+  const doc = buildThreatmap({ nodes, fetched, trend, obsSince, collapsed, geoStats: { cached: cached.size, looked_up: g.geo.size, ipapi_calls: g.ipapi_calls, rate_limited: g.limited, pending: need.length - g.geo.size } });
   const published = await putDoc('threatmap', doc);
   await recordVolume(LAYERS.filter((l) => fetched[l].ok).map((l) => ['infra_' + l, fetched[l].rows.length]));
-  return { layers: Object.fromEntries(LAYERS.map((l) => [l, { ok: fetched[l].ok, status: fetched[l].status, rows: fetched[l].rows.length, error: fetched[l].error }])),
-    nodes: nodes.length, geolocated: doc.geolocated, geo: doc.geo, published, ms: Date.now() - t0 };
+  return { layers: Object.fromEntries(LAYERS.map((l) => [l, { ok: fetched[l].ok, status: fetched[l].status, rows: fetched[l].rows.length, error: fetched[l].error,
+      ...(fetched[l].answer ? { answer: fetched[l].answer } : {}), ...(collapsed[l] ? { collapsed: collapsed[l] } : {}) }])),
+    collapsed: Object.keys(collapsed).length ? Object.keys(collapsed) : undefined, nodes: nodes.length, geolocated: doc.geolocated, geo: doc.geo, published, ms: Date.now() - t0 };
+}
+
+// Collapse guard (in the spirit of the blogs job's): a layer that answered with rows but fewer than a fifth of its volume
+// baseline for this UTC hour (volumeFlag silence, judged after seven days of runs). Returns { layer: { n, baseline,
+// basis } }. The run stays ok, since the drop may be real upstream (URLhaus, 2 November 2026); the layer and the run
+// detail name it.
+export async function infraCollapse(fetched, hour = new Date().getUTCHours()) {
+  const out = {};
+  let base = [];
+  try { base = await sql(VOLUME_BASELINE_SQL, [`{${LAYERS.map((l) => 'infra_' + l).join(',')}}`, hour]); } catch { return out; }
+  for (const b of base) {
+    const l = b.feed.slice(6), f = fetched[l];
+    if (!f || !f.ok) continue;
+    const v = volumeFlag({ ...b, n: f.rows.length });
+    if (v.flag === 'silence') out[l] = { n: v.n, baseline: v.baseline, basis: v.basis };
+  }
+  return out;
 }
 
 // The map draws at most MAP_CAP nodes per layer (ThreatFox newest first, URLhaus by URL count); the layer, country and
@@ -269,14 +300,18 @@ const compact = (o) => { for (const k of Object.keys(o)) if (o[k] == null || o[k
 // collector started, so it does not count; the live fallback has no observations and uses source times alone.
 const DAY_MS = 86400000;
 const msOf = (v) => (v ? new Date(v).getTime() : NaN);
-export function buildThreatmap({ nodes, fetched, trend, geoStats, obsSince = null }) {
+export function buildThreatmap({ nodes, fetched, trend, geoStats, obsSince = null, collapsed = {} }) {
   const now = Date.now();
   const since = msOf(obsSince), baseline = isFinite(since) && now - since >= DAY_MS;
   const within = (v) => { const t = msOf(v); return isFinite(t) && now - t < DAY_MS; };
   const rows = [], byCc = new Map(), fam = new Map(), stats = {}, drawn = { c2: 0, ioc: 0, src: 0, url: 0 };
   nodes = nodes.slice().sort((a, b) => (a.layer === 'url' && b.layer === 'url' ? (b.count || 0) - (a.count || 0) : String(b.first_seen || '').localeCompare(String(a.first_seen || ''))));
-  for (const l of LAYERS) stats[l] = { name: FEEDS[l].name, url: FEEDS[l].url, ok: fetched[l].ok, status: fetched[l].status, listed: fetched[l].rows.length, nodes: 0, geolocated: 0, new_24h: 0,
-    ...(fetched[l].gated ? { gated: true, note: ABUSE_GATE } : fetched[l].ok ? {} : { note: String(fetched[l].error || 'HTTP ' + fetched[l].status).slice(0, 200) }) };
+  for (const l of LAYERS) {
+    const c = collapsed[l];
+    stats[l] = { name: FEEDS[l].name, url: FEEDS[l].url, ok: fetched[l].ok, status: fetched[l].status, listed: fetched[l].rows.length, nodes: 0, geolocated: 0, new_24h: 0,
+      ...(fetched[l].gated ? { gated: true, note: ABUSE_GATE } : !fetched[l].ok ? { note: String(fetched[l].error || 'HTTP ' + fetched[l].status).slice(0, 200) }
+        : c ? { collapsed: c, note: `listed ${c.n} against a baseline of ${c.baseline} (${c.basis === 'hour' ? 'same UTC hour' : 'all hours'}); hosts seen in the last 3 hours are kept, flagged stale` } : {}) };
+  }
   // Layers naming each address, for the independence count behind credibility (38-lists.mjs).
   const ipLayers = new Map();
   for (const n of nodes) { const s = ipLayers.get(n.ip) || new Set(); s.add(n.layer); ipLayers.set(n.ip, s); }
