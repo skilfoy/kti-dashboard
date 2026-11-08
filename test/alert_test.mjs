@@ -79,6 +79,17 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
   const r2 = A.evaluate(h, NOW);
   ok(!titles(r2).includes('Collector: ukmto answer changed') && titles(r2).includes('Collector: gdelt_doc_api answer changed'), 'state field wins when present');
 }
+// GreyNoise: an intermittent known gap. A 429, or a passing check while 24-hour uptime is under 95 percent, holds the
+// gap; a steady recovery or another failure is a changed answer; it never opens a failing issue.
+{
+  const gn = (o) => { const h = clone(); Object.assign(feed(h, 'greynoise'), o); return titles(A.evaluate(h, NOW)); };
+  ok(feed(BASE, 'greynoise').status === 429 && gn({}).length === 0, 'greynoise 429 on the 2 November record: no problem');
+  ok(gn({ ok: true, status: 404, uptime_24h: 81.25, failing_streak: 0 }).length === 0, 'an occasional pass keeps the gap');
+  ok(JSON.stringify(gn({ ok: true, status: 200, uptime_24h: 98, failing_streak: 0 })) === '["Collector: greynoise answer changed"]', 'a steady recovery is reported once as a change');
+  ok(JSON.stringify(gn({ ok: false, status: 401, failing_streak: 9 })) === '["Collector: greynoise answer changed"]', 'another failure is a change');
+  ok(!gn({ ok: false, status: 429, failing_streak: 40 }).some((t) => /greynoise failing/.test(t)), 'never a failing issue');
+  ok(gn({ ok: false, status: 429, state: 'known_gap' }).length === 0, 'collector state known_gap holds');
+}
 {
   const h = clone();
   h.collector.checked_at = minAgo(150);

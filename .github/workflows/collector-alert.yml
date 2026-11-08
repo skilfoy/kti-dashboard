@@ -51,12 +51,20 @@ jobs:
             'threatcluster', 'sec_edgar', 'blocklist_de', 'spamhaus_drop'];
           // Documented gaps (runbook 6): reported only when their answer changes. The collector marks them state "known_gap"
           // from 2026-11-02.1; before that the expected HTTP answer decides. Volume rows of the maritime gaps hold at zero.
-          export const KNOWN_GAPS = { marad_msci: { expect: [403] }, ukmto: { expect: [403] }, nga_msi: { expect: [200, 206], stale: true }, gdelt_doc_api: { expect: [429] } };
+          // GreyNoise (intermittent): its free lookup rate-limits cloud egress (HTTP 429) and sometimes answers, so a passing
+          // check holds the gap until the feed passes steadily (24-hour uptime of 95 percent or more); it needs an API key.
+          export const KNOWN_GAPS = { marad_msci: { expect: [403] }, ukmto: { expect: [403] }, nga_msi: { expect: [200, 206], stale: true }, gdelt_doc_api: { expect: [429] },
+            greynoise: { expect: [429], intermittent: true } };
+          export const STEADY_UPTIME = 95;
           export const GAP_VOLUME = ['marad', 'asam', 'navwarn_security'];
           const STREAK = 4, FAILS_24H = 3, STALE_RECORD_MIN = 90;
 
           const mins = (now, t) => Math.round((now - Date.parse(t)) / 60000);
-          const gapHolds = (f) => (f.state ? f.state === 'known_gap' : KNOWN_GAPS[f.feed].expect.includes(f.status) && (KNOWN_GAPS[f.feed].stale || !f.ok));
+          const gapHolds = (f) => {
+            const g = KNOWN_GAPS[f.feed];
+            if (g.intermittent && f.ok === true) return (f.uptime_24h ?? 0) < STEADY_UPTIME;
+            return f.state ? f.state === 'known_gap' : g.expect.includes(f.status) && (g.stale || !f.ok);
+          };
 
           // Problems in one health answer. complete is false when the record could not be judged in full (endpoint or collector
           // record unreachable, or stale), so problems not seen this time are left open; closable lists titles that may close.
