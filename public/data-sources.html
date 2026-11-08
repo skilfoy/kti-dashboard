@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data sources</title>
+<meta name="description" content="Every upstream the Global Threat Intelligence platform reads or has evaluated: owner, what it feeds, access, licence, required attribution and live status.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/tokens.css">
+<script src="/runtime/theme.js"></script>
+<style>
+  :root { --ds-gap: var(--cds-gap-md, 12px); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--color-bg); color: var(--color-fg); font: var(--cds-font-size-body, 14px)/1.5 var(--ti-font-sans); }
+  a { color: inherit; text-decoration-color: var(--color-border-line); text-underline-offset: 2px; }
+  a:hover { text-decoration-color: currentColor; }
+  .ds { max-width: 1200px; margin: 0 auto; padding: 0 16px 32px; }
+  .ds-mark { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--cds-font-size-caption, 12px); color: var(--color-fg-muted); border-bottom: 1px solid var(--color-border-line); padding: 8px 0; }
+  .ds-tlp { color: var(--color-warn); font-weight: var(--cds-font-weight-medium, 600); }
+  h1 { font-family: var(--ti-font-serif); font-size: 26px; font-weight: 600; margin: 20px 0 4px; }
+  .ds-lede { color: var(--color-fg-muted); max-width: 75ch; margin: 0 0 16px; }
+  .ds-tools { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 12px 0; }
+  .ds-tools label { font-size: var(--cds-font-size-caption, 12px); color: var(--color-fg-muted); display: flex; flex-direction: column; gap: 2px; }
+  .ds-tools select, .ds-tools input { font: inherit; color: var(--color-fg); background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: 6px; padding: 5px 8px; min-width: 0; }
+  .ds-count { font-size: var(--cds-font-size-caption, 12px); color: var(--color-fg-muted); margin-left: auto; }
+  .ds-box { overflow-x: auto; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius, 8px); background: var(--color-panel); }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--color-border-line); }
+  thead th { position: sticky; top: 0; background: var(--color-panel); font-size: var(--cds-font-size-caption, 12px); color: var(--color-fg-muted); font-weight: 600; }
+  tr.ds-group th { background: var(--color-bg); font-size: 13px; color: var(--color-fg); padding-top: 12px; }
+  td.ds-name a { font-weight: 600; }
+  .ds-sub { display: block; color: var(--color-fg-muted); font-size: 12px; }
+  .ds-badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11.5px; border: 1px solid currentColor; white-space: nowrap; }
+  .ds-badge[data-s="live"], .ds-badge[data-s="Up"] { color: var(--color-ok); }
+  .ds-badge[data-s="Down"] { color: var(--color-bad); }
+  .ds-badge[data-s="known_gap"], .ds-badge[data-s="Known gap"], .ds-badge[data-s="held"] { color: var(--color-warn); }
+  .ds-badge[data-s="candidate"], .ds-badge[data-s="declined"], .ds-badge[data-s="not_implemented"] { color: var(--color-fg-muted); }
+  code { font-size: 12px; }
+  .ds-attr { margin-top: 24px; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius, 8px); background: var(--color-panel); padding: 12px 16px; }
+  .ds-attr h2, .ds-foot h2 { font-size: 16px; margin: 0 0 8px; }
+  .ds-attr ul { margin: 0; padding-left: 18px; }
+  .ds-attr li { margin: 3px 0; }
+  .ds-foot { margin-top: 20px; color: var(--color-fg-muted); font-size: 13px; }
+  .ds-note { color: var(--color-fg-muted); font-size: 12px; }
+  @media (max-width: 720px) {
+    .ds-hide-sm { display: none; }
+    h1 { font-size: 22px; }
+    .ds-count { margin-left: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<main class="ds" id="ds">
+  <div class="ds-mark"><span class="ds-tlp">TLP:AMBER</span><span>PAP:AMBER</span><span>Open-source intelligence</span><span><a href="/">Back to the dashboard</a></span></div>
+  <h1>Data sources</h1>
+  <p class="ds-lede">Every upstream the platform reads or has evaluated, with its owner, what it feeds, how it is reached, its licence and any attribution it requires. Secrets are named, never shown. The live column reads the collector's own checks from <a href="/api/health">/api/health</a>.</p>
+  <div class="ds-tools" role="search">
+    <label>Status<select id="f-status" aria-label="Filter by status"><option value="">All</option></select></label>
+    <label>Access<select id="f-access" aria-label="Filter by access"><option value="">All</option></select></label>
+    <label>Search<input id="f-q" type="search" placeholder="Name, owner, licence" aria-label="Search sources"></label>
+    <span class="ds-count" id="count" aria-live="polite">Loading the registry…</span>
+  </div>
+  <div class="ds-box">
+    <table id="tbl" aria-describedby="count">
+      <thead><tr><th scope="col">Source</th><th scope="col">Status</th><th scope="col">Live</th><th scope="col" class="ds-hide-sm">Feeds</th><th scope="col">Access</th><th scope="col" class="ds-hide-sm">Licence</th><th scope="col" class="ds-hide-sm">Cadence</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <section class="ds-attr" id="attribution" aria-labelledby="attr-h">
+    <h2 id="attr-h">Attribution</h2>
+    <ul id="attr-list"><li class="ds-note">Loading…</li></ul>
+  </section>
+  <div class="ds-foot">
+    <p>The registry is machine-checked on every build against the collector's checks, the site's datasets and the collector's jobs. Download it as <a href="/data-sources.json">JSON</a>. The derived submarine cable dataset is open data under the ODbL: <a href="/open-data/cables.geojson">cables.geojson</a> (<a href="/open-data/cables-LICENSE.txt">licence note</a>).</p>
+  </div>
+</main>
+<script src="/js/data-sources.js"></script>
+</body>
+</html>

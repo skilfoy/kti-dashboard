@@ -39,8 +39,8 @@ CREATE TABLE IF NOT EXISTS ti.disruption (source text NOT NULL, entity text NOT 
 CREATE TABLE IF NOT EXISTS ti.run (id bigserial PRIMARY KEY, job text NOT NULL, started_at timestamptz NOT NULL, ms int, ok boolean, detail jsonb);
 CREATE INDEX IF NOT EXISTS run_job_started ON ti.run (job, started_at);
 CREATE TABLE IF NOT EXISTS ti.lease (job text PRIMARY KEY, holder text, until timestamptz NOT NULL DEFAULT 'epoch');
--- 'cables' is reserved for a planned submarine cable dependency layer (KTI work tracker; earlier G26): no job yet, and
--- its data source is open data only (TeleGeography's geocoded data is an annual paid licence). Keep the row.
+-- 'cables' (reserved since G26) runs the weekly submarine cable job (neon/parts/37e-cables.mjs) on open data only;
+-- TeleGeography's geocoded data is an annual paid licence and is not used. Keep the row.
 INSERT INTO ti.lease (job) VALUES ('gdelt'),('infra'),('health'),('snap'),('ioda'),('cables'),('retention') ON CONFLICT DO NOTHING;
 
 -- Added 2026-10-22 (collector 2026-10-22.1). Small key-value state for jobs that cache upstream reads (Unit 42 notes, Gen Threat
@@ -63,3 +63,11 @@ CREATE TABLE IF NOT EXISTS ti.link_check (url text PRIMARY KEY, label text, kind
 CREATE TABLE IF NOT EXISTS ti.enrich (type text NOT NULL, q text NOT NULL, analyzer text NOT NULL, ok boolean, result jsonb, error text, at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (type, q, analyzer));
 INSERT INTO ti.lease (job) VALUES ('lists'),('fires'),('maritime'),('leaksites'),('ransompay'),('unit42'),('genioc'),('lanesreg'),('blogs'),('links'),('sec8k') ON CONFLICT DO NOTHING;
 -- ti_app's DML on these tables comes from the schema's default privileges (checked with has_table_privilege after creation).
+-- Added 2026-11-03: submarine cables from OpenStreetMap (ODbL 1.0, "© OpenStreetMap contributors"), joined with Wikidata
+-- (CC0) by exact name. Snapshot tables, replaced whole by the weekly cables job; no OSM user or edit metadata is kept.
+-- Metadata (osm_base, counts, source URL, licence, attribution) lives in ti.kv under 'cables:meta'.
+CREATE TABLE IF NOT EXISTS ti.cable (osm_id bigint PRIMARY KEY, name text, tags jsonb NOT NULL DEFAULT '{}', parts jsonb NOT NULL, points int NOT NULL,
+  wikidata jsonb, seen_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS ti.cable_station (osm_id bigint PRIMARY KEY, name text, lat real NOT NULL, lon real NOT NULL, cc text, tags jsonb NOT NULL DEFAULT '{}',
+  seen_at timestamptz NOT NULL DEFAULT now());
+INSERT INTO ti.lease (job) VALUES ('cables') ON CONFLICT DO NOTHING;

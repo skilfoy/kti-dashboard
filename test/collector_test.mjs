@@ -381,7 +381,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
     && /2024-05-10/.test(fr.nga_msi.gap) && fr.epss.state === 'down' && fr.feodo.state === 'up' && JSON.stringify(hd.down) === JSON.stringify(h.down) && hd.known_gaps.length === 4 && hd.infocon === 'green',
     'health doc: state per feed, ok unchanged, down and known_gaps lists');
   ok(M.feedState({ feed: 'marad_msci', ok: true, status: 200 }) === 'up' && M.feedState({ feed: 'marad_msci', ok: false, status: 404 }) === 'down'
-    && M.feedState({ feed: 'ukmto', ok: false, status: 403 }) === 'known_gap' && M.feedState({ feed: 'gdelt_doc_api', ok: false, status: 0 }) === 'down'
+    && M.feedState({ feed: 'ukmto', ok: false, status: 403 }) === 'known_gap' && M.feedState({ feed: 'gdelt_doc_api', ok: false, status: 503 }) === 'down' && M.feedState({ feed: 'gdelt_doc_api', ok: false, status: 0 }) === 'known_gap'
     && M.feedState({ feed: 'nga_msi', ok: false, status: 503 }) === 'down' && M.feedState({ feed: 'epss', ok: false, status: 403 }) === 'down', 'a changed answer leaves the gap');
   const s = await M.runJob('snap', {});
   ok(s.ok && s['snap-ransomware'].ok && s['snap-cyberattacks'].ok && s['snap-epss'].ok && s['snap-threatfox'].ok && s['snap-lanes'].ok && s['snap-ofac'].ok, 'snap ' + JSON.stringify(s).slice(0, 400));
