@@ -1,0 +1,34 @@
+# Changelog
+
+## 2.1.0 (13 November 2026)
+
+A review of the whole platform (site, service, collector, pipeline, data, workflows, tracker and the scheduled reassessment) and the upgrade that came out of it. Findings and the backlog they opened are in the Notion page "KTI platform review, 13 November 2026".
+
+### Analytic integrity
+- Change log. `data/authored/history.json` records one event whenever a theater's ThreatCon level or trend, a judgment's title, likelihood, severity, status, rank or horizon, a warning indicator's state, or a vector's level or trend moves. The validator writes it and `--check` refuses a build whose tracked values differ from it. Backfilled from Git to 30 October 2026 by `pipeline/backfill_history.py` (151 baseline rows, 5 changes across runs R-0012 to R-0024).
+- Judgment horizons. Every live judgment carries `horizon`, the date by which it is scored. A reassessment fails while a horizon has passed without an outcome and a new horizon.
+- Forecast record. `data/authored/outcomes.json` holds one row per passed horizon with the outcome and the cited items behind it; the validator derives the Brier score. KJ-01 and KJ-02 were scored for their 3 November horizon (both held) and re-issued with new horizons; their titles no longer read "through the midterms" ten days after the midterms.
+- Review cadence. `review_by` is derived from `last_reviewed` and the level (CRITICAL and HIGH 2 days, ELEVATED 4, GUARDED and NORMAL 7). A reassessment fails while a theater is past it, a ranked judgment has gone 7 days without review, or a requirement has gone 35.
+- Currency rules fail the reassessment and print as warnings under `--check`, so an overdue review never blocks a feed deploy.
+- More validator rules: item lane and date precision, no future publication date, a headline-only item at credibility 3 or lower, ICD-203 likelihood terms, judgment status, a 3,500-character cap on a theater's basis, and the remaining writing rules that a pattern can catch ("X is not Y. It is Z.", "x becomes y when z", negative-then-positive pairs, more than two em dashes in a field). Checks per run rose from about 48,000 to about 125,000.
+- Data corrections: I-066 (a headline-only item) regraded from credibility 2 to 3; I-725 date precision normalised; the basis of T-RSY, T-HRM, T-UKR and T-SDN cut from as much as 6,958 characters of accumulated daily entries to the standing rationale plus the newest developments.
+
+### Site
+- Brief leads with "Since the last reassessment": the latest run's logged changes, the net change in cited items, the last ThreatCon level change on record and the changes of the previous 14 days.
+- Judgment cards show the date each is scored by. Theater detail shows when the current level and trend took effect.
+- Method gains the forecast record (outcomes, Brier score, open horizons) and the full change log.
+- `/feed.json`: a JSON Feed with one entry per run and the changes it logged.
+- Security headers on every response: a content security policy that keeps scripts, styles, fonts and connections to this origin and forbids framing, `nosniff`, a referrer policy, a permissions policy and a cross-origin opener policy.
+- Tabs follow the WAI-ARIA pattern (one tab stop, arrow keys, Home and End, `aria-controls`). In-page links open the page they point into. A print stylesheet turns the open page into a handout.
+- The STIX export carries each judgment's horizon.
+
+### Operations
+- The operator host (`threat-feeds-skilfoys-projects.vercel.app`) stopped following production deploys on 2 November and served that day's build and service code for eleven days; runs R-0013 to R-0024 read it and recorded stale catalog versions in the ledger. The workflow now points it at every deployment, and the runbook reads site data from the public host.
+- The smoke test fails when the public site serves a commit other than the one just deployed, when the security headers are missing, or when the change feed is absent.
+- "Reassessment watch" (`.github/workflows/reassessment-watch.yml`): twice a day, without a model, one issue stays open while the ledger holds no daily reassessment from the last 25 hours or a review is overdue.
+- "Collector alerts" no longer raises the maritime job for failing with "no source answered": all four of its sources are documented gaps, and that failure restates them. A silent job or another error still raises it.
+- Site and watch workflows pin their actions to commit hashes. `collector-deploy.yml` is left on tags until the next collector change, because editing it starts a run that waits at the production approval gate.
+
+### Not changed
+- The collector (`neon/`), the service routes (`api/`, `lib/`), verticals, controls, assets, exposure, OSINT toolkit, indicator rules and chokepoints.
+- The TLP:AMBER and PAP:AMBER markings, by the owner's standing choice.
