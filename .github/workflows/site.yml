@@ -32,19 +32,21 @@ env:
   VERCEL_PROJECT_ID: prj_eISaKjcBNEHSxvuO7OvW6Nf94s5P
   VERCEL_TELEMETRY_DISABLED: "1"
   PUBLIC_DOMAIN: intel.kilfoycyber.com
+  # The operator side: the project's team-scoped *.vercel.app address behind Vercel Authentication, where /api/admin answers.
+  OPERATOR_HOST: threat-feeds-skilfoys-projects.vercel.app
 
 jobs:
   site:
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "24"
           cache: npm
@@ -59,7 +61,7 @@ jobs:
       # other run restores the newest one.
       - name: Restore built feeds
         id: feeds
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: feeds
           key: feeds-${{ github.run_id }}
@@ -99,13 +101,18 @@ jobs:
 
       - name: Save built feeds
         if: steps.rebuild.outcome == 'success'
-        uses: actions/cache/save@v6
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: feeds
           key: feeds-${{ github.run_id }}
 
+      # Currency rules (overdue reviews, passed horizons) print as WARN lines here and never fail a deploy: they gate
+      # the reassessment itself, and the "Reassessment watch" workflow raises them as an issue.
       - name: Validate the authored datasets
-        run: python3 -I pipeline/authored_build.py data/authored --check
+        run: |
+          python3 -I pipeline/authored_build.py data/authored --check | tee validate.txt
+          grep '^WARN ' validate.txt | sed 's/^WARN /::warning::/' || true
+          rm -f validate.txt
 
       - name: Assemble the site data
         run: python3 -I pipeline/site_build.py --authored data/authored --feeds feeds --out public --commit "$GITHUB_SHA"
@@ -154,11 +161,18 @@ jobs:
           # previous deployment; pointing it explicitly makes the public site follow every deploy.
           vercel alias set "$url" "$PUBLIC_DOMAIN" --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
           echo "Pointed $PUBLIC_DOMAIN at $url" | tee -a "$GITHUB_STEP_SUMMARY"
+          # The operator side stopped following production deploys on 2 November 2026 and served that day's build and
+          # service code for eleven days, so the daily run read stale catalogs through it. It is pointed explicitly too.
+          if vercel alias set "$url" "$OPERATOR_HOST" --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"; then
+            echo "Pointed $OPERATOR_HOST at $url" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::Could not point $OPERATOR_HOST at $url; the operator side may serve an older deployment"
+          fi
 
       # Until DNS for the public domain resolves to Vercel this check warns instead of failing the run.
       - name: Check the public site
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: |
           sleep 20
-          if getent hosts "$PUBLIC_DOMAIN" > /dev/null; then node test/smoke.mjs "https://$PUBLIC_DOMAIN"
+          if getent hosts "$PUBLIC_DOMAIN" > /dev/null; then EXPECT_COMMIT="$GITHUB_SHA" node test/smoke.mjs "https://$PUBLIC_DOMAIN"
           else echo "::warning::$PUBLIC_DOMAIN does not resolve yet; add its DNS record to check the public site"; fi
