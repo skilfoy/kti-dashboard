@@ -440,3 +440,20 @@
 #def-detail .ti-kj { margin-bottom: var(--cds-gap-sm); }
 #def-detail .ti-kj p { font-size: var(--cds-font-size-caption); }
 .ti-gapkey { margin-left: 4px; }
+
+/* Change log lists (Brief) */
+.ti-changes { list-style: none; margin: 0 0 var(--cds-gap-md); padding: 0; display: grid; gap: 6px; }
+.ti-changes li { line-height: 1.45; padding: 6px 0; border-top: 1px solid var(--color-border-line); }
+.ti-changes li:first-child { border-top: 0; }
+
+/* Print: the open page as a handout. Controls, tabs and buttons drop out, scroll boxes open, cards stay whole. */
+@media print {
+  .site-skip, .ti-controls, .ti-tabs, .ti-more, .ti-chip, button { display: none !important; }
+  .ti-amap[hidden] { display: none !important; }
+  .ti { max-width: none; padding: 0; }
+  .ti-tbox, .ti-tbox.ti-short { max-height: none; overflow: visible; }
+  .ti-card, .ti-kj, .ti-tile, .ti-changes li, tr { break-inside: avoid; }
+  .ti-h2, .ti-h3 { break-after: avoid; }
+  a[href^="http"] { text-decoration: none; color: inherit; }
+  body { background: #fff; }
+}

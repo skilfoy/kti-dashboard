@@ -69,6 +69,8 @@
       row('Outlook', 'outlook', t.outlook),
       row('Requirements', 'pirs', t.pirs),
       [h('dt', { text: 'MERIDIAN baseline' }), h('dd', {}, t.meridian_baseline == null ? 'Not covered' : v('span', 'theaters', 'meridian_baseline', w, String(t.meridian_baseline)))],
+      TI.changes ? TI.changes.theaterRow(t) : null,
+      row('Last reviewed', 'last_reviewed', t.last_reviewed),
       row('Review by', 'review_by', t.review_by));
     el.append(dl);
     if (t.judgment_id) {

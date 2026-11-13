@@ -32,7 +32,7 @@
         confidence: CONF[c.confidence] ?? 15, labels: [j.likelihood, `confidence:${c.confidence || 'LOW'}`, `severity:${j.severity}`],
         object_refs: [ident], object_marking_refs: [TLP_AMBER, pap],
         external_references: refs.map((i) => ({ source_name: i.source_name, url: i.url, description: `${i.date} ${i.title} [${i.grade}, ${i.veracity}]` })),
-        x_likelihood: j.likelihood, x_probability: j.probability, x_nist_csf: j.csf, x_pirs: j.pirs,
+        x_likelihood: j.likelihood, x_probability: j.probability, x_horizon: j.horizon || null, x_nist_csf: j.csf, x_pirs: j.pirs,
       });
     }
     return JSON.stringify({ type: 'bundle', id: `bundle--${uuid('bundle' + at)}`, objects }, null, 2);
@@ -41,6 +41,8 @@
   TI.page('method', (sec) => {
     // Credibility and RSIT on the threat map (intel.js).
     if (TI.intel) TI.intel.methodCards(sec);
+    // Forecast record and change log (changes.js).
+    if (TI.changes) TI.changes.method(sec);
     const tc = sec.querySelector('#tbl-conf');
     if (TI.tableState(tc, ['confidence'])) {
       TI.table(tc, TI.rows('confidence'), [

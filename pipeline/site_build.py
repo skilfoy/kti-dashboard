@@ -89,6 +89,34 @@ json.dump(site, open(os.path.join(a.out, "site.json"), "w", encoding="utf-8"), e
 print(f"site.json: {sum(1 for d in catalog.values() if d['kind'] == 'file')} files ({total / 1e6:.1f} MB), "
       f"{sum(1 for d in catalog.values() if d['kind'] == 'query')} queries" + (f"; missing: {', '.join(missing)}" if missing else ""))
 
+# The change feed (JSON Feed 1.1): one entry per ledger run, newest first, saying what the run changed. Built from the
+# ledger and the change log, so a reader or a tool can follow the site's assessed changes without opening the page.
+LV = {"5": "CRITICAL", "4": "HIGH", "3": "ELEVATED", "2": "GUARDED", "1": "NORMAL"}
+FIELD = {"threatcon": "ThreatCon level", "trend": "trend", "title": "title", "likelihood": "likelihood", "severity": "severity",
+         "status": "status", "exec_rank": "executive rank", "horizon": "horizon", "state": "state", "level": "level"}
+history = load_json(os.path.join(a.authored, "history.json")) or []
+HOME = "https://intel.kilfoycyber.com"
+entries = []
+for n, run in enumerate(ledger):
+    if not isinstance(run, dict) or not run.get("run_id"):
+        continue
+    moves = [e for e in history if e.get("run_id") == run["run_id"] and e.get("from") is not None]
+    show = lambda e, x: (f"{x} {LV.get(str(x), '')}".strip() if e["kind"] == "theater" and e["field"] == "threatcon" else str(x))
+    lines = [f"{e['kind'].capitalize()} {e['id']} ({e['name']}): {FIELD.get(e['field'], e['field'])} {show(e, e['from'])} to {show(e, e['to'])}" for e in moves]
+    prev = ledger[n - 1] if n else None
+    delta = run["items"] - prev["items"] if prev and isinstance(run.get("items"), int) and isinstance(prev.get("items"), int) else None
+    head = f"{len(moves)} change{'' if len(moves) == 1 else 's'} to levels, trends, judgments and indicators" if moves else "no level, trend, judgment or indicator moved"
+    text = f"{run.get('kind', 'Run')} {run['run_id']}: {head}; {run.get('items')} cited items" + (f" (net {delta:+d})" if delta is not None else "") + f". {run.get('validator', '')}."
+    entries.append({"id": f"{HOME}/#run-{run['run_id']}", "url": f"{HOME}/#brief-since", "title": f"{run['run_id']}: {head}",
+                    "content_text": "\n".join([text] + lines), "date_published": run.get("at"),
+                    "_kti": {"run_id": run["run_id"], "kind": run.get("kind"), "hash": run.get("hash"), "changes": len(moves)}})
+feed = {"version": "https://jsonfeed.org/version/1.1", "title": "Global threat intelligence: assessed changes by run",
+        "home_page_url": HOME + "/", "feed_url": HOME + "/feed.json", "language": "en",
+        "description": "One entry per reassessment run with the ThreatCon, trend, judgment and warning-indicator changes it logged. Marked TLP:AMBER and PAP:AMBER by the owner's choice.",
+        "authors": [{"name": "Sean Kilfoy"}], "items": entries[::-1][:60]}
+json.dump(feed, open(os.path.join(a.out, "feed.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+print(f"feed.json: {len(feed['items'])} runs")
+
 # The data sources registry (data/data_sources.json, checked by pipeline/check_data_sources.mjs) is published as is at the
 # site root for the /data-sources page, outside /data so its URL stays stable.
 reg_src = os.path.join(os.path.dirname(os.path.abspath(a.authored)), "data_sources.json")
