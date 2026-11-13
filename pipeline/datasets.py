@@ -38,6 +38,8 @@ D = {
  "collection_matrix": ("Collection matrix", "Requirement-to-source traceability with each source's role and the element of information it satisfies." + JUDGED),
  "method": ("Doctrine traceability", "Each design choice on this site and the book and page of the CTI literature it comes from." + JUDGED),
  "followons": ("Follow-on requirements", "FP-numbered follow-on requirements from comments and collection gaps, classified and prioritised for approval." + JUDGED),
+ "history": ("Change log", "One event per change of a tracked value: theater ThreatCon level and trend, judgment title, likelihood, severity, status, rank and horizon, warning-indicator state, and vector level and trend, each stamped with the run that made it. Rows with no prior value are the baseline of the record, which begins on 30 October 2026. Kept by the validator, which refuses a build whose tracked values differ from the log; no analyst edits it."),
+ "outcomes": ("Forecast record", "One row per judgment horizon that has passed: the judged statement, the ICD-203 term and probability range in force, the outcome (Held, Did not hold or Indeterminate), the cited items behind it and the Brier score from the midpoint of the range. Written by the reassessment when a horizon passes; the validator checks each row and derives the score."),
  "ledger": ("Run ledger", "One entry per reassessment with catalog versions, validator result, a hash of the authored datasets and the previous entry's hash. Appended by the daily reassessment."),
  "verticals": ("Vertical calibration weights", "Eight critical-infrastructure verticals with the weight each applies to theater and vector levels, the default vertical, and the sector label used to match leak-site claims. An analyst-set lens; the daily reassessment carries it unchanged."),
  "controls": ("Control coverage by vector", "NIST CSF 2.0 control coverage per threat vector, 0 to 1, with the basis for each value. Set with the control owners; the daily reassessment carries it unchanged."),
@@ -87,6 +89,6 @@ Q = {
 }
 
 AUTHORED = {"sources", "items", "theaters", "theater_indicators", "judgments", "evidence", "vectors", "pirs", "collection_matrix",
-            "method", "followons", "ledger", "verticals", "osint_tools", "indicator_rules", "chokepoints", "controls", "assets", "exposure_darkweb"}
+            "method", "followons", "ledger", "history", "outcomes", "verticals", "osint_tools", "indicator_rules", "chokepoints", "controls", "assets", "exposure_darkweb"}
 FEEDS = set(D) - AUTHORED
 PARAMS = {"vertical": "financial", "exp_domains": "", "exp_vendors": "", "exp_ips": "", "enrich_type": "", "enrich_q": ""}
