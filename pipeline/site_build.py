@@ -96,6 +96,7 @@ FIELD = {"threatcon": "ThreatCon level", "trend": "trend", "title": "title", "li
          "status": "status", "exec_rank": "executive rank", "horizon": "horizon", "state": "state", "level": "level"}
 history = load_json(os.path.join(a.authored, "history.json")) or []
 HOME = "https://intel.kilfoycyber.com"
+first_logged = history[0]["run_id"] if history else "R-9999"
 entries = []
 for n, run in enumerate(ledger):
     if not isinstance(run, dict) or not run.get("run_id"):
@@ -105,7 +106,10 @@ for n, run in enumerate(ledger):
     lines = [f"{e['kind'].capitalize()} {e['id']} ({e['name']}): {FIELD.get(e['field'], e['field'])} {show(e, e['from'])} to {show(e, e['to'])}" for e in moves]
     prev = ledger[n - 1] if n else None
     delta = run["items"] - prev["items"] if prev and isinstance(run.get("items"), int) and isinstance(prev.get("items"), int) else None
-    head = f"{len(moves)} change{'' if len(moves) == 1 else 's'} to levels, trends, judgments and indicators" if moves else "no level, trend, judgment or indicator moved"
+    if run["run_id"] < first_logged:  # the change log holds nothing about runs before its baseline
+        head = "run before the change log began"
+    else:
+        head = f"{len(moves)} change{'' if len(moves) == 1 else 's'} to levels, trends, judgments and indicators" if moves else "no level, trend, judgment or indicator moved"
     text = f"{run.get('kind', 'Run')} {run['run_id']}: {head}; {run.get('items')} cited items" + (f" (net {delta:+d})" if delta is not None else "") + f". {run.get('validator', '')}."
     entries.append({"id": f"{HOME}/#run-{run['run_id']}", "url": f"{HOME}/#brief-since", "title": f"{run['run_id']}: {head}",
                     "content_text": "\n".join([text] + lines), "date_published": run.get("at"),
