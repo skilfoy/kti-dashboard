@@ -1844,6 +1844,8 @@
     "method",
     "followons",
     "ledger",
+    "history",
+    "outcomes",
     "page:brief",
     "page:theaters",
     "page:vectors",

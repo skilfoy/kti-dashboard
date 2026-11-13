@@ -1,0 +1,60 @@
+# Reassessment watch, without a model. Twice a day: is there a daily reassessment in the ledger from the last 25 hours,
+# and does the validator report anything overdue (a theater past its review date, a judgment past its horizon, a
+# requirement past its review)? One GitHub issue, labelled reassessment-alert, stays open while the answer is no; it is
+# commented when the detail changes and closed with a comment when the record is current again.
+# The scheduled Claude session that runs the reassessment can fail without leaving a trace in this repository; this is
+# the trace. pipeline/reassessment_watch.py holds the rule and its self-test runs in the offline suite.
+name: Reassessment watch
+
+on:
+  schedule:
+    # The run is due at 06:45 America/Chicago (11:45 UTC in summer, 12:45 in winter) and takes under 15 minutes.
+    - cron: "23 14,20 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: reassessment-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+
+      - name: Judge the record and reconcile the issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TITLE: "Reassessment: daily run missing or reviews overdue"
+          LABEL: reassessment-alert
+        run: |
+          python3 -I pipeline/reassessment_watch.py data/authored | tee watch.json
+          ok=$(python3 -c "import json; print(json.load(open('watch.json'))['ok'])")
+          python3 - > body.md <<'PY'
+          import json
+          w = json.load(open("watch.json"))
+          h = w.get("head") or {}
+          print("\n".join(["The reassessment record is not current.", ""] + ["- " + p for p in w["problems"]] + ["",
+              f"Newest daily entry: {h.get('run_id')} at {h.get('at')} ({h.get('validator')}).",
+              "Rules: pipeline/reassessment_watch.py and the currency rules in pipeline/authored_build.py. Check the scheduled task's last session in Claude, then run it by hand or wait for the next run. This issue closes with a comment when the record is current."]))
+          PY
+          gh label create "$LABEL" --color B60205 --description "The daily reassessment is missing or a review is overdue" 2>/dev/null || true
+          number=$(gh issue list --label "$LABEL" --state open --json number --jq '.[0].number // empty')
+          if [ "$ok" = "True" ]; then
+            if [ -n "$number" ]; then gh issue close "$number" --comment "Cleared at $(date -u +%FT%TZ): the ledger holds a daily reassessment from the last 25 hours and nothing is overdue."; fi
+            echo "record current"
+          elif [ -z "$number" ]; then
+            gh issue create --title "$TITLE" --label "$LABEL" --body-file body.md
+          elif ! gh issue view "$number" --json body --jq .body | diff -q - body.md > /dev/null; then
+            gh issue edit "$number" --body-file body.md
+            gh issue comment "$number" --body "Detail changed at $(date -u +%FT%TZ). See the issue body."
+          fi

@@ -64,6 +64,12 @@ jobs:
           const holdsWhileIntermittent = (f) => !!KNOWN_GAPS[f.feed].intermittent && f.ok === true && (f.uptime_24h ?? 0) < 95;
           // Submarine cables (weekly, Sundays 05:19 UTC): silent after a week plus 90 minutes.
           CADENCE_MIN.cables = 10080;
+          // Jobs whose every source is a documented gap (13 November 2026): the maritime job reads MARAD, NGA ASAM, NGA
+          // broadcast warnings and UKMTO, all of them gaps, so each run fails with "no source answered". That failure
+          // restates the gaps and is no problem of its own; a silent job, or a failure with another error, still is.
+          // A gap whose answer moves is reported by its own "answer changed" issue.
+          export const GAP_JOBS = { maritime: /no source answered/ };
+          const restatesGap = (job, j) => !!GAP_JOBS[job] && j.ok === false && GAP_JOBS[job].test(String(j.error || ''));
           // Jobs added after the alert workflow: no "no run recorded" problem until their first run is in the record.
           export const NEW_JOBS = ['cables'];
           const STREAK = 4, FAILS_24H = 3, STALE_RECORD_MIN = 90;
@@ -104,9 +110,10 @@ jobs:
             if (!j) { why.push('no run recorded in the last 30 days'); fp.push('none'); }
               else {
                 const quiet = mins(now, j.last_run);
-                if (j.ok === false) { why.push(`last run failed (${j.last_run}): ${j.error || 'no error text'}`); fp.push('failed:' + String(j.error || '').replace(/\d+/g, '#').slice(0, 120)); }
+                const gap = restatesGap(job, j);
+                if (j.ok === false && !gap) { why.push(`last run failed (${j.last_run}): ${j.error || 'no error text'}`); fp.push('failed:' + String(j.error || '').replace(/\d+/g, '#').slice(0, 120)); }
                 if (quiet > silentAfterMin(job)) { why.push(`silent for ${quiet} minutes (last run ${j.last_run}; expected every ${CADENCE_MIN[job]} minutes, alert after ${silentAfterMin(job)})`); fp.push('silent'); }
-                if ((j.failed_24h || 0) >= FAILS_24H) { why.push(`${j.failed_24h} of ${j.runs_24h} runs failed in 24 hours`); fp.push('fails24'); }
+                if ((j.failed_24h || 0) >= FAILS_24H && !gap) { why.push(`${j.failed_24h} of ${j.runs_24h} runs failed in 24 hours`); fp.push('fails24'); }
               }
               if (why.length) add(`Collector: ${job} failing`, 'job', why, 'job:' + job + ':' + fp.join('|'));
             }

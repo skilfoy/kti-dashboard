@@ -125,7 +125,11 @@
   };
   TI.show = (id, setLink = true) => {
     for (const s of root.querySelectorAll('.ti-page')) s.hidden = s.id !== id;
-    for (const t of root.querySelectorAll('.ti-tab')) t.setAttribute('aria-selected', String(t.dataset.page === id));
+    // One tab stop for the tab list (WAI-ARIA tabs pattern): the selected tab takes focus, the arrow keys move between tabs.
+    for (const t of root.querySelectorAll('.ti-tab')) {
+      t.setAttribute('aria-selected', String(t.dataset.page === id));
+      t.setAttribute('tabindex', t.dataset.page === id ? '0' : '-1');
+    }
     TI.mount(id);
     if (setLink) dash.setLink(id);
     TI.draw(id);
@@ -140,6 +144,21 @@
     return null;
   };
   for (const t of root.querySelectorAll('.ti-tab')) t.addEventListener('click', () => TI.show(t.dataset.page));
+  {
+    const tabs = [...root.querySelectorAll('.ti-tab')];
+    for (const t of tabs) t.setAttribute('aria-controls', t.dataset.page);
+    const list = root.querySelector('.ti-tabs');
+    if (list) list.addEventListener('keydown', (ev) => {
+      const at = tabs.indexOf(document.activeElement);
+      if (at < 0) return;
+      const to = ev.key === 'ArrowRight' ? (at + 1) % tabs.length : ev.key === 'ArrowLeft' ? (at - 1 + tabs.length) % tabs.length
+        : ev.key === 'Home' ? 0 : ev.key === 'End' ? tabs.length - 1 : -1;
+      if (to < 0) return;
+      ev.preventDefault();
+      TI.show(tabs[to].dataset.page);
+      tabs[to].focus();
+    });
+  }
   TI.go = (pageId, elId) => {
     TI.show(pageId, !elId);
     if (elId) {

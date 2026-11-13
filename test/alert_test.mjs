@@ -188,4 +188,15 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
   ok(r.error === 'HTTP 502', 'endpoint failure after three tries ' + JSON.stringify(r));
 }
 
+// ---------------------------------------------------------------- a job whose every source is a documented gap
+{
+  const h = clone();
+  Object.assign(job(h, 'maritime'), { ok: false, error: 'maritime: no source answered: [{"id":"MARAD","status":403},{"id":"UKMTO","status":403}]', last_run: minAgo(20), runs_24h: 24, failed_24h: 24 });
+  ok(!titles(A.evaluate(h, NOW)).includes('Collector: maritime failing'), 'a maritime run that fails because no documented-gap source answered raises nothing');
+  Object.assign(job(h, 'maritime'), { error: 'maritime: relation ti.maritime does not exist' });
+  ok(titles(A.evaluate(h, NOW)).includes('Collector: maritime failing'), 'a maritime failure with another error is still a problem');
+  Object.assign(job(h, 'maritime'), { error: 'maritime: no source answered: []', last_run: minAgo(400) });
+  ok(titles(A.evaluate(h, NOW)).includes('Collector: maritime failing'), 'a silent maritime job is still a problem');
+}
+
 console.log(`PASS ${pass} checks (collector alerts)`);

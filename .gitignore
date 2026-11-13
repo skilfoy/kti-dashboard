@@ -16,3 +16,4 @@ e2e_shots/
 neon/collector.mjs.sha256
 neon/deploy-plan.md
 /public/data-sources.json
+/public/feed.json

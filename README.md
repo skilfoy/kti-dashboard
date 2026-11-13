@@ -13,7 +13,8 @@ GitHub (skilfoy/kti-dashboard, private)
   public/               the static site: page, runtime, styles, vendored d3
   api/ lib/             threat-feeds: the site's live-data service (Vercel functions)
   neon/                 the collector (a Neon Function every 15 minutes, with Postgres and a bucket)
-  .github/workflows/    Site: build, test, deploy
+  .github/workflows/    Site: build, test, deploy; Collector alerts and Reassessment watch: issues without a model;
+                        Collector deploy: build and approval gate
 
 GitHub Actions (Site workflow)
   02:23, 10:23, 18:23 UTC  rebuild every machine-collected dataset from its public sources (cached between runs)
@@ -59,6 +60,17 @@ Every push to `main` deploys, and the schedule rebuilds the feeds and redeploys 
 ## Daily reassessment
 
 A scheduled Claude session runs `pipeline/RUNBOOK.md` at 06:45 America/Chicago: it re-researches the theaters and the cyber picture against the closed source registry, has a separate judge check every change, runs the validator, appends a hash-chained ledger entry, and pushes `data/authored/` to `main`, which deploys. Work is tracked in the Notion "KTI work tracker"; items of type Feedback become FP-numbered follow-on requirements in the next run.
+
+## What keeps it honest
+
+- The validator (`pipeline/authored_build.py`) decides what ships. It checks every authored row, the writing rules and the ledger's hash chain, and it refuses a build whose files differ from what it would write.
+- The change log (`data/authored/history.json`) is written by the validator: one event whenever a theater's level or trend, a judgment, a warning indicator or a vector moves. A value cannot change without a run recording it. The Brief page leads with the latest run's events.
+- Every live judgment carries a horizon, the date by which it is scored. When the date passes, the reassessment records the outcome in the forecast record (`data/authored/outcomes.json`) with the cited items behind it before it sets a new horizon; the Method page shows the record and its Brier score.
+- Currency rules gate the reassessment: a theater past its review date, a judgment past its horizon or weekly review, or a requirement past 35 days fails the run. The same rules print as warnings in the site workflow, so a late review never blocks a feed deploy.
+- Two workflows watch without a model. "Collector alerts" keeps one issue per failing job or feed; "Reassessment watch" keeps one issue open while the ledger holds no daily run from the last 25 hours or a review is overdue.
+- Every response carries a content security policy that keeps scripts, styles and connections to this origin; the browser test fails on any violation. The smoke test fails when the public site serves a commit other than the one just deployed.
+
+Release notes: `CHANGELOG.md`.
 
 ## Marking
 

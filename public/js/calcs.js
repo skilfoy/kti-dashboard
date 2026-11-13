@@ -268,6 +268,86 @@ dash.calc('latest_run', {
   fn: (ledger) => ledger.slice(-1),
 });
 
+// ---- The change log and the forecast record ----
+dash.calc('run_changes', {
+  title: 'Changes by run',
+  description: 'Every change the validator logged (theater level and trend, judgment title, likelihood, severity, status, rank and horizon, indicator state, vector level and trend), newest first, with baseline rows left out and a plain-language line for each.',
+  inputs: ['history', 'ledger'],
+  fn: (history, ledger) => {
+    const LV = { 5: 'CRITICAL', 4: 'HIGH', 3: 'ELEVATED', 2: 'GUARDED', 1: 'NORMAL' };
+    const KIND = { theater: 'Theater', judgment: 'Judgment', indicator: 'Indicator', vector: 'Vector' };
+    const FIELD = { threatcon: 'ThreatCon level', trend: 'trend', title: 'title', likelihood: 'likelihood', severity: 'severity', status: 'status', exec_rank: 'executive rank', horizon: 'horizon', state: 'state', level: 'level' };
+    const show = (e, x) => (e.kind === 'theater' && e.field === 'threatcon' ? `${x} ${LV[x] || ''}`.trim() : String(x));
+    const last = (ledger.slice(-1)[0] || {}).run_id;
+    return history.filter((e) => e.from != null).map((e) => {
+      const num = e.field === 'threatcon' || e.field === 'level';
+      return {
+        event_id: e.event_id, run_id: e.run_id, date: e.date, kind: KIND[e.kind] || e.kind, id: e.id, name: e.name, what: FIELD[e.field] || e.field,
+        from: show(e, e.from), to: show(e, e.to),
+        direction: num ? (+e.to > +e.from ? 'Raised' : 'Lowered') : '',
+        latest: e.run_id === last ? 'Yes' : 'No',
+      };
+    }).reverse();
+  },
+});
+
+dash.calc('run_summary', {
+  title: 'Latest run against the one before',
+  description: 'The newest ledger entry beside the previous one: changes logged in the run, net change in cited items, the last ThreatCon level change on record and the date the change log begins.',
+  inputs: ['ledger', 'history'],
+  fn: (ledger, history) => {
+    const cur = ledger.slice(-1)[0] || {};
+    const prev = ledger.slice(-2, -1)[0] || {};
+    const moves = history.filter((e) => e.from != null);
+    const lv = moves.filter((e) => e.kind === 'theater' && e.field === 'threatcon').slice(-1)[0];
+    return [{
+      run_id: cur.run_id || '', at: cur.at || '', kind: cur.kind || '', prev_run: prev.run_id || '', prev_at: prev.at || '',
+      changes: moves.filter((e) => e.run_id === cur.run_id).length,
+      baseline_set: history.filter((e) => e.from == null && e.run_id === cur.run_id).length,
+      items: cur.items ?? null, items_delta: cur.items != null && prev.items != null ? cur.items - prev.items : null,
+      changes_14d: moves.filter((e) => Date.parse(cur.at) - Date.parse(e.date + 'T00:00:00Z') <= 14 * 864e5).length,
+      last_level_change: lv ? `${lv.name}: ${lv.from} to ${lv.to} on ${lv.date}` : '',
+      record_from: history.length ? history[0].date : '',
+    }];
+  },
+});
+
+dash.calc('theater_history', {
+  title: 'Theater level and trend history',
+  description: 'For each theater, the date its current ThreatCon level and its current trend took effect and the value each replaced, read from the change log. A value unchanged since the log began carries the log\'s first date.',
+  inputs: ['theaters', 'history'],
+  fn: (theaters, history) => theaters.map((t) => {
+    const ev = history.filter((e) => e.kind === 'theater' && e.id === t.theater_id);
+    const lastOf = (f) => ev.filter((e) => e.field === f).slice(-1)[0];
+    const lv = lastOf('threatcon'), tr = lastOf('trend');
+    const part = (e, label) => (!e ? '' : e.from == null ? `${label} unchanged since the record began on ${e.date}` : `${label} since ${e.date}, from ${e.from}`);
+    return {
+      theater_id: t.theater_id,
+      level_since: lv ? lv.date : '', level_from: lv && lv.from != null ? lv.from : '',
+      trend_since: tr ? tr.date : '', trend_from: tr && tr.from != null ? tr.from : '',
+      level_changes: ev.filter((e) => e.field === 'threatcon' && e.from != null).length,
+      summary: [part(lv, `ThreatCon ${t.threatcon}`), part(tr, t.trend)].filter(Boolean).join('; ') || 'No history recorded',
+    };
+  }),
+});
+
+dash.calc('forecast_record', {
+  title: 'Forecast record summary',
+  description: 'Judgment horizons scored so far: counts by outcome and the mean Brier score, (p - outcome) squared with p the midpoint of the stated probability range, over outcomes that held or did not hold. A score of 0 is a certain, correct forecast; always saying 50% scores 0.25.',
+  inputs: ['outcomes', 'judgments'],
+  fn: (outcomes, judgments) => {
+    const scored = outcomes.filter((o) => o.brier != null);
+    const next = judgments.filter((j) => j.horizon && j.status !== 'Retired').map((j) => j.horizon).sort()[0] || '';
+    return [{
+      resolved: outcomes.length, held: outcomes.filter((o) => o.outcome === 'Held').length,
+      not_held: outcomes.filter((o) => o.outcome === 'Did not hold').length,
+      indeterminate: outcomes.filter((o) => o.outcome === 'Indeterminate').length,
+      scored: scored.length, brier_mean: scored.length ? Math.round((scored.reduce((s, o) => s + o.brier, 0) / scored.length) * 1e4) / 1e4 : null,
+      open: judgments.filter((j) => j.horizon && j.status !== 'Retired').length, next_horizon: next,
+    }];
+  },
+});
+
 // ---- Per-vertical calibration and residual risk (every vertical computed; the page shows the selected one) ----
 dash.calc('theater_calibrated', {
   title: 'Theater level by vertical',
