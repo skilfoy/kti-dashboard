@@ -22,7 +22,7 @@ const PROBES = [
   ['sec_edgar', 'sec:'],
   ['github_api', 'https://api.github.com/rate_limit'],
   ['spamhaus_drop', 'https://www.spamhaus.org/drop/drop_v4.json'],
-  ['blocklist_de', 'https://lists.blocklist.de/lists/all.txt'],
+  ['blocklist_de', 'https://lists.blocklist.de/lists/all.txt', [200, 206, 416], { range: 'bytes=0-1023' }],
   ['cins_army', 'https://cinsscore.com/list/ci-badguys.txt'],
   ['circl_bgpranking', 'https://bgpranking-ng.circl.lu/ipasn_history/?ip=8.8.8.8'],
   ['tranco', 'https://tranco-list.eu/api/ranks/domain/example.com'],
@@ -37,7 +37,7 @@ const PROBES = [
 export const KNOWN_GAPS = {
   marad_msci: { expect: [403], note: "MARAD's Akamai edge refuses cloud addresses with HTTP 403 (since 22 Oct 2026); never worked around" },
   ukmto: { expect: [403], note: "UKMTO's Cloudflare rule refuses cloud addresses with HTTP 403 (since 22 Oct 2026); never worked around" },
-  nga_msi: { expect: [200, 206], stale: true, note: 'NGA broadcast warnings answer HTTP 200, but the newest warning listed in force was issued 2024-05-10; the maritime job counts the list as stale and keeps it off the map' },
+  nga_msi: { expect: [200, 206, 503], stale: true, note: 'NGA broadcast warnings: the newest warning listed in force was issued 2024-05-10, and since November 2026 the endpoint also answers HTTP 503 at times; the maritime job counts the list as stale and keeps it off the map' },
   gdelt_doc_api: { expect: [429], note: 'The GDELT DOC API rate-limits cloud egress (HTTP 429) and feeds no layer' },
   // Intermittent: the free lookup sometimes answers (uptime about 80 percent), so a passing check reads "up" and the
   // alert workflow reports a change only once the feed passes steadily (24-hour uptime of 95 percent or more). To lift
@@ -58,7 +58,7 @@ KNOWN_GAPS.greynoise = { note: "GreyNoise's free lookup rate-limits cloud egress
 // with the same identifying User-Agent and an Accept header (overpass-api.de answers a bare request with HTTP 406).
 const OPEN_DATA_HEADERS = (accept) => () => ({ accept, 'user-agent': cableUserAgent(ENV().SEC_USER_AGENT || 'contact not set') });
 PROBES.push(['overpass', 'https://overpass-api.de/api/status', [200], OPEN_DATA_HEADERS('text/plain')],
-  ['wikidata', WIKIDATA_SPARQL + '?format=json&query=' + encodeURIComponent('ASK {}'), [200], OPEN_DATA_HEADERS('application/sparql-results+json')]);
+  ['wikidata', WIKIDATA_SPARQL + '?format=json&query=' + encodeURIComponent('ASK {}'), [200, 206], OPEN_DATA_HEADERS('application/sparql-results+json')]);
 // GreyNoise: with GREYNOISE_API_KEY in the function environment the probe sends it (header "key"); without it the
 // keyless community lookup is used as before. The key lives only here, in the collector's Neon environment.
 export const greynoiseHeaders = () => (ENV().GREYNOISE_API_KEY ? { key: ENV().GREYNOISE_API_KEY, accept: 'application/json' } : { accept: 'application/json' });

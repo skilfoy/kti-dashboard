@@ -53,6 +53,11 @@ catalog, missing, total = {}, [], 0
 for ds, (title, desc) in D.items():
     src = os.path.join(a.authored if ds in AUTHORED else a.feeds, ds + ".json")
     rows = load_json(src)
+    if rows is None and ds == "verification":
+        rows = []  # the first build after a cache loss: every item shows as pending until the verifier has run
+    if ds == "items" and rows is not None:
+        # Excerpts are the run's proof of reading, checked by pipeline/verify_citations.py; they stay in the repository.
+        rows = [{**{k: v for k, v in r.items() if k != "excerpt"}, "has_excerpt": bool(r.get("excerpt"))} for r in rows]
     if rows is None:
         missing.append(ds)
         continue
@@ -116,7 +121,7 @@ for n, run in enumerate(ledger):
                     "_kti": {"run_id": run["run_id"], "kind": run.get("kind"), "hash": run.get("hash"), "changes": len(moves)}})
 feed = {"version": "https://jsonfeed.org/version/1.1", "title": "Global threat intelligence: assessed changes by run",
         "home_page_url": HOME + "/", "feed_url": HOME + "/feed.json", "language": "en",
-        "description": "One entry per reassessment run with the ThreatCon, trend, judgment and warning-indicator changes it logged. Marked TLP:AMBER and PAP:AMBER by the owner's choice.",
+        "description": "One entry per reassessment run with the ThreatCon, trend, judgment and warning-indicator changes it logged. Marked TLP:GREEN and PAP:AMBER.",
         "authors": [{"name": "Sean Kilfoy"}], "items": entries[::-1][:60]}
 json.dump(feed, open(os.path.join(a.out, "feed.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
 print(f"feed.json: {len(feed['items'])} runs")

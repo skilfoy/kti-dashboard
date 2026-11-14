@@ -25,7 +25,7 @@
   font-size: var(--cds-font-size-caption); letter-spacing: 0.04em; text-transform: uppercase;
   color: var(--color-fg-muted); border-bottom: 1px solid var(--color-border-line); padding-bottom: var(--cds-pad-sm);
 }
-.ti-tlp { color: var(--color-warn); font-weight: var(--cds-font-weight-medium); }
+.ti-tlp { color: var(--color-ok); font-weight: var(--cds-font-weight-medium); }
 .ti-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--cds-gap-md); align-items: flex-end; margin: var(--cds-gap-md) 0 var(--cds-gap-sm); }
 .ti-title { font-family: var(--ti-font-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; line-height: 1.15; }
 .ti-take { margin: var(--cds-gap-xs) 0 0; color: var(--color-fg-muted); max-width: 75ch; line-height: 1.5; }

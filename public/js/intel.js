@@ -311,6 +311,47 @@
         { field: 'newest', label: 'Newest', fmt: 'date', hideSm: true },
       ], { sort: 'items', dir: 'desc', limit: 80, empty: 'No blogs were read.' });
     }
+    const tp = sec.querySelector('#tbl-psirt');
+    if (tp && TI.tableState(tp, ['live_psirt'])) {
+      const m = metaOf('live_psirt') || {};
+      const feeds = m.feeds || [];
+      setCount(sec, 'psirt-asof', fresh(m));
+      note(sec, 'psirt-sum', `${int(m.advisories)} advisories from ${int(feeds.filter((f) => f.ok).length)} of ${int(feeds.length)} feeds; ${int(m.kev_hits)} name a CVE in CISA KEV (${int(m.kev_entries)} entries read). `, m.kev_note ? m.kev_note + '. ' : '', m.method || '', ' ', m.terms || '');
+      TI.table(tp, kindRows('live_psirt', 'advisory'), [
+        { field: 'published', label: 'Published', fmt: 'date', cls: 'ti-nowrap' },
+        { field: 'vendor', label: 'Publisher' },
+        { field: 'title', label: 'Advisory', link: 'link', cls: 'ti-wrap' },
+        { field: 'cves', label: 'CVEs', get: (r) => (r.cves || []).slice(0, 4).join(', ') + ((r.cves || []).length > 4 ? ` +${r.cves.length - 4}` : ''), hideSm: true },
+        { field: 'kev', label: 'In KEV', get: (r) => ((r.kev || []).length ? (r.kev || []).join(', ') + (r.ransomware ? ' (ransomware use known)' : '') : ''), attr: { 'data-status': (r) => ((r.kev || []).length ? 'review' : '') } },
+      ], { sort: 'published', dir: 'desc', limit: 150, empty: 'No advisories in 14 days.' });
+      const tpf = sec.querySelector('#tbl-psirt-feeds');
+      if (tpf) TI.table(tpf, feeds, [
+        { field: 'vendor', label: 'Publisher', link: 'url' },
+        { field: 'klass', label: 'Class' },
+        { field: 'ok', label: 'Feed', get: (r) => (r.ok ? 'ok' : r.error || 'failed'), attr: { 'data-status': (r) => (r.ok ? 'ok' : 'review') } },
+        { field: 'items', label: 'Entries', num: true, fmt: 'int' },
+      ], { sort: 'vendor', empty: 'No feeds were read.' });
+    }
+    const tt = sec.querySelector('#tbl-triage');
+    if (tt && TI.tableState(tt, ['live_triage'])) {
+      const m = metaOf('live_triage') || {}, ev = m.eval, pct = (x) => (x == null ? 'n/a' : Math.round(x * 100) + '%');
+      const show = !!(ev && ev.promoted);
+      setCount(sec, 'triage-asof', fresh(m));
+      note(sec, 'triage-sum', `${m.marking || 'Machine triage, unreviewed'}. ${int(m.labelled_24h)} titles labelled in 24 hours; ${int(m.count)} leads of relevance 1 or more shown. `, m.method || '');
+      note(sec, 'triage-eval', ev
+        ? `Agreement with the analyst's labels on ${int(ev.items)} of ${int(ev.gold_items)} evidence items (prompt ${ev.prompt_version}): theater ${pct(ev.theater_accuracy)} (macro F1 ${pct(ev.theater_macro_f1)}), vector ${pct(ev.vector_accuracy)} on ${int(ev.vector_items)} items, vector assigned where the analyst gave none ${pct(ev.vector_false_positive_rate)}. ${show ? 'The tier meets its thresholds; vector and theater labels are shown.' : `Vector and theater labels stay hidden until the full set clears the thresholds (theater ${pct(ev.thresholds.theater_accuracy)}, vector ${pct(ev.thresholds.vector_accuracy)}, false vector at most ${pct(ev.thresholds.vector_false_positive_rate)}, ${int(ev.thresholds.min_items)} items).`}`
+        : 'The tier has not been scored against the analyst\'s labels yet; vector and theater labels stay hidden until it has.');
+      const cols = [
+        { field: 'relevance', label: 'Rel.', num: true, fmt: 'int' },
+        { field: 'published', label: 'Published', fmt: 'date', cls: 'ti-nowrap' },
+        { field: 'title', label: 'Title', link: 'link', cls: 'ti-wrap' },
+        { field: 'source', label: 'Source', hideSm: true },
+        { field: 'cves', label: 'CVEs', get: (r) => (r.cves || []).slice(0, 3).join(', '), hideSm: true },
+      ];
+      if (show) cols.push({ field: 'vector', label: 'Vector', hideSm: true }, { field: 'theater', label: 'Theater', hideSm: true });
+      cols.push({ field: 'why', label: 'Model\'s reason', cls: 'ti-wrap', hideSm: true });
+      TI.table(tt, kindRows('live_triage', 'lead'), cols, { sort: 'relevance', dir: 'desc', limit: 120, empty: 'No leads in 72 hours.' });
+    }
     const tv = sec.querySelector('#tbl-volume');
     if (tv && TI.tableState(tv, ['live_health'])) {
       const rows = kindRows('live_health', 'volume');

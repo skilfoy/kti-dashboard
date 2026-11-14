@@ -6,6 +6,10 @@ const LEASE_S = { gdelt: 240, infra: 240, health: 120, snap: 120, ioda: 120, ret
 // Submarine cables (37e-cables.mjs) on the lease row reserved for them since G26: weekly, Sundays at 05:19 UTC.
 JOBS.cables = jobCables;
 LEASE_S.cables = 180;
+// Advisory feeds every three hours at :19; machine triage hourly at :49 (after the blogs slice of the same run), with its
+// evaluation run on demand only (37f-triage.mjs).
+Object.assign(JOBS, { psirt: jobPsirt, triage: jobTriage, triageeval: jobTriageeval });
+Object.assign(LEASE_S, { psirt: 180, triage: 240, triageeval: 600 });
 export async function runJob(job, opts = {}) {
   const fn = JOBS[job];
   if (!fn) return { job, ok: false, error: 'unknown job' };
@@ -48,8 +52,9 @@ export function plan(at) {
     if (h === 8 && at.getUTCDay() === 1) jobs.push('ransompay');
     if (h === 12 || h === 22) jobs.push('sec8k');
     if (h === 5 && at.getUTCDay() === 0) jobs.push('cables');
+    if (h % 3 === 1) jobs.push('psirt');
   }
-  if (m >= 45) jobs.push('retention', 'fires', 'maritime', 'blogs');
+  if (m >= 45) jobs.push('retention', 'fires', 'maritime', 'blogs', 'triage');
   return jobs;
 }
 export async function scheduled(at) {

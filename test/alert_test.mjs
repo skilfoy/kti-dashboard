@@ -68,7 +68,7 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
 {
   const h = clone();
   Object.assign(feed(h, 'marad_msci'), { ok: true, status: 200, failing_streak: 0 });
-  Object.assign(feed(h, 'nga_msi'), { ok: false, status: 503, error: 'HTTP 503' });
+  Object.assign(feed(h, 'nga_msi'), { ok: false, status: 404, error: 'HTTP 404' }); // 503 joined the documented answers on 14 November 2026
   feed(h, 'gdelt_doc_api').status = 429;
   h.collector.volume.find((v) => v.feed === 'asam').n = 3;
   const r = A.evaluate(h, NOW);

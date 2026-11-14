@@ -110,6 +110,8 @@ def due(cond, msg):
 
 
 TODAY = NOW.date()
+EXCERPT_FROM = 1126  # items numbered from here carry an excerpt and a fetch time
+norm_txt = lambda s: re.sub(r"\W+", " ", str(s).lower()).strip()
 day = lambda s: dt.date.fromisoformat(s)
 # Days a theater may go without review, by ThreatCon level; review_by is last_reviewed plus this.
 CADENCE = {5: 2, 4: 2, 3: 4, 2: 7, 1: 7}
@@ -150,6 +152,14 @@ for it in I:
     check(it["reported"] <= TODAY.isoformat(), f"{it['item_id']}: reported date in the future")
     check(len(it["title"]) <= 500, f"{it['item_id']}: title over 500 characters")
     check(bool(it["origin"].strip()), f"{it['item_id']}: no origin")
+    # Proof of reading (release 2.2): every item added from I-1126 on carries a sentence copied from the cited page
+    # and the time the page was read. pipeline/verify_citations.py fetches the page in the site workflow and checks
+    # that the sentence is on it; the excerpt stays in this repository and is left out of the published data.
+    if int(it["item_id"].split("-")[1]) >= EXCERPT_FROM:
+        ex = str(it.get("excerpt") or "")
+        check(60 <= len(ex) <= 400, f"{it['item_id']}: needs an excerpt of 60 to 400 characters copied from the cited page")
+        check(norm_txt(ex) != norm_txt(it["title"]), f"{it['item_id']}: the excerpt is the page's wording, not the item title")
+        check(bool(re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?Z$", str(it.get("fetched_at") or ""))), f"{it['item_id']}: needs fetched_at, the UTC time the page was read (YYYY-MM-DDTHH:MMZ)")
     # A headline seen only in search results is credibility 3 (runbook standing rules).
     if it["title"].rstrip(". ").endswith(", headline"):
         check(it["credibility"] >= 3, f"{it['item_id']}: a headline-only item is graded credibility 3 or lower")

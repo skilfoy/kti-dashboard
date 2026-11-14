@@ -18,7 +18,7 @@
   a:hover { text-decoration-color: currentColor; }
   .ds { max-width: 1200px; margin: 0 auto; padding: 0 16px 32px; }
   .ds-mark { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: var(--cds-font-size-caption, 12px); color: var(--color-fg-muted); border-bottom: 1px solid var(--color-border-line); padding: 8px 0; }
-  .ds-tlp { color: var(--color-warn); font-weight: var(--cds-font-weight-medium, 600); }
+  .ds-tlp { color: var(--color-ok, #1a7f37); font-weight: var(--cds-font-weight-medium, 600); }
   h1 { font-family: var(--ti-font-serif); font-size: 26px; font-weight: 600; margin: 20px 0 4px; }
   .ds-lede { color: var(--color-fg-muted); max-width: 75ch; margin: 0 0 16px; }
   .ds-tools { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 12px 0; }
@@ -53,7 +53,7 @@
 </head>
 <body>
 <main class="ds" id="ds">
-  <div class="ds-mark"><span class="ds-tlp">TLP:AMBER</span><span>PAP:AMBER</span><span>Open-source intelligence</span><span><a href="/">Back to the dashboard</a></span></div>
+  <div class="ds-mark"><span class="ds-tlp">TLP:GREEN</span><span>PAP:AMBER</span><span>Open-source intelligence</span><span><a href="/">Back to the dashboard</a></span></div>
   <h1>Data sources</h1>
   <p class="ds-lede">Every upstream the platform reads or has evaluated, with its owner, what it feeds, how it is reached, its licence and any attribution it requires. Secrets are named, never shown. The live column reads the collector's own checks from <a href="/api/health">/api/health</a>.</p>
   <div class="ds-tools" role="search">

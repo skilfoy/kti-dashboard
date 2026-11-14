@@ -10,7 +10,7 @@
     }
     return `${out.slice(0, 8)}-${out.slice(8, 12)}-5${out.slice(13, 16)}-${((parseInt(out[16], 16) & 3) | 8).toString(16)}${out.slice(17, 20)}-${out.slice(20, 32)}`;
   };
-  const TLP_AMBER = 'marking-definition--f88d31f6-486f-44da-b317-01333bde0b82';
+  const TLP_GREEN = 'marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da'; // STIX 2.1's TLP:GREEN marking definition
   const CONF = { HIGH: 85, MEDIUM: 50, LOW: 15 };
 
   function stix(judgments, confidence, evidence, items, ledger) {
@@ -30,7 +30,7 @@
         type: 'report', spec_version: '2.1', id: `report--${uuid(j.judgment_id)}`, created_by_ref: ident, created: at, modified: at,
         name: `${j.judgment_id}: ${j.title}`, description: `${j.assessment} ${j.cta}`, report_types: ['threat-report'], published: at,
         confidence: CONF[c.confidence] ?? 15, labels: [j.likelihood, `confidence:${c.confidence || 'LOW'}`, `severity:${j.severity}`],
-        object_refs: [ident], object_marking_refs: [TLP_AMBER, pap],
+        object_refs: [ident], object_marking_refs: [TLP_GREEN, pap],
         external_references: refs.map((i) => ({ source_name: i.source_name, url: i.url, description: `${i.date} ${i.title} [${i.grade}, ${i.veracity}]` })),
         x_likelihood: j.likelihood, x_probability: j.probability, x_horizon: j.horizon || null, x_nist_csf: j.csf, x_pirs: j.pirs,
       });

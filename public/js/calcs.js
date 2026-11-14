@@ -348,6 +348,25 @@ dash.calc('forecast_record', {
   },
 });
 
+// ---- Citation verification ----
+dash.calc('verification_summary', {
+  title: 'Citation verification by state',
+  description: 'Cited items by what an independent fetch of each URL found, with the share of fetched pages that carry the claim (excerpt found or claim supported) and the share of the evidence base that could be judged at all. Blocked, thin and error states are unverifiable from the workflow, which is said plainly.',
+  inputs: ['verification'],
+  fn: (v) => {
+    const LABEL = { excerpt_found: 'Excerpt found on the page', claim_supported: 'Figures and names found on the page', weak_match: 'Partial match', mismatch: 'Page does not carry the claim',
+      thin: 'Too little page text to judge', blocked: 'Site refused the request', gone: 'Page gone (404 or 410)', error: 'Fetch failed', pending: 'Not fetched yet' };
+    const ORDER = Object.keys(LABEL);
+    const n = v.length || 1;
+    const count = (s) => v.filter((r) => r.state === s).length;
+    const judged = count('excerpt_found') + count('claim_supported') + count('weak_match') + count('mismatch') + count('gone');
+    const good = count('excerpt_found') + count('claim_supported');
+    return ORDER.map((s) => ({ state: s, label: LABEL[s], items: count(s), share: count(s) / n,
+      judged, judged_share: judged / n, supported: good, supported_share: judged ? good / judged : null,
+      newest_check: v.map((r) => r.checked_at).filter(Boolean).sort().pop() || '' }));
+  },
+});
+
 // ---- Per-vertical calibration and residual risk (every vertical computed; the page shows the selected one) ----
 dash.calc('theater_calibrated', {
   title: 'Theater level by vertical',
