@@ -19,6 +19,10 @@ on:
         description: Rebuild every machine-built dataset from its sources
         type: boolean
         default: false
+      verify_max:
+        description: Cited pages to fetch for citation verification in this run (default 150; 1500 for a full sweep)
+        type: string
+        default: "150"
 
 permissions:
   contents: read
@@ -110,9 +114,39 @@ jobs:
       # the reassessment itself, and the "Reassessment watch" workflow raises them as an issue.
       - name: Validate the authored datasets
         run: |
+          set -o pipefail
           python3 -I pipeline/authored_build.py data/authored --check | tee validate.txt
           grep '^WARN ' validate.txt | sed 's/^WARN /::warning::/' || true
           rm -f validate.txt
+
+      # Citation verification, without a model: fetch cited pages and record whether each carries its item's claim
+      # (pipeline/verify_citations.py). Results persist in their own cache and build up over runs: new items first,
+      # then retries, then the oldest verified pages. On a pull request the gate fails the check when a new item
+      # (I-1126 on) cites a page that is gone or does not carry the claim, so such an item cannot reach main.
+      - name: Restore citation verification state
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: verification
+          key: verification-${{ github.run_id }}
+          restore-keys: verification-
+
+      - name: Verify citations
+        env:
+          VERIFY_MAX: ${{ inputs.verify_max || '150' }}
+        run: |
+          set -o pipefail
+          mkdir -p verification
+          python3 -I pipeline/verify_citations.py --items data/authored/items.json --state verification/state.json \
+            --out feeds/verification.json --max "$VERIFY_MAX" --gate-from 1126 | tee verify.txt
+          tail -n 12 verify.txt >> "$GITHUB_STEP_SUMMARY"
+          rm -f verify.txt
+
+      - name: Save citation verification state
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: verification
+          key: verification-${{ github.run_id }}
 
       - name: Assemble the site data
         run: python3 -I pipeline/site_build.py --authored data/authored --feeds feeds --out public --commit "$GITHUB_SHA"

@@ -43,7 +43,7 @@ jobs:
           export const LABEL = 'collector-alert';
           // Minutes between scheduled runs of each job (neon/parts/50-http.mjs plan()). A job is silent when its last run is
           // older than 90 minutes, or for a job slower than hourly, older than its own interval plus 90 minutes.
-          export const CADENCE_MIN = { gdelt: 15, infra: 30, snap: 30, health: 30, ioda: 30, lists: 60, leaksites: 60, links: 60, retention: 60, fires: 60, maritime: 60, blogs: 60,
+          export const CADENCE_MIN = { gdelt: 15, infra: 30, snap: 30, health: 30, ioda: 30, lists: 60, leaksites: 60, links: 60, retention: 60, fires: 60, maritime: 60, blogs: 60, triage: 60, psirt: 180,
             unit42: 1440, genioc: 1440, lanesreg: 1440, sec8k: 840, ransompay: 10080 };
           export const silentAfterMin = (job) => { const c = CADENCE_MIN[job] || 15; return c <= 60 ? 90 : c + 90; };
           // Feeds the map or the store-first endpoints depend on (runbook 6c); a failing streak of 4 checks (2 hours) is a problem.
@@ -53,7 +53,7 @@ jobs:
           // from 2026-11-02.1; before that the expected HTTP answer decides. Volume rows of the maritime gaps hold at zero.
           // GreyNoise (intermittent): its free lookup rate-limits cloud egress (HTTP 429) and sometimes answers, so a passing
           // check holds the gap until the feed passes steadily (24-hour uptime of 95 percent or more); it needs an API key.
-          export const KNOWN_GAPS = { marad_msci: { expect: [403] }, ukmto: { expect: [403] }, nga_msi: { expect: [200, 206], stale: true }, gdelt_doc_api: { expect: [429] },
+          export const KNOWN_GAPS = { marad_msci: { expect: [403] }, ukmto: { expect: [403] }, nga_msi: { expect: [200, 206, 503], stale: true }, gdelt_doc_api: { expect: [429] },
             greynoise: { expect: [429], intermittent: true } };
           export const STEADY_UPTIME = 95;
           export const GAP_VOLUME = ['marad', 'asam', 'navwarn_security'];
@@ -71,7 +71,7 @@ jobs:
           export const GAP_JOBS = { maritime: /no source answered/ };
           const restatesGap = (job, j) => !!GAP_JOBS[job] && j.ok === false && GAP_JOBS[job].test(String(j.error || ''));
           // Jobs added after the alert workflow: no "no run recorded" problem until their first run is in the record.
-          export const NEW_JOBS = ['cables'];
+          export const NEW_JOBS = ['cables', 'psirt', 'triage'];
           const STREAK = 4, FAILS_24H = 3, STALE_RECORD_MIN = 90;
 
           const mins = (now, t) => Math.round((now - Date.parse(t)) / 60000);

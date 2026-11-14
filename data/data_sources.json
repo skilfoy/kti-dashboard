@@ -1676,6 +1676,244 @@
    "reviewed": "2026-11-03"
   },
   {
+   "id": "psirt-fortinet",
+   "name": "Fortinet PSIRT advisories",
+   "owner": "Fortinet",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://filestore.fortinet.com/fortiguard/rss/ir.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "psirt-paloalto",
+   "name": "Palo Alto Networks security advisories",
+   "owner": "Palo Alto Networks",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://security.paloaltonetworks.com/rss.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "psirt-cisco",
+   "name": "Cisco security advisories",
+   "owner": "Cisco",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "psirt-sonicwall",
+   "name": "SonicWall PSIRT advisories",
+   "owner": "SonicWall",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://psirtapi.global.sonicwall.com/api/v1/feed/rss.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "psirt-ivanti",
+   "name": "Ivanti security advisories",
+   "owner": "Ivanti",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.ivanti.com/blog/topics/security-advisory/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "psirt-msrc",
+   "name": "Microsoft Security Update Guide",
+   "owner": "Microsoft",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://api.msrc.microsoft.com/update-guide/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "psirt-cisa",
+   "name": "CISA cybersecurity advisories",
+   "owner": "CISA",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.cisa.gov/cybersecurity-advisories/all.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "psirt-certeu",
+   "name": "CERT-EU security advisories",
+   "owner": "CERT-EU",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://cert.europa.eu/publications/security-advisories-rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "openrouter-triage",
+   "name": "OpenRouter free models (machine triage)",
+   "owner": "OpenRouter and the model providers",
+   "category": "Enrichment",
+   "feeds": [
+    "live_triage",
+    "page:sources"
+   ],
+   "url": "https://openrouter.ai/docs/api-reference/limits",
+   "access": "key",
+   "secret": {
+    "name": "OPENROUTER_API_KEY",
+    "where": "neon_function_variable"
+   },
+   "licence": "Free model variants under OpenRouter terms; only public titles are sent, and free providers may log or train on prompts",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly, at most 40 requests a day",
+   "health_feed": null,
+   "jobs": [
+    "triage",
+    "triageeval"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
    "id": "orkl",
    "name": "ORKL threat report library",
    "owner": "ORKL",
@@ -1846,6 +2084,7 @@
     "ledger",
     "history",
     "outcomes",
+    "verification",
     "page:brief",
     "page:theaters",
     "page:vectors",

@@ -25,6 +25,8 @@ const TYPES = { lanes: { snap: 'snap-lanes', freshMin: 180 }, ofac: { snap: 'sna
 // cables (added 2026-11-03): submarine cables and landing stations from OpenStreetMap (ODbL 1.0) with Wikidata metadata
 // (CC0), collected weekly; partial coverage. Every answer carries the licence and attribution fields; &format=geojson
 // (also served as /open-data/cables.geojson) returns the derived open dataset as a GeoJSON FeatureCollection.
+TYPES.psirt = { snap: 'psirt', freshMin: 300, store: true };
+TYPES.triage = { snap: 'triage', freshMin: 180, store: true };
 TYPES.cables = { snap: 'cables', freshMin: 8 * 1440 + 120, store: true };
 const CABLE_TERMS = { licence: 'ODbL-1.0', licence_url: 'https://opendatacommons.org/licenses/odbl/1-0/', attribution: '© OpenStreetMap contributors',
   attribution_url: 'https://www.openstreetmap.org/copyright', licence_note: '/open-data/cables-LICENSE.txt', coverage: 'partial' };

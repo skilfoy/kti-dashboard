@@ -68,6 +68,37 @@
         m('indeterminate', TI.f.int(f.indeterminate)), ' indeterminate. Mean Brier score ', m('brier_mean', f.brier_mean == null ? '—' : d3.format('.3f')(f.brier_mean)),
         ' over ', m('scored', TI.f.int(f.scored)), ' scored outcomes. ', m('open', TI.f.int(f.open)), ' judgments carry an open horizon, the next on ', m('next_horizon', f.next_horizon || '—'), '.');
     }
+    const vl = sec.querySelector('#verify-line');
+    if (vl && TI.ready('verification_summary')) {
+      const s = TI.rows('verification_summary')[0] || {};
+      const m = (field, text) => v('span', 'verification_summary', field, { state: s.state }, text);
+      TI.clear(vl);
+      vl.append(m('supported', TI.f.int(s.supported)), ' of the ', m('judged', TI.f.int(s.judged)), ' items whose page could be judged carry the claim (',
+        m('supported_share', s.supported_share == null ? '—' : d3.format('.0%')(s.supported_share)), '); ', m('judged_share', d3.format('.0%')(s.judged_share || 0)),
+        ' of the evidence base could be judged. Last fetch ', m('newest_check', s.newest_check ? s.newest_check.replace('T', ' ').replace('Z', ' UTC') : 'not yet run'), '.');
+    }
+    const vs = sec.querySelector('#tbl-verify-states');
+    if (vs && TI.tableState(vs, ['verification_summary'])) {
+      TI.table(vs, TI.rows('verification_summary'), [
+        { field: 'label', label: 'What the fetch found', cls: 'ti-wrap' },
+        { field: 'items', label: 'Items', num: true, fmt: 'int' },
+        { field: 'share', label: 'Share', num: true, get: (r) => d3.format('.1%')(r.share) },
+      ], { filter: (r) => r.items > 0 });
+    }
+    const vt = sec.querySelector('#tbl-verify');
+    if (vt && TI.tableState(vt, ['verification'])) {
+      TI.table(vt, TI.rows('verification'), [
+        { field: 'item_id', label: 'Item', cls: 'ti-nowrap ti-mono' },
+        { field: 'date', label: 'Event date', fmt: 'date', cls: 'ti-nowrap', hideSm: true },
+        { field: 'source_name', label: 'Source', cls: 'ti-wrap' },
+        { field: 'host', label: 'Host', cls: 'ti-mono', hideSm: true },
+        { field: 'state', label: 'State' },
+        { field: 'http_status', label: 'HTTP', num: true },
+        { field: 'tokens_found', label: 'Tokens', get: (r) => (r.tokens_total == null ? '' : `${r.tokens_found} of ${r.tokens_total}`) },
+        { field: 'moved_to', label: 'Redirected to', cls: 'ti-mono', hideSm: true },
+        { field: 'checked_at', label: 'Checked', fmt: 'date', cls: 'ti-nowrap', hideSm: true },
+      ], { filter: (r) => ['gone', 'mismatch', 'weak_match'].includes(r.state), sort: 'item_id', dir: 'desc', empty: 'No fetched page is missing or fails to carry its item.' });
+    }
     const to = sec.querySelector('#tbl-outcomes');
     if (to && TI.tableState(to, ['outcomes'])) {
       TI.table(to, TI.rows('outcomes'), [

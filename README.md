@@ -74,7 +74,7 @@ Release notes: `CHANGELOG.md`.
 
 ## Marking
 
-The site is marked TLP:AMBER and PAP:AMBER by the owner's choice.
+The site is marked TLP:GREEN and PAP:AMBER by the owner's choice (TLP:AMBER until 14 November 2026): it surfaces public data through a few API connections, for the community's use.
 
 ## Sources and terms
 

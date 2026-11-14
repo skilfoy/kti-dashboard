@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.2.0 (14 November 2026)
+
+Proof for the citations, a wider collection surface, and a machine reading tier that runs through the day without spending the analyst model.
+
+### Analytic integrity
+- Citation verification. `pipeline/verify_citations.py` fetches every cited page without a model and classes the result: the item's stored excerpt found on the page, the title's figures and names found, a weak match, a mismatch, a page that needs a browser, a publisher that refuses automated requests, or a page that is gone. The Site workflow runs it on every build, keeps its state between runs, and rechecks each page every 45 days. Method publishes the result per item and in aggregate.
+- Excerpts. From I-1126 each item carries `excerpt`, 60 to 400 characters copied from the fetched page, and `fetched_at`. The excerpt stays in the repository; the site publishes only whether one exists. A new item whose page is gone or whose excerpt is absent from the page fails the build.
+- `main` is protected. The daily run opens a pull request, the `site` check validates, verifies citations and tests it, and only a passing check merges.
+- Marking moved from TLP:AMBER to TLP:GREEN on the page, the STIX export and the judgments: the site surfaces public data through public interfaces. PAP:AMBER stays.
+
+### Collection
+- Vendor and CERT advisories (`psirt` job, every three hours): Fortinet, Palo Alto Networks, Cisco, SonicWall, Ivanti, Microsoft MSRC, CISA and CERT-EU, each from its own feed, with CVE identifiers extracted and cross-referenced with CISA KEV. Served at `/api/context?type=psirt` and shown on Sources.
+- Machine triage (`triage` job, hourly): a free hosted model labels the titles the blogs and advisory jobs collected (relevance, vector, theater, actors) under closed lists and deterministic rule checks, inside a daily request budget. Output is a lead list marked "Machine triage, unreviewed" at `/api/context?type=triage`; the tier writes no judgment, ThreatCon or evidence item. It ships dark and makes no request until `OPENROUTER_API_KEY` is set in the collector's environment.
+- Triage evaluation (`triageeval`, on demand): the tier's labels are scored against the analyst's own on the 1,007 evidence items (`lib/triage-gold.json`). The site hides the model's vector and theater labels until the full set clears the published thresholds.
+- Probes: the Wikidata check accepts a ranged answer, blocklist.de is asked for one kilobyte, and the NGA broadcast-warning gap covers the HTTP 503 it now returns.
+- `collector-deploy.yml` pins its actions to commit hashes.
+
+### Fixes
+- The collector test's GDELT fixture follows the clock. Pinned to 17 October, it left the 30-day recheck window on 14 November and would have failed every later deploy.
+- The validate and verify steps of the Site workflow run under `pipefail`; `tee` had been masking a failing validator's exit code.
+
 ## 2.1.0 (13 November 2026)
 
 A review of the whole platform (site, service, collector, pipeline, data, workflows, tracker and the scheduled reassessment) and the upgrade that came out of it. Findings and the backlog they opened are in the Notion page "KTI platform review, 13 November 2026".

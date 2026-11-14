@@ -63,7 +63,7 @@ ok(Object.values(by).filter((r) => r.status === 'candidate' && /unverified/.test
   const page = fs.readFileSync(path.join(ROOT, 'public', 'data-sources.html'), 'utf8');
   const js = fs.readFileSync(path.join(ROOT, 'public', 'js', 'data-sources.js'), 'utf8');
   const index = fs.readFileSync(path.join(ROOT, 'public', 'index.html'), 'utf8');
-  ok(/TLP:AMBER/.test(page) && /href="\/data-sources\.json"/.test(page) && /\/css\/tokens\.css/.test(page) && /\/runtime\/theme\.js/.test(page), 'page: marking, registry link, site theme');
+  ok(/TLP:GREEN/.test(page) && /href="\/data-sources\.json"/.test(page) && /\/css\/tokens\.css/.test(page) && /\/runtime\/theme\.js/.test(page), 'page: marking, registry link, site theme');
   ok(![...page.matchAll(/<(?:script|link)[^>]+(?:src|href)="(https?:)?\/\/[^"]+"/g)].length && !/innerHTML/.test(js), 'page: no outside scripts or styles, text set without innerHTML');
   ok((index.match(/href="\/data-sources"/g) || []).length === 2 && !/data-page="data-sources"/.test(index), 'linked from the Sources tab and the footer, not a new tab');
   ok(/\/api\/health/.test(js) && /attribution/.test(js), 'page reads live status and renders the attribution block');

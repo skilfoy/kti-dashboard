@@ -20,7 +20,7 @@
 <noscript><div class="site-noscript">This site draws its tables, charts and map in the browser and needs JavaScript. The underlying datasets are listed at <a href="/site.json">/site.json</a> and served as JSON under /data.</div></noscript>
 <div class="ti" id="ti">
   <div class="ti-classbar" id="marking">
-    <span class="ti-tlp">TLP:AMBER</span><span>PAP:AMBER</span><span>Open-source intelligence</span><span id="marking-scope">Inherent threat, calibrated per vertical</span>
+    <span class="ti-tlp">TLP:GREEN</span><span>PAP:AMBER</span><span>Open-source intelligence</span><span id="marking-scope">Inherent threat, calibrated per vertical</span>
   </div>
 
   <div class="ti-controls" id="controls">
@@ -877,6 +877,19 @@
         <h4 class="ti-h4">Blog feeds read</h4>
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-blog-feeds" data-source="live_blogs" data-row-key="url"></table></div>
       </div>
+      <div class="ti-card ti-section" id="src-triage">
+        <h3 class="ti-h3">Machine triage leads, 72 hours <span class="ti-pir">unreviewed</span> <span class="ti-count" id="triage-asof"></span></h3>
+        <p class="ti-card-note" id="triage-sum" data-source="live_triage"></p>
+        <p class="ti-card-note" id="triage-eval" data-source="live_triage"></p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-triage" data-source="live_triage" data-row-key="link"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="src-psirt">
+        <h3 class="ti-h3">Vendor and CERT advisories, 14 days <span class="ti-pir">KEV cross-reference</span> <span class="ti-count" id="psirt-asof"></span></h3>
+        <p class="ti-card-note" id="psirt-sum" data-source="live_psirt"></p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-psirt" data-source="live_psirt" data-row-key="link"></table></div>
+        <h4 class="ti-h4">Advisory feeds read</h4>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-psirt-feeds" data-source="live_psirt" data-row-key="id"></table></div>
+      </div>
       <div class="ti-card ti-section" id="src-links">
         <h3 class="ti-h3">Link health <span class="ti-pir">registry, toolkit and pivots</span> <span class="ti-count" id="links-asof"></span></h3>
         <p class="ti-card-note" id="links-sum" data-source="live_links"></p>
@@ -926,6 +939,14 @@
         <p class="ti-card-note">Each entry hashes the run's datasets and the previous entry, so any edit to history breaks the chain (Gupta and Tennin p117).</p>
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-ledger" data-source="ledger" data-row-key="run_id"></table></div>
       </div>
+      <div class="ti-card ti-section" id="method-verification">
+        <h3 class="ti-h3">Citation verification</h3>
+        <p class="ti-card-note">The site workflow fetches every cited URL itself, apart from the session that wrote the item, and records what it finds: whether the sentence the run copied from the page is on it, or how many of the title's figures, CVE ids and proper nouns are. Items added since 14 November 2026 carry such a sentence and a fetch time, and a run whose new item points at a missing page, or at a page that does not carry the claim, fails before it deploys. A site that refuses automated requests is unverifiable from here and is counted as such.</p>
+        <p class="ti-lede" id="verify-line"></p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-verify-states" data-source="verification_summary" data-row-key="state"></table></div>
+        <h4 class="ti-h3" style="margin-top: var(--cds-gap-md)">Items to review</h4>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-verify" data-source="verification" data-row-key="item_id"></table></div>
+      </div>
       <div class="ti-card ti-section" id="method-forecast">
         <h3 class="ti-h3">Forecast record</h3>
         <p class="ti-card-note" id="forecast-note">Every live judgment names the date by which it is scored. Once that date passes, the reassessment records whether the judged statement held, with the cited items behind the call, before it sets a new horizon or retires the judgment. The Brier score is (p - outcome) squared, with p the midpoint of the stated probability range: 0 is a certain, correct forecast and a standing 50% scores 0.25. A handful of outcomes says little about calibration; the record is kept from the start so that it can.</p>
@@ -947,7 +968,7 @@
       </div>
       <div class="ti-card ti-section" id="method-stix">
         <h3 class="ti-h3">STIX 2.1 export</h3>
-        <p class="ti-card-note">Key judgments as STIX opinion-style notes with their cited reports, marked TLP:AMBER and PAP:AMBER, the most restrictive marking of their inputs. Select all and copy.</p>
+        <p class="ti-card-note">Key judgments as STIX opinion-style notes with their cited reports, marked TLP:GREEN and PAP:AMBER. Select all and copy.</p>
         <textarea class="ti-export" id="stix-out" readonly aria-label="STIX bundle" data-source="judgments confidence evidence items"></textarea>
       </div>
     </template>
