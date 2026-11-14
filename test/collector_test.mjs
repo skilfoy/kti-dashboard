@@ -48,8 +48,11 @@ function zipOne(name, data) {
 const PLACES = [['Kyiv, Ukraine', 30.52, 50.45, 4], ['Gaza, Gaza Strip', 34.45, 31.5, 4], ['Beirut, Beyrouth, Lebanon', 35.5, 33.89, 4], ['Khartoum, Sudan', 32.53, 15.5, 4],
   ['Goma, Nord-Kivu, Congo', 29.22, -1.68, 4], ['Sanaa, Yemen', 44.21, 15.35, 4], ['Ukraine', 32, 49, 1], ['Damascus, Syria', 36.29, 33.51, 4], ['Kharkiv, Ukraine', 36.25, 50.0, 4]];
 const ORIG = [['Moscow, Russia', 37.62, 55.75, 4], ['Tehran, Iran', 51.39, 35.69, 4], ['Washington, District of Columbia, United States', -77.03, 38.9, 3], ['Russia', 100, 60, 1], null, 'same'];
-const LATEST = '20261017180000';
-const latestD = new Date(Date.UTC(2026, 9, 17, 18, 0));
+// The GDELT fixture's clock follows the real one (the newest export is three days old, on an 18:00 UTC slot): the
+// collector's windows are measured from now(), and a fixture pinned to a calendar date ages out of them. Pinned to
+// 17 October 2026, this suite began failing on 14 November once its oldest missing slot left the 30-day recheck window.
+const latestD = new Date(Math.floor((Date.now() - 3 * 86400000) / 86400000) * 86400000 + 18 * 3600000);
+const LATEST = latestD.toISOString().replace(/[-:T]/g, '').slice(0, 14);
 const stamp = (d) => d.toISOString().replace(/[-:T]/g, '').slice(0, 14);
 const gdelt = new Map();
 for (let s = 0; s < 288; s++) {
