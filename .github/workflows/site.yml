@@ -178,6 +178,11 @@ jobs:
           curl -sS -o config.json -H "Authorization: Bearer $VERCEL_TOKEN" "$api/v6/domains/$PUBLIC_DOMAIN/config?$q&projectIdOrName=$VERCEL_PROJECT_ID" || true
           python3 -c "import json; d=json.load(open('config.json')); print('DNS misconfigured:', d.get('misconfigured'), '| recommended CNAME:', (d.get('recommendedCNAME') or [{}])[0].get('value'))" | tee -a "$GITHUB_STEP_SUMMARY" || true
           rm -f domain.json config.json
+          # Retired addresses (14 November 2026): project-dcxjt.vercel.app predates the public domain. Removed if present.
+          for old in project-dcxjt.vercel.app; do
+            rc=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $VERCEL_TOKEN" "$api/v9/projects/$VERCEL_PROJECT_ID/domains/$old?$q")
+            echo "Retired address $old: HTTP $rc (200 removed, 404 already absent)" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
           case "$code" in 2*) ;; *) echo "::warning::Could not attach $PUBLIC_DOMAIN (HTTP $code); the deploy continues" ;; esac
 
       - name: Deploy to production
