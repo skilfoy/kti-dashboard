@@ -664,11 +664,11 @@ ok(M.feedState({ feed: 'greynoise', ok: false, status: 429 }) === 'known_gap' &&
   ok((await call('/status', { headers: { 'x-ti-key': 'k'.repeat(48) } })).status === 200, 'operator key accepted when configured');
   const t = await call('/', { method: 'POST', headers: { 'x-neon-trigger-invocation-id': 'abc', 'content-type': 'application/json' }, body: JSON.stringify({ version: 1, trigger: { type: 'schedule' }, data: { scheduled_at: '2026-10-17T18:15:00Z' } }) });
   const tj = await t.json();
-  ok(t.status === 200 && tj.jobs.map((j) => j.job).join() === 'gdelt,health,ioda,lists,leaksites,links', 'trigger plan at :15 ' + tj.jobs.map((j) => j.job));
+  ok(t.status === 200 && tj.jobs.map((j) => j.job).join() === 'gdelt,health,ioda,lists,leaksites,links,triageeval', 'trigger plan at :15 ' + tj.jobs.map((j) => j.job));
   const st = await (await call('/status', bearer(mint()))).json();
   ok(st.gdelt_files.files >= 288 && st.version === M.VERSION && st.runs.length > 0, 'status ' + JSON.stringify(st.gdelt_files));
   ok(JSON.stringify(M.plan(new Date('2026-10-17T18:00:00Z'))) === '["gdelt","infra","snap"]' && JSON.stringify(M.plan(new Date('2026-10-17T18:45:00Z'))) === '["gdelt","health","ioda","retention","fires","maritime","blogs","triage"]'
-    && M.plan(new Date('2026-10-17T07:19:00Z')).includes('psirt') && !M.plan(new Date('2026-10-17T08:19:00Z')).includes('psirt') && !M.plan(new Date('2026-10-17T07:19:00Z')).includes('triageeval'), 'plan');
+    && M.plan(new Date('2026-10-17T07:19:00Z')).includes('psirt') && !M.plan(new Date('2026-10-17T08:19:00Z')).includes('psirt') && M.plan(new Date('2026-10-17T08:19:00Z')).includes('triageeval') && !M.plan(new Date('2026-10-17T08:49:00Z')).includes('triageeval'), 'plan');
 }
 
 console.log(`PASS ${pass} checks; sql calls ${sqlCalls}; ip-api calls ${ipapiCalls}; geojs calls ${geojsCalls}; bucket objects ${bucket.size}`);

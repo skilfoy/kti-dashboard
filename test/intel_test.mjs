@@ -272,7 +272,7 @@ ok(yf.found && yf.sightings === 3 && yf.tasks === 2 && yf.yara_rules.length === 
 const vf = (n, med, days) => M.volumeFlag({ feed: 'x', n, median_30d: med, runs: 10, first_at: new Date(now - days * 864e5).toISOString() }, now);
 ok(vf(500, 100, 10).flag === 'spike' && vf(10, 100, 10).flag === 'silence' && vf(0, 100, 10).flag === 'silence' && vf(110, 100, 10).flag === 'normal' && vf(500, 100, 3).flag === 'baseline building', 'volume flags');
 const at = (s) => M.plan(new Date(s));
-ok(JSON.stringify(at('2026-10-22T06:19:00Z')) === JSON.stringify(['gdelt', 'health', 'ioda', 'lists', 'leaksites', 'links', 'unit42']), ':19 at 06 UTC adds Unit 42');
+ok(JSON.stringify(at('2026-10-22T06:19:00Z')) === JSON.stringify(['gdelt', 'health', 'ioda', 'lists', 'leaksites', 'links', 'unit42', 'triageeval']), ':19 at 06 UTC adds Unit 42');
 ok(at('2026-10-26T08:19:00Z').includes('ransompay') && !at('2026-10-27T08:19:00Z').includes('ransompay'), 'Ransomwhere Mondays only');
 ok(at('2026-10-22T10:49:00Z').join() === 'gdelt,health,ioda,retention,fires,maritime,blogs,triage' && at('2026-10-22T10:04:00Z').join() === 'gdelt,infra,snap', ':49 and :04 plans');
 ok(at('2026-10-22T12:19:00Z').includes('sec8k') && at('2026-10-22T22:19:00Z').includes('sec8k') && !at('2026-10-22T13:19:00Z').includes('sec8k'), 'SEC 8-K at 12 and 22 UTC');

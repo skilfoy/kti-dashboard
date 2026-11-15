@@ -86,7 +86,7 @@ export async function jobPsirt(opts = {}) {
 // else is rejected and counted. A daily request budget in ti.kv keeps the job inside the free tier. Without
 // OPENROUTER_API_KEY in the function environment the job records "held" and makes no request.
 export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, MAX_TOKENS: 12000, DAILY_REQUESTS: 40, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 75000, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
-  ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions', MODEL: 'openrouter/free', EVAL_BATCHES: 6 };
+  ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions', MODEL: 'openrouter/free', EVAL_BATCHES: 1 };
 export const TRIAGE_VECTORS = ['Exploitation & edge devices', 'Fraud', 'Identity & valid accounts', 'Phishing & social engineering', 'Ransomware & malware', 'Supply chain & third parties', 'DDoS', 'Insider'];
 export const TRIAGE_THEATERS = { 'T-RSY': 'Red Sea, Yemen and Saudi Arabia', 'T-HRM': 'Strait of Hormuz and the Gulf (Iran)', 'T-AFP': 'Afghanistan and Pakistan border', 'T-HOA': 'Horn of Africa',
   'T-LEV': 'Israel, Lebanon and Syria', 'T-UKR': 'Russia and Ukraine', 'T-SAH': 'Sahel and West Africa', 'T-SDN': 'Sudan', 'T-EUH': 'Europe: hybrid threats and sabotage',
@@ -217,7 +217,7 @@ export async function jobTriage() {
   if (items.length && !rows.length && !res.stop) out.run_failed = 'no usable answer from the triage endpoint: ' + res.calls.map((c) => c.error || 'unparsed').join('; ');
   return out;
 }
-// Evaluation (on demand: /api/admin?op=run&job=triageeval). Replays the analyst-labelled evidence items (ref/triage-gold.json,
+// Evaluation (hourly at :19, one batch a run, until every gold item is scored). Replays the analyst-labelled evidence items (ref/triage-gold.json,
 // built from data/authored/items.json: title, theater, vector) through the same prompt and checks, and scores the labels
 // against the analyst's. Progress is kept in ti.kv, so repeated runs walk the whole set inside the daily budget.
 export function triageScore(done) {
