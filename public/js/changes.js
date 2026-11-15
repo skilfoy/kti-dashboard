@@ -68,6 +68,29 @@
         m('indeterminate', TI.f.int(f.indeterminate)), ' indeterminate. Mean Brier score ', m('brier_mean', f.brier_mean == null ? '—' : d3.format('.3f')(f.brier_mean)),
         ' over ', m('scored', TI.f.int(f.scored)), ' scored outcomes. ', m('open', TI.f.int(f.open)), ' judgments carry an open horizon, the next on ', m('next_horizon', f.next_horizon || '—'), '.');
     }
+    const ll = sec.querySelector('#leads-line');
+    if (ll && TI.ready('lead_use')) {
+      const s = TI.rows('lead_use')[0] || {};
+      const m = (field, text) => { const e = v('span', 'lead_use', field, null, text); e.setAttribute('data-row', '0'); return e; };
+      const pct = (x) => (x == null ? '—' : d3.format('.0%')(x));
+      TI.clear(ll);
+      if (!s.opened) ll.append('No leads recorded yet. The record starts with the first analyst run after 15 November 2026.');
+      else ll.append(m('opened', TI.f.int(s.opened)), ' leads opened since ', m('first', s.first), ': ', m('used', TI.f.int(s.used)), ' used, ', m('duplicate', TI.f.int(s.duplicate)), ' already held, ',
+        m('rejected', TI.f.int(s.rejected)), ' rejected, ', m('wrong', TI.f.int(s.wrong)), ' wrong. Precision ', m('precision', pct(s.precision)), '; for relevance 3 leads ', m('top_precision', pct(s.top_precision)),
+        ' over ', m('top_opened', TI.f.int(s.top_opened)), '.');
+    }
+    const lt = sec.querySelector('#tbl-leads');
+    if (lt && TI.tableState(lt, ['leads'])) {
+      TI.table(lt, TI.rows('leads'), [
+        { field: 'date', label: 'Date', fmt: 'date', cls: 'ti-nowrap' },
+        { field: 'source', label: 'Tier' },
+        { field: 'relevance', label: 'Rel.', num: true, get: (r) => (r.relevance == null ? '' : r.relevance) },
+        { field: 'disposition', label: 'Result', attr: { 'data-status': (r) => (r.disposition === 'wrong' ? 'review' : r.disposition === 'used' ? 'ok' : '') } },
+        { field: 'title', label: 'Lead', link: 'link', cls: 'ti-wrap', get: (r) => r.title || r.link },
+        { field: 'item_ids', label: 'Items', hideSm: true },
+        { field: 'reason', label: 'Reason', cls: 'ti-wrap', hideSm: true },
+      ], { sort: 'date', dir: 'desc', limit: 200, empty: 'No leads recorded yet.' });
+    }
     const vl = sec.querySelector('#verify-line');
     if (vl && TI.ready('verification_summary')) {
       const s = TI.rows('verification_summary')[0] || {};

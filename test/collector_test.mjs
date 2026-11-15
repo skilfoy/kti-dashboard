@@ -520,9 +520,10 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   process.env.OPENROUTER_API_KEY = 'sk-or-test';
   const t1 = await M.runJob('triage');
   ok(t1.ok && llm.length === 1 && llm[0].auth === 'Bearer sk-or-test' && llm[0].structured && llm[0].temperature === 0 && llm[0].max_tokens >= 8000 && llm[0].reasoning.effort === 'low' && llm[0].reasoning.exclude === true, 'one structured request at temperature 0 with low reasoning effort and room for the answer');
-  ok(t1.candidates === 12 && t1.labelled === t1.candidates - 2 && t1.rejects.vector_not_listed === 1 && t1.rejects.why_has_link_or_markup === 1 && t1.rejects.id_not_in_batch === 1, 'rule checks reject off-list, linked and invented labels ' + JSON.stringify(t1.rejects));
+  const F = M.PSIRT_FEEDS.length - 2; // feeds that answer in this fixture: each carries the shared-CVE story and one bulletin of its own
+  ok(t1.pool === 2 * F && t1.candidates === F + 1 && t1.labelled === 2 * F - 2 && t1.rejects.vector_not_listed === 1 && t1.rejects.why_has_link_or_markup === 1 && t1.rejects.id_not_in_batch === 1, 'rule checks reject off-list, linked and invented labels ' + JSON.stringify(t1.rejects));
   const tdoc = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/triage.json.gz')).toString());
-  ok(tdoc.marking === 'Machine triage, unreviewed' && tdoc.rows.length === t1.labelled && tdoc.rows[0].relevance === 3 && tdoc.rows.every((r) => !r.actors.includes('Volt Typhoon') && r.model === 'test/free-model' && r.prompt_v === M.TRIAGE.PROMPT_V), 'triage document: provenance kept, actors absent from the title dropped');
+  ok(tdoc.marking === 'Machine triage, unreviewed' && tdoc.rows.length === F - 1 && tdoc.titles === 2 * F - 2 && tdoc.rows[0].relevance === 3 && tdoc.rows[0].also === F - 1 && tdoc.rows[0].also_sources.length === Math.min(F - 1, 6) && tdoc.rows[0].kev.join() === 'CVE-2026-11111' && tdoc.rows.every((r) => !r.actors.includes('Volt Typhoon') && r.model === 'test/free-model' && r.prompt_v === M.TRIAGE.PROMPT_V), 'triage document: provenance kept, actors absent from the title dropped');
   ok(tdoc.rows.some((r) => r.kind === 'lead' && r.cves.includes('CVE-2026-11111')) && tdoc.budget.used === 1 && !JSON.stringify(tdoc).includes('sk-or-test'), 'CVE identifiers come from the feed; budget counted; no key in the document');
   // Second run: only the two rejected titles remain; a structured refusal falls back to a plain request.
   llmMode = 'refuse-structured'; llm = [];
@@ -540,6 +541,11 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   llmMode = 'limited';
   const t5 = await M.runJob('triage');
   ok(t5.ok && /rate limited/.test(t5.stop) && llm.length === 1, 'a 429 ends the run after one request');
+  // Story clustering: same story from three publishers, a shared CVE with different wording, and an unrelated title.
+  const cl = M.clusterTitles([{ title: 'Fortinet patches critical FortiOS SSL VPN authentication bypass', cves: [] }, { title: 'Critical FortiOS SSL VPN authentication bypass patched by Fortinet', cves: [] },
+    { title: 'Exploitation of CVE-2026-33333 seen in the wild against gateways', cves: ['CVE-2026-33333'] }, { title: 'Gateways under attack: CVE-2026-33333 exploitation in the wild', cves: ['CVE-2026-33333'] },
+    { title: 'Quarterly webinar on cloud posture', cves: [] }, { title: 'Fortinet earnings beat estimates', cves: [] }]);
+  ok(cl.length === 4 && cl[0].members.length === 2 && cl[1].members.length === 2, 'story clustering groups rewordings and shared CVEs, keeps unrelated titles apart: ' + cl.map((c) => c.members.length));
   // Pure checks.
   const chk = M.triageCheck([{ id: 1, title: 'APT29 phishing wave' }], { labels: [{ id: 1, relevance: 2, vector: 'null', theater: 'T-UKR', actors: ['APT29', 'Cozy Bear'], why: 'x'.repeat(400) }, { id: 1, relevance: 1, vector: null, theater: 'T-GLB', actors: [], why: '' }] });
   ok(chk.ok.get(1).actors.join() === 'APT29' && chk.ok.get(1).vector === null && chk.ok.get(1).why.length <= M.TRIAGE.WHY_MAX && chk.rejects.duplicate_id === 1, 'triageCheck actor, null vector, length cap and duplicate rules');

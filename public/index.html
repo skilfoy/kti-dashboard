@@ -947,6 +947,12 @@
         <h4 class="ti-h3" style="margin-top: var(--cds-gap-md)">Items to review</h4>
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-verify" data-source="verification" data-row-key="item_id"></table></div>
       </div>
+      <div class="ti-card ti-section" id="method-leads">
+        <h3 class="ti-h3">Lead feedback</h3>
+        <p class="ti-card-note">The machine triage tier and the advisory feeds hand the analyst run a ranked list of leads. The run records what it did with each lead it opened: used it as evidence, found the event already held, rejected it, or found the page did not support it. The share used or already held is the tier's precision where it counts, at the number of leads an analyst run reads.</p>
+        <p class="ti-lede" id="leads-line"></p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-leads" data-source="leads" data-row-key="lead_id"></table></div>
+      </div>
       <div class="ti-card ti-section" id="method-forecast">
         <h3 class="ti-h3">Forecast record</h3>
         <p class="ti-card-note" id="forecast-note">Every live judgment names the date by which it is scored. Once that date passes, the reassessment records whether the judged statement held, with the cited items behind the call, before it sets a new horizon or retires the judgment. The Brier score is (p - outcome) squared, with p the midpoint of the stated probability range: 0 is a certain, correct forecast and a standing 50% scores 0.25. A handful of outcomes says little about calibration; the record is kept from the start so that it can.</p>

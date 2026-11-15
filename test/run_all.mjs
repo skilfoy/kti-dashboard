@@ -15,6 +15,7 @@ const steps = [
   ...(has('@electric-sql/pglite') ? [['collector jobs (PGlite)', process.execPath, ['test/collector_test.mjs', '.']]] : []),
   ['collector loader and deploy plan', process.execPath, ['test/loader_test.mjs', '.']],
   ['collector alert workflow', process.execPath, ['test/alert_test.mjs', '.']],
+  ['lead watch', process.execPath, ['test/lead_watch_test.mjs', '.']],
   ['reassessment watch', py, ['-I', 'pipeline/reassessment_watch.py', '--self-test']],
   ['citation verification', py, ['-I', 'pipeline/verify_citations.py', '--self-test']],
   ...(has('@electric-sql/pglite') ? [['submarine cables job and route (PGlite)', process.execPath, ['test/cables_test.mjs', '.']]] : []),

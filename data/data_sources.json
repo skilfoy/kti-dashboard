@@ -1884,6 +1884,162 @@
    "reviewed": "2026-11-14"
   },
   {
+   "id": "psirt-cccs",
+   "name": "Canadian Centre for Cyber Security alerts and advisories",
+   "owner": "Canadian Centre for Cyber Security",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.cyber.gc.ca/api/cccs/atom/v1/get?feed=alerts_advisories&lang=en",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-15",
+   "reviewed": "2026-11-15"
+  },
+  {
+   "id": "psirt-ncscuk",
+   "name": "NCSC (UK) reports",
+   "owner": "National Cyber Security Centre (UK)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-15",
+   "reviewed": "2026-11-15"
+  },
+  {
+   "id": "psirt-msisac",
+   "name": "MS-ISAC advisories",
+   "owner": "Center for Internet Security",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.cisecurity.org/feed/advisories",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-15",
+   "reviewed": "2026-11-15"
+  },
+  {
+   "id": "psirt-splunk",
+   "name": "Splunk security advisories",
+   "owner": "Splunk",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://advisory.splunk.com/feed.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-15",
+   "reviewed": "2026-11-15"
+  },
+  {
+   "id": "psirt-tenable",
+   "name": "Tenable product security advisories",
+   "owner": "Tenable",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.tenable.com/security/feed",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-15",
+   "reviewed": "2026-11-15"
+  },
+  {
+   "id": "psirt-aws",
+   "name": "AWS security bulletins",
+   "owner": "Amazon Web Services",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://aws.amazon.com/security/security-bulletins/rss/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-15",
+   "reviewed": "2026-11-15"
+  },
+  {
    "id": "openrouter-triage",
    "name": "OpenRouter free models (machine triage)",
    "owner": "OpenRouter and the model providers",
@@ -2084,6 +2240,7 @@
     "ledger",
     "history",
     "outcomes",
+    "leads",
     "verification",
     "page:brief",
     "page:theaters",

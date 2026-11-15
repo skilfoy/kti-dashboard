@@ -72,6 +72,7 @@ else:  # seed from the authored module
     from authored_chokepoints import CHOKEPOINTS as CP  # noqa: E402
 HIST = load("history.json") if os.path.exists(os.path.join(FROM_JSON, "history.json")) else []
 OUTC = [{k: v for k, v in r.items() if k not in ("judgment_title", "p", "brier")} for r in load("outcomes.json")] if os.path.exists(os.path.join(FROM_JSON, "outcomes.json")) else []
+LEADS = load("leads.json") if os.path.exists(os.path.join(FROM_JSON, "leads.json")) else []
 for t in T:  # derived below from last_reviewed and the level's cadence
     t.pop("review_by", None)
 for j in J:  # keep the action line consistent with its parts
@@ -212,6 +213,24 @@ for o in OUTC:
     refs = [x.strip() for x in str(o.get("item_ids", "")).split(",") if x.strip()]
     check(len(refs) >= 1 and all(x in item_ids for x in refs), f"{oid}: needs at least one cited item, each in items.json")
     check(len(str(o.get("statement", ""))) >= 20 and len(str(o.get("basis", ""))) >= 20, f"{oid}: needs the judged statement and the basis for the outcome")
+# Lead feedback: what the analyst run did with each machine lead it opened (triage or advisory). The record is the
+# triage tier's precision at the analyst's budget, so a row is written for a rejected lead as well as a used one.
+check(len(ids(LEADS, "lead_id")) == len(set(ids(LEADS, "lead_id"))), "leads: duplicate lead_id")
+check(len({(l.get("link"), l.get("date")) for l in LEADS}) == len(LEADS), "leads: the same link is recorded twice on one day")
+for l in LEADS:
+    lid = l.get("lead_id")
+    check(bool(re.match(r"^L-\d{4,}$", str(lid))), f"{lid}: lead_id must look like L-0001")
+    check(bool(iso.match(str(l.get("date", "")))) and str(l.get("date")) <= TODAY.isoformat(), f"{lid}: date must be an ISO date, today or earlier")
+    check(str(l.get("link", "")).startswith("https://"), f"{lid}: link must be the lead's https URL")
+    check(l.get("source") in ("triage", "psirt"), f"{lid}: source must be triage or psirt")
+    check(l.get("disposition") in ("used", "duplicate", "rejected", "wrong"), f"{lid}: disposition must be used, duplicate, rejected or wrong")
+    refs = [x.strip() for x in str(l.get("item_ids", "")).split(",") if x.strip()]
+    check(all(x in item_ids for x in refs), f"{lid}: item_ids must be in items.json")
+    if l.get("disposition") in ("used", "duplicate"):
+        check(len(refs) >= 1, f"{lid}: a used or duplicate lead names the item that carries the event")
+    check(10 <= len(str(l.get("reason", ""))) <= 240, f"{lid}: reason is one sentence, 10 to 240 characters")
+    check(8 <= len(str(l.get("title", ""))) <= 300, f"{lid}: title is the lead's headline")
+    check(l.get("relevance") in (None, 0, 1, 2, 3), f"{lid}: relevance is the tier's 0 to 3 label when it had one")
 for p in P:
     if iso.match(str(p.get("last_reviewed", ""))):
         due((TODAY - day(p["last_reviewed"])).days <= 35, f"{p['pir_id']}: requirement review overdue (last reviewed {p['last_reviewed']}; reviewed at least every 35 days)")
@@ -263,7 +282,7 @@ BANNED = [(r"\bactually\b", "the word 'actually'"), (r"\bmatters?\b|\bmattered\b
           (r"\u2014[^\u2014]*\u2014[^\u2014]*\u2014", "more than two em dashes in one field")]
 for name, rows in [("items", I), ("theaters", T), ("indicators", IND), ("judgments", J), ("evidence", E), ("vectors", V),
                    ("pirs", P), ("method", M), ("followons", F), ("verticals", VE), ("controls", CT), ("chokepoints", CP),
-                   ("outcomes", OUTC)]:
+                   ("outcomes", OUTC), ("leads", LEADS)]:
     for r in rows:
         for k, v in r.items():
             if isinstance(v, str):
@@ -371,6 +390,7 @@ dump("assets.json", AS)
 dump("exposure_darkweb.json", EX)
 dump("chokepoints.json", CP)
 dump("outcomes.json", OUTC)
+dump("leads.json", LEADS)
 dump("history.json", HIST)
 
 if CHECK:

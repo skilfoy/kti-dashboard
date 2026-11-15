@@ -12,8 +12,15 @@ export const PSIRT_FEEDS = [
   { id: 'msrc', vendor: 'Microsoft MSRC', klass: 'platform', url: 'https://api.msrc.microsoft.com/update-guide/rss' },
   { id: 'cisa', vendor: 'CISA advisories', klass: 'cert', url: 'https://www.cisa.gov/cybersecurity-advisories/all.xml' },
   { id: 'certeu', vendor: 'CERT-EU', klass: 'cert', url: 'https://cert.europa.eu/publications/security-advisories-rss' },
+  // Added 15 November 2026, each confirmed to answer with a feed that day.
+  { id: 'cccs', vendor: 'Canadian Centre for Cyber Security', klass: 'cert', url: 'https://www.cyber.gc.ca/api/cccs/atom/v1/get?feed=alerts_advisories&lang=en' },
+  { id: 'ncscuk', vendor: 'NCSC (UK) reports', klass: 'cert', url: 'https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml' },
+  { id: 'msisac', vendor: 'MS-ISAC advisories (CIS)', klass: 'cert', url: 'https://www.cisecurity.org/feed/advisories' },
+  { id: 'splunk', vendor: 'Splunk', klass: 'platform', url: 'https://advisory.splunk.com/feed.xml' },
+  { id: 'tenable', vendor: 'Tenable', klass: 'platform', url: 'https://www.tenable.com/security/feed' },
+  { id: 'aws', vendor: 'AWS security bulletins', klass: 'platform', url: 'https://aws.amazon.com/security/security-bulletins/rss/feed/' },
 ];
-export const PSIRT_LIMITS = { TIMEOUT_MS: 15000, CONCURRENCY: 4, KEEP_DAYS: 120, WINDOW_DAYS: 14, MAX_ROWS: 400 };
+export const PSIRT_LIMITS = { TIMEOUT_MS: 15000, CONCURRENCY: 5, KEEP_DAYS: 120, WINDOW_DAYS: 14, MAX_ROWS: 400 };
 const CVE_RE = /CVE-\d{4}-\d{4,7}/gi;
 export const cvesIn = (s) => [...new Set((String(s || '').match(CVE_RE) || []).map((c) => c.toUpperCase()))];
 // One entry per item or entry block: title, link, date and the CVE identifiers found anywhere in the block.
@@ -49,7 +56,7 @@ export async function jobPsirt(opts = {}) {
   if (!feeds.some((f) => f.ok)) throw new Error('no advisory feed answered: ' + feeds.map((f) => `${f.id} ${f.error}`).join('; '));
   let kev = new Map(), kevNote = null;
   const k = await get(KEV_URL, { timeout: 20000, as: 'json' });
-  if (k.ok && k.json) kev = kevIndex(k.json); else kevNote = 'KEV catalog not read this run: ' + (k.error || `HTTP ${k.status}`);
+  if (k.ok && k.json) { kev = kevIndex(k.json); if (kev.size) await kvPut('psirt:kev', { at: new Date().toISOString(), ids: [...kev.keys()] }); } else kevNote = 'KEV catalog not read this run: ' + (k.error || `HTTP ${k.status}`);
   if (rows.length) {
     await sql(`INSERT INTO ti.advisory (link, feed, title, published, cves) SELECT link, feed, title, published, cves
       FROM jsonb_to_recordset($1::jsonb) AS x(link text, feed text, title text, published timestamptz, cves jsonb)
@@ -85,7 +92,7 @@ export async function jobPsirt(opts = {}) {
 // vector and theater from the closed lists, actors that occur in the title, and a short reason without links; anything
 // else is rejected and counted. A daily request budget in ti.kv keeps the job inside the free tier. Without
 // OPENROUTER_API_KEY in the function environment the job records "held" and makes no request.
-export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, MAX_TOKENS: 12000, DAILY_REQUESTS: 40, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 75000, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
+export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, POOL: 200, MAX_TOKENS: 12000, DAILY_REQUESTS: 40, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 75000, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
   ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions', MODEL: 'openrouter/free', EVAL_BATCHES: 1 };
 export const TRIAGE_VECTORS = ['Exploitation & edge devices', 'Fraud', 'Identity & valid accounts', 'Phishing & social engineering', 'Ransomware & malware', 'Supply chain & third parties', 'DDoS', 'Insider'];
 export const TRIAGE_THEATERS = { 'T-RSY': 'Red Sea, Yemen and Saudi Arabia', 'T-HRM': 'Strait of Hormuz and the Gulf (Iran)', 'T-AFP': 'Afghanistan and Pakistan border', 'T-HOA': 'Horn of Africa',
@@ -179,14 +186,47 @@ export async function triageBatch(items, cap) {
   return { labels: new Map(), rejects: { no_usable_answer: 1 }, missing: items.length, calls };
 }
 export async function triageDoc(extra = {}) {
-  const rows = await sql(`SELECT link, kind, source, title, published, relevance, vector, theater, actors, cves, why, model, prompt_v, at FROM ti.triage
-    WHERE COALESCE(published, at) > now() - make_interval(hours => $1) AND relevance >= 1 ORDER BY relevance DESC, COALESCE(published, at) DESC LIMIT $2`, [TRIAGE.WINDOW_H, TRIAGE.MAX_ROWS]);
+  const all = await sql(`SELECT link, kind, source, title, published, relevance, vector, theater, actors, cves, why, model, prompt_v, at, cluster FROM ti.triage
+    WHERE COALESCE(published, at) > now() - make_interval(hours => $1) AND relevance >= 1 ORDER BY relevance DESC, COALESCE(published, at) DESC`, [TRIAGE.WINDOW_H]);
+  // One row per story: the representative, with the other publishers that carried it. KEV marks come from the catalog
+  // the psirt job last read.
+  const kev = new Set(((await kvGet('psirt:kev')) || {}).ids || []);
+  const others = new Map();
+  for (const r of all) if (r.cluster && r.cluster !== r.link) (others.get(r.cluster) || others.set(r.cluster, []).get(r.cluster)).push(r);
+  const lone = new Set(all.map((r) => r.link));
+  const rows = all.filter((r) => !r.cluster || r.cluster === r.link || !lone.has(r.cluster)).slice(0, TRIAGE.MAX_ROWS).map(({ cluster, ...r }) => {
+    const also = others.get(r.link) || [];
+    const cves = [...new Set([...(r.cves || []), ...also.flatMap((a) => a.cves || [])])];
+    return { ...r, cves, kev: cves.filter((c) => kev.has(c)), actors: [...new Set([...(r.actors || []), ...also.flatMap((a) => a.actors || [])])], also: also.length, also_sources: [...new Set(also.map((a) => a.source).filter(Boolean))].slice(0, 6) };
+  });
   const [n] = await sql(`SELECT count(*)::int AS all_rows, count(*) FILTER (WHERE at > now() - interval '24 hours')::int AS d1 FROM ti.triage`);
   return { source: 'Machine triage of the titles collected from CTI blogs and vendor or CERT advisories, by a free hosted language model',
     terms: 'Titles and links belong to their publishers. Labels are machine output and are unreviewed.',
-    method: `Every hour up to ${TRIAGE.BATCH} new titles are labelled in one request at temperature 0: relevance 0 to 3, one of eight intrusion vectors or none, one theater or none, and actors named in the title. A label is kept only when it names an id of the batch, a vector and theater from the closed lists and a reason without links; actors that do not occur in the title are dropped; CVE identifiers come from the advisory feed, never from the model. The tier sets no ThreatCon and writes no judgment or evidence item: the daily analyst run reads this list as leads and opens the sources itself. Requests are capped at ${TRIAGE.DAILY_REQUESTS} a day.`,
+    method: `Every hour new titles are grouped into stories (titles that share most of their words, or a CVE identifier) and up to ${TRIAGE.BATCH} stories are labelled in one request at temperature 0: relevance 0 to 3, one of eight intrusion vectors or none, one theater or none, and actors named in the title. A label is kept only when it names an id of the batch, a vector and theater from the closed lists and a reason without links; actors that do not occur in the title are dropped; CVE identifiers come from the advisory feed, never from the model. The tier sets no ThreatCon and writes no judgment or evidence item: the daily analyst run reads this list as leads and opens the sources itself. Requests are capped at ${TRIAGE.DAILY_REQUESTS} a day.`,
     marking: 'Machine triage, unreviewed', prompt_version: TRIAGE.PROMPT_V, eval: (await kvGet('triage:eval')) || null, budget: (await kvGet('triage:budget')) || null,
-    labelled_total: n.all_rows, labelled_24h: n.d1, generated: new Date().toISOString(), served_from: 'store', ...extra, count: rows.length, rows: rows.map(({ kind, ...r }) => ({ kind: 'lead', from: kind, ...r })) };
+    labelled_total: n.all_rows, labelled_24h: n.d1, generated: new Date().toISOString(), served_from: 'store', ...extra, stories: rows.length, titles: all.length, count: rows.length, rows: rows.map(({ kind, ...r }) => ({ kind: 'lead', from: kind, ...r })) };
+}
+// Story clustering (G71). Several publishers carry the same story, and one request should cover each story once. Titles
+// are reduced to a set of content words; a title joins the first earlier cluster whose representative shares 60 percent
+// of the smaller set (Jaccard 0.5 or more), or shares a CVE identifier and a quarter of the words. The representative is
+// the newest title; its label is stored for every member, so a duplicate is never sent later.
+const STOP = new Set('the and for with from that this are was were has have had into over after amid about your you its their his her new how why what when who says said report reports reported via more than not but can will may out all one two'.split(' '));
+export const titleWords = (t) => new Set(String(t || '').toLowerCase().replace(/cve-\d{4}-\d{4,7}/g, ' ').split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !STOP.has(w)));
+export function clusterTitles(items) {
+  const clusters = [];
+  for (const it of items) {
+    const w = titleWords(it.title), cv = new Set(it.cves || []);
+    let home = null;
+    for (const c of clusters) {
+      let inter = 0;
+      for (const x of w) if (c.words.has(x)) inter++;
+      const union = w.size + c.words.size - inter, jac = union ? inter / union : 0, overlap = Math.min(w.size, c.words.size) ? inter / Math.min(w.size, c.words.size) : 0;
+      const sharedCve = [...cv].some((x) => c.cves.has(x));
+      if ((jac >= 0.5 && overlap >= 0.6 && inter >= 3) || (sharedCve && jac >= 0.25)) { home = c; break; }
+    }
+    if (home) home.members.push(it); else clusters.push({ rep: it, words: w, cves: cv, members: [it] });
+  }
+  return clusters;
 }
 export async function jobTriage() {
   const t0 = Date.now(), E = ENV();
@@ -194,24 +234,28 @@ export async function jobTriage() {
   const cand = await sql(`SELECT c.link, c.kind, c.source, c.title, c.published, c.cves FROM (
       SELECT i.link, 'blog' AS kind, b.name AS source, i.title, i.published, '[]'::jsonb AS cves FROM ti.blog_item i JOIN ti.blog b ON b.url = i.blog_url WHERE i.published > now() - make_interval(hours => $1)
       UNION ALL SELECT a.link, 'advisory', a.feed, a.title, COALESCE(a.published, a.seen_at), a.cves FROM ti.advisory a WHERE COALESCE(a.published, a.seen_at) > now() - make_interval(hours => $1)) c
-    WHERE NOT EXISTS (SELECT 1 FROM ti.triage t WHERE t.link = c.link) ORDER BY c.published DESC LIMIT $2`, [TRIAGE.WINDOW_H, TRIAGE.BATCH]);
+    WHERE NOT EXISTS (SELECT 1 FROM ti.triage t WHERE t.link = c.link) ORDER BY c.published DESC LIMIT $2`, [TRIAGE.WINDOW_H, TRIAGE.POOL]);
   const [{ n: waiting }] = await sql(`SELECT (SELECT count(*) FROM ti.blog_item WHERE published > now() - make_interval(hours => $1)) + (SELECT count(*) FROM ti.advisory WHERE COALESCE(published, seen_at) > now() - make_interval(hours => $1))
     - (SELECT count(*) FROM ti.triage WHERE COALESCE(published, at) > now() - make_interval(hours => $1)) AS n`, [TRIAGE.WINDOW_H]);
   let res = { labels: new Map(), rejects: {}, missing: 0, calls: [] };
-  const items = cand.map((c, i) => ({ id: i + 1, ...c }));
+  // CVE identifiers come from the advisory feed and from the title itself, never from the model.
+  const pool_ = cand.map((c) => ({ ...c, cves: [...new Set([...(Array.isArray(c.cves) ? c.cves : []), ...cvesIn(c.title)])] }));
+  const clusters = clusterTitles(pool_).slice(0, TRIAGE.BATCH);
+  const items = clusters.map((c, i) => ({ id: i + 1, ...c.rep, members: c.members }));
   if (items.length) res = await triageBatch(items, TRIAGE.DAILY_REQUESTS);
-  const rows = items.filter((i) => res.labels.has(i.id)).map((i) => ({ link: i.link, kind: i.kind, source: i.source, title: i.title, published: i.published, cves: Array.isArray(i.cves) ? i.cves : [],
-    ...res.labels.get(i.id), model: res.model || null, prompt_v: TRIAGE.PROMPT_V }));
+  const rows = items.filter((i) => res.labels.has(i.id)).flatMap((i) => i.members.map((m) => ({ link: m.link, kind: m.kind, source: m.source, title: m.title, published: m.published, cves: m.cves,
+    ...res.labels.get(i.id), actors: res.labels.get(i.id).actors.filter((a) => String(m.title).toLowerCase().includes(a.toLowerCase())), cluster: i.members.length > 1 ? i.link : null,
+    model: res.model || null, prompt_v: TRIAGE.PROMPT_V })));
   if (rows.length) {
-    await sql(`INSERT INTO ti.triage (link, kind, source, title, published, cves, relevance, vector, theater, actors, why, model, prompt_v)
-      SELECT link, kind, source, title, published, cves, relevance, vector, theater, actors, why, model, prompt_v FROM jsonb_to_recordset($1::jsonb)
-      AS x(link text, kind text, source text, title text, published timestamptz, cves jsonb, relevance int, vector text, theater text, actors jsonb, why text, model text, prompt_v text) ON CONFLICT (link) DO NOTHING`, [rows]);
+    await sql(`INSERT INTO ti.triage (link, kind, source, title, published, cves, relevance, vector, theater, actors, why, model, prompt_v, cluster)
+      SELECT link, kind, source, title, published, cves, relevance, vector, theater, actors, why, model, prompt_v, cluster FROM jsonb_to_recordset($1::jsonb)
+      AS x(link text, kind text, source text, title text, published timestamptz, cves jsonb, relevance int, vector text, theater text, actors jsonb, why text, model text, prompt_v text, cluster text) ON CONFLICT (link) DO NOTHING`, [rows]);
   }
   await sql(`DELETE FROM ti.triage WHERE at < now() - make_interval(days => $1)`, [TRIAGE.KEEP_DAYS]);
-  const last = { at: new Date().toISOString(), candidates: items.length, labelled: rows.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls };
+  const last = { at: new Date().toISOString(), pool: pool_.length, candidates: items.length, labelled: rows.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls };
   await kvPut('triage:last', last);
   await recordVolume([['triage_labelled', rows.length]]);
-  const out = { candidates: items.length, waiting: Math.max(0, Number(waiting) - rows.length), labelled: rows.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls,
+  const out = { pool: pool_.length, candidates: items.length, waiting: Math.max(0, Number(waiting) - rows.length), labelled: rows.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls,
     published: await putDoc('triage', await triageDoc({ last_run: last })), ms: Date.now() - t0 };
   // A run whose requests all failed is a failed run, so the health record and the alert workflow see it.
   if (items.length && !rows.length && !res.stop) out.run_failed = 'no usable answer from the triage endpoint: ' + res.calls.map((c) => c.error || 'unparsed').join('; ');

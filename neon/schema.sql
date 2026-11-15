@@ -79,3 +79,5 @@ CREATE TABLE IF NOT EXISTS ti.triage (link text PRIMARY KEY, kind text NOT NULL,
   relevance int NOT NULL, vector text, theater text, actors jsonb NOT NULL DEFAULT '[]', why text, model text, prompt_v text, at timestamptz NOT NULL DEFAULT now());
 CREATE INDEX IF NOT EXISTS triage_at ON ti.triage (at);
 INSERT INTO ti.lease (job) VALUES ('psirt'),('triage'),('triageeval') ON CONFLICT DO NOTHING;
+-- Added 2026-11-15 (collector 2026-11-15.3): the story a triage row belongs to (the representative's link; null when alone).
+ALTER TABLE ti.triage ADD COLUMN IF NOT EXISTS cluster text;

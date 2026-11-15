@@ -19,7 +19,8 @@ const to = yml.findIndex((l, i) => i > from && l.trim() === 'SCRIPT');
 ok(from > 0 && to > from, 'workflow embeds the script');
 const indent = yml[from].match(/^ */)[0].length;
 const src = yml.slice(from + 1, to).map((l) => l.slice(indent)).join('\n') + '\n';
-ok(/^permissions:\n  issues: write\n\n/m.test(yml.join('\n')) && !/actions\/checkout|contents:/.test(yml.join('\n')), 'workflow token: issues write only, no checkout');
+ok(/^permissions:\n  issues: write\n  contents: read\n\n/m.test(yml.join('\n')) && !/contents: write|pull-requests:|actions: write/.test(yml.join('\n')) && /sparse-checkout:\s*\|\n\s+pipeline\/lead_watch\.mjs\n\s+data\/authored\/judgments\.json/.test(yml.join('\n')),
+  'workflow token: issues write and contents read only; the checkout is sparse (the lead watch script and the judgments)');
 const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'alert-')), 'collector_alert.mjs');
 fs.writeFileSync(file, src);
 process.env.HEALTH_URL = 'https://health.test/api/health';

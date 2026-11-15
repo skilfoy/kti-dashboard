@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.3.0 (15 November 2026)
+
+The machine tier in production, measured, and wired to the analyst run.
+
+- Machine triage live on free models. Requests ask for low reasoning effort with a 12,000-token allowance after the first production run returned empty answers from reasoning models; an empty answer records its finish reason.
+- Story clustering. New titles are grouped into stories (shared words, or a shared CVE identifier) before triage, one request covers up to 25 stories, and a story's label is stored for every publisher that carried it. The lead list shows one row per story with the other publishers.
+- KEV marks on leads. CVE identifiers are read from the advisory feed and from the title, and matched to the KEV catalog the advisory job last read.
+- Intraday lead watch. Twice an hour, without a model, one GitHub issue (`lead-watch`) stays open while a relevance 3 lead names a KEV CVE or an actor a ranked judgment names. The daily run opens those leads first. No level moves between analyst runs.
+- Lead feedback (`leads.json`). The analyst run records what it did with every lead it opened: used, duplicate, rejected or wrong. Method publishes the tier's precision from that record.
+- Triage evaluation on the schedule: one batch an hour at :19 until the 1,007 analyst-labelled items are scored.
+- Six more advisory feeds, each confirmed live: Canadian Centre for Cyber Security, NCSC (UK) reports, MS-ISAC, Splunk, Tenable, AWS security bulletins. Fourteen in all.
+
 ## 2.2.0 (14 November 2026)
 
 Proof for the citations, a wider collection surface, and a machine reading tier that runs through the day without spending the analyst model.
