@@ -53,6 +53,9 @@ export function plan(at) {
     if (h === 12 || h === 22) jobs.push('sec8k');
     if (h === 5 && at.getUTCDay() === 0) jobs.push('cables');
     if (h % 3 === 1) jobs.push('psirt');
+    // One evaluation batch an hour until the gold set is scored; a complete evaluation makes no request. The operator
+    // route answers within its own deadline and cannot hold a model request open, so the replay runs on the schedule.
+    jobs.push('triageeval');
   }
   if (m >= 45) jobs.push('retention', 'fires', 'maritime', 'blogs', 'triage');
   return jobs;
