@@ -348,6 +348,21 @@ dash.calc('forecast_record', {
   },
 });
 
+// ---- Lead feedback: what the analyst run did with the machine leads it opened ----
+dash.calc('lead_use', {
+  title: 'Lead feedback summary',
+  description: 'Machine leads the analyst run opened, by what it did with them. Precision is the share used or already held (used + duplicate) over all leads opened; the same share is given for leads the triage tier labelled relevance 3.',
+  inputs: ['leads'],
+  fn: (leads) => {
+    const n = (f) => leads.filter(f).length, good = (l) => l.disposition === 'used' || l.disposition === 'duplicate';
+    const top = leads.filter((l) => l.relevance === 3);
+    const share = (a, b) => (b ? Math.round((a / b) * 1000) / 1000 : null);
+    return [{ opened: leads.length, used: n((l) => l.disposition === 'used'), duplicate: n((l) => l.disposition === 'duplicate'), rejected: n((l) => l.disposition === 'rejected'),
+      wrong: n((l) => l.disposition === 'wrong'), precision: share(n(good), leads.length), top_opened: top.length, top_precision: share(top.filter(good).length, top.length),
+      first: leads.map((l) => l.date).sort()[0] || '', last: leads.map((l) => l.date).sort().pop() || '' }];
+  },
+});
+
 // ---- Citation verification ----
 dash.calc('verification_summary', {
   title: 'Citation verification by state',

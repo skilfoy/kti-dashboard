@@ -18,6 +18,7 @@ on:
 
 permissions:
   issues: write
+  contents: read
 
 concurrency:
   group: collector-alert
@@ -218,3 +219,18 @@ jobs:
           if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main().catch((e) => { console.error(e); process.exit(1); });
           SCRIPT
           node "$RUNNER_TEMP/collector_alert.mjs"
+
+      # The intraday lead watch (pipeline/lead_watch.mjs) rides on this job so it costs no extra runner minute.
+      - name: Check out the watch script and the judgments
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          sparse-checkout: |
+            pipeline/lead_watch.mjs
+            data/authored/judgments.json
+          sparse-checkout-cone-mode: false
+      - name: Lead watch
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+        run: node pipeline/lead_watch.mjs .

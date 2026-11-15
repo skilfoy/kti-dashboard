@@ -337,7 +337,7 @@
       const m = metaOf('live_triage') || {}, ev = m.eval, pct = (x) => (x == null ? 'n/a' : Math.round(x * 100) + '%');
       const show = !!(ev && ev.promoted);
       setCount(sec, 'triage-asof', fresh(m));
-      note(sec, 'triage-sum', `${m.marking || 'Machine triage, unreviewed'}. ${int(m.labelled_24h)} titles labelled in 24 hours; ${int(m.count)} leads of relevance 1 or more shown. `, m.method || '');
+      note(sec, 'triage-sum', `${m.marking || 'Machine triage, unreviewed'}. ${int(m.labelled_24h)} titles labelled in 24 hours; ${int(m.count)} stories of relevance 1 or more shown, from ${int(m.titles)} titles. `, m.method || '');
       note(sec, 'triage-eval', ev
         ? `Agreement with the analyst's labels on ${int(ev.items)} of ${int(ev.gold_items)} evidence items (prompt ${ev.prompt_version}): theater ${pct(ev.theater_accuracy)} (macro F1 ${pct(ev.theater_macro_f1)}), vector ${pct(ev.vector_accuracy)} on ${int(ev.vector_items)} items, vector assigned where the analyst gave none ${pct(ev.vector_false_positive_rate)}. ${show ? 'The tier meets its thresholds; vector and theater labels are shown.' : `Vector and theater labels stay hidden until the full set clears the thresholds (theater ${pct(ev.thresholds.theater_accuracy)}, vector ${pct(ev.thresholds.vector_accuracy)}, false vector at most ${pct(ev.thresholds.vector_false_positive_rate)}, ${int(ev.thresholds.min_items)} items).`}`
         : 'The tier has not been scored against the analyst\'s labels yet; vector and theater labels stay hidden until it has.');
@@ -346,7 +346,9 @@
         { field: 'published', label: 'Published', fmt: 'date', cls: 'ti-nowrap' },
         { field: 'title', label: 'Title', link: 'link', cls: 'ti-wrap' },
         { field: 'source', label: 'Source', hideSm: true },
+        { field: 'also', label: 'Also carried by', get: (r) => (r.also ? `${r.also} more` + ((r.also_sources || []).length ? ': ' + r.also_sources.slice(0, 3).join(', ') : '') : ''), hideSm: true },
         { field: 'cves', label: 'CVEs', get: (r) => (r.cves || []).slice(0, 3).join(', '), hideSm: true },
+        { field: 'kev', label: 'In KEV', get: (r) => (r.kev || []).join(', '), attr: { 'data-status': (r) => ((r.kev || []).length ? 'review' : '') } },
       ];
       if (show) cols.push({ field: 'vector', label: 'Vector', hideSm: true }, { field: 'theater', label: 'Theater', hideSm: true });
       cols.push({ field: 'why', label: 'Model\'s reason', cls: 'ti-wrap', hideSm: true });
