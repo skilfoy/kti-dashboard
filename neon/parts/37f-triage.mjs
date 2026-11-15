@@ -85,7 +85,7 @@ export async function jobPsirt(opts = {}) {
 // vector and theater from the closed lists, actors that occur in the title, and a short reason without links; anything
 // else is rejected and counted. A daily request budget in ti.kv keeps the job inside the free tier. Without
 // OPENROUTER_API_KEY in the function environment the job records "held" and makes no request.
-export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 30, DAILY_REQUESTS: 40, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 75000, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
+export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, MAX_TOKENS: 12000, DAILY_REQUESTS: 40, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 75000, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
   ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions', MODEL: 'openrouter/free', EVAL_BATCHES: 6 };
 export const TRIAGE_VECTORS = ['Exploitation & edge devices', 'Fraud', 'Identity & valid accounts', 'Phishing & social engineering', 'Ransomware & malware', 'Supply chain & third parties', 'DDoS', 'Insider'];
 export const TRIAGE_THEATERS = { 'T-RSY': 'Red Sea, Yemen and Saudi Arabia', 'T-HRM': 'Strait of Hormuz and the Gulf (Iran)', 'T-AFP': 'Afghanistan and Pakistan border', 'T-HOA': 'Horn of Africa',
@@ -147,14 +147,19 @@ export async function triageBudget(want, cap) {
 }
 export async function triageCall(messages, { structured = true } = {}) {
   const E = ENV(), key = E.OPENROUTER_API_KEY || E.TI_TRIAGE_KEY;
-  const body = { model: E.TI_TRIAGE_MODEL || TRIAGE.MODEL, messages, temperature: 0, max_tokens: 4000 };
+  const body = { model: E.TI_TRIAGE_MODEL || TRIAGE.MODEL, messages, temperature: 0, max_tokens: TRIAGE.MAX_TOKENS,
+    // Free routers often pick a reasoning model. Reasoning tokens count against max_tokens, and a model that spends the whole
+    // allowance thinking returns an empty answer (first production run, 15 November 2026: two models, 4,000 tokens each, no
+    // content). Low effort with a wide allowance leaves room for the labels; the reasoning text is not returned.
+    reasoning: { effort: 'low', exclude: true } };
   if (structured) { body.response_format = { type: 'json_schema', json_schema: TRIAGE_SCHEMA }; body.provider = { require_parameters: true }; }
   const r = await get(E.TI_TRIAGE_ENDPOINT || TRIAGE.ENDPOINT, { method: 'POST', as: 'json', timeout: TRIAGE.TIMEOUT_MS, body: JSON.stringify(body),
     headers: { authorization: 'Bearer ' + key, 'content-type': 'application/json', 'http-referer': 'https://intel.kilfoycyber.com', 'x-title': 'KTI machine triage' } });
   const j = r.json || {};
   const text = j.choices && j.choices[0] && j.choices[0].message ? j.choices[0].message.content : null;
   const err = j.error ? String(j.error.message || j.error.code || 'error').slice(0, 200) : null;
-  return { ok: r.ok && typeof text === 'string' && !err, status: r.status, ms: r.ms, model: j.model || body.model, text, error: err || (r.ok ? (text ? null : 'empty answer') : (r.error || `HTTP ${r.status}`)),
+  const finish = j.choices && j.choices[0] ? j.choices[0].finish_reason || null : null;
+  return { ok: r.ok && typeof text === 'string' && !err, status: r.status, ms: r.ms, model: j.model || body.model, text, error: err || (r.ok ? (text ? null : 'empty answer' + (finish ? ` (finish_reason ${finish})` : '')) : (r.error || `HTTP ${r.status}`)),
     tokens: j.usage ? { in: j.usage.prompt_tokens || 0, out: j.usage.completion_tokens || 0 } : null };
 }
 // One batch: a structured request, then one plain retry when the endpoint or model refuses structured output (a 4xx other
