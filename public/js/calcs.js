@@ -348,6 +348,19 @@ dash.calc('forecast_record', {
   },
 });
 
+// ---- Calibration of the forecast record ----
+dash.calc('calibration', {
+  title: 'Calibration by likelihood term',
+  description: 'Scored judgments grouped by the likelihood term they carried: how many there were, how many held, the observed rate, and the midpoint of the probability range the term stands for. A calibrated record has an observed rate near the stated midpoint in each row. With fewer than ten outcomes in a row the observed rate is an anecdote, and the note column says so.',
+  inputs: ['outcomes'],
+  fn: (outcomes) => {
+    const by = new Map();
+    for (const o of outcomes) { const g = by.get(o.likelihood) || by.set(o.likelihood, { likelihood: o.likelihood, probability: o.probability, p: Number(o.p), n: 0, held: 0, brier: 0 }).get(o.likelihood); g.n++; if (o.outcome === 'Held') g.held++; g.brier += Number(o.brier) || 0; }
+    return [...by.values()].sort((a, b) => b.p - a.p).map((g) => ({ ...g, observed: Math.round((g.held / g.n) * 1000) / 1000, gap: Math.round((g.held / g.n - g.p) * 1000) / 1000, brier: Math.round((g.brier / g.n) * 10000) / 10000,
+      note: g.n < 10 ? `${g.n} of the 10 outcomes a rate needs` : '' }));
+  },
+});
+
 // ---- Corroboration behind each ranked judgment ----
 dash.calc('judgment_corroboration', {
   title: 'Corroboration by judgment',
@@ -389,7 +402,7 @@ dash.calc('week_review', {
 // ---- Analysis of competing hypotheses over the ranked judgments ----
 dash.calc('ach_matrix', {
   title: 'Competing hypotheses',
-  description: 'For each ranked judgment, the judgment (H1) and each stated alternative, with the count of evidence items rated consistent, inconsistent or not diagnostic for it. H1 is read from each evidence row\'s role (Supports, Weakens, Context); the alternatives from the row\'s ach ratings. In this method the hypothesis with the least inconsistent evidence stands, so rows are ordered by inconsistent count within a judgment; unrated counts show how much of the evidence the analyst has yet to rate.',
+  description: 'For each ranked judgment, the judgment (H1) and each stated alternative, with the count of evidence items rated consistent, inconsistent or not diagnostic for it. H1 is read from each evidence row\'s role (Supports, Weakens, Context); the alternatives from the row\'s ach ratings. In this method the hypothesis with the least inconsistent evidence stands. An alternative that fewer than a quarter of the items are consistent or inconsistent with is marked as one that little evidence bears on: the evidence base has not tested it, which names a collection gap. Unrated counts show how much of the evidence is yet to be rated.',
   inputs: ['judgments', 'evidence'],
   fn: (judgments, evidence) => {
     const out = [];
@@ -403,8 +416,15 @@ dash.calc('ach_matrix', {
         return { key: j.judgment_id + '-' + x.h, judgment_id: j.judgment_id, exec_rank: j.exec_rank, hypothesis: x.h, text: x.text, consistent: n('C'), inconsistent: n('I'), neutral: n('N'), unrated: r.filter((v) => !v).length, evidence: ev.length,
           rated_share: ev.length ? Math.round(((ev.length - r.filter((v) => !v).length) / ev.length) * 1000) / 1000 : null };
       });
-      const complete = rows.every((r) => r.unrated === 0), least = Math.min(...rows.map((r) => r.inconsistent));
-      for (const r of rows) out.push({ ...r, standing: !complete ? 'rating incomplete' : r.inconsistent === least ? 'least inconsistent' : 'more inconsistent' });
+      const complete = rows.every((r) => r.unrated === 0);
+      const tested = (r) => r.hypothesis === 'H1' || (r.evidence ? (r.consistent + r.inconsistent) / r.evidence : 0) >= 0.25;
+      const least = Math.min(...rows.filter(tested).map((r) => r.inconsistent));
+      // A hypothesis that little of the evidence bears on is untested, which is a collection gap and no kind of support.
+      for (const r of rows) {
+        const diag = r.evidence ? (r.consistent + r.inconsistent) / r.evidence : 0;
+        out.push({ ...r, diagnostic_share: Math.round(diag * 1000) / 1000,
+          standing: !complete ? 'rating incomplete' : r.hypothesis !== 'H1' && diag < 0.25 ? 'little evidence bears on it' : r.inconsistent === least ? 'least inconsistent' : 'more inconsistent' });
+      }
     }
     return out;
   },
