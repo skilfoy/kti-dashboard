@@ -162,7 +162,12 @@ export async function jobPsirt(opts = {}) {
 // else is rejected and counted. A daily request budget in ti.kv keeps the job inside the free tier. Without
 // OPENROUTER_API_KEY in the function environment the job records "held" and makes no request.
 export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, POOL: 200, MAX_TOKENS: 12000, DAILY_REQUESTS: 40, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 70000, VERIFY_AFTER_MS: 80000, VERIFY_EVERY_MS: 100 * 60000, EVAL_TRIES: 3, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
-  ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions', MODEL: 'openrouter/free', EVAL_BATCHES: 1 };
+  ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions',
+  // Tried in order by OpenRouter (its `models` fallback list, three at most). The first two answered every request they
+  // were routed in the first day of production, in 20 to 35 seconds; the bare free router picked a slow or reasoning-heavy
+  // model about half the time and those requests met the deadline or came back empty. The router stays as the last resort
+  // for the day a pinned preview model is withdrawn. TI_TRIAGE_MODEL (comma-separated) overrides the list.
+  MODELS: ['particle-ai/particle-1:free', 'baidu/ernie-5.5-flash-preview:free', 'openrouter/free'], EVAL_BATCHES: 1 };
 export const TRIAGE_VECTORS = ['Exploitation & edge devices', 'Fraud', 'Identity & valid accounts', 'Phishing & social engineering', 'Ransomware & malware', 'Supply chain & third parties', 'DDoS', 'Insider'];
 export const TRIAGE_THEATERS = { 'T-RSY': 'Red Sea, Yemen and Saudi Arabia', 'T-HRM': 'Strait of Hormuz and the Gulf (Iran)', 'T-AFP': 'Afghanistan and Pakistan border', 'T-HOA': 'Horn of Africa',
   'T-LEV': 'Israel, Lebanon and Syria', 'T-UKR': 'Russia and Ukraine', 'T-SAH': 'Sahel and West Africa', 'T-SDN': 'Sudan', 'T-EUH': 'Europe: hybrid threats and sabotage',
@@ -229,7 +234,8 @@ export async function triageBudget(want, cap) {
 }
 export async function triageCall(messages, { structured = true } = {}) {
   const E = ENV(), key = E.OPENROUTER_API_KEY || E.TI_TRIAGE_KEY;
-  const body = { model: E.TI_TRIAGE_MODEL || TRIAGE.MODEL, messages, temperature: 0, max_tokens: TRIAGE.MAX_TOKENS,
+  const models = (E.TI_TRIAGE_MODEL ? String(E.TI_TRIAGE_MODEL).split(',').map((s) => s.trim()).filter(Boolean) : TRIAGE.MODELS).slice(0, 3);
+  const body = { model: models[0], ...(models.length > 1 ? { models } : {}), messages, temperature: 0, max_tokens: TRIAGE.MAX_TOKENS,
     // Free routers often pick a reasoning model. Reasoning tokens count against max_tokens, and a model that spends the whole
     // allowance thinking returns an empty answer (first production run, 15 November 2026: two models, 4,000 tokens each, no
     // content). Low effort with a wide allowance leaves room for the labels; the reasoning text is not returned.

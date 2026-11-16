@@ -489,7 +489,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
     if (u.startsWith(M.EPSS_URL)) return resp(200, { data: u.slice(M.EPSS_URL.length).split(',').map((c) => ({ cve: c, epss: c.endsWith('22222') ? '0.62' : '0.01', percentile: c.endsWith('22222') ? '0.98' : '0.2' })) });
     if (u === M.TRIAGE.ENDPOINT) {
       const body = JSON.parse(opts.body);
-      llm.push({ auth: h.authorization || h.Authorization, structured: !!body.response_format, temperature: body.temperature, max_tokens: body.max_tokens, reasoning: body.reasoning, user: body.messages[1].content });
+      llm.push({ auth: h.authorization || h.Authorization, structured: !!body.response_format, temperature: body.temperature, max_tokens: body.max_tokens, model: body.model, models: body.models, reasoning: body.reasoning, user: body.messages[1].content });
       if (llmMode === 'refuse-structured' && body.response_format) return resp(400, { error: { message: 'response_format is not supported' } });
       if (llmMode === 'limited') return resp(429, { error: { message: 'rate limited' } });
       const ids = body.messages[1].content.split('\n').slice(1).map((l) => +l.split('\t')[0]);
@@ -535,7 +535,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   process.env.OPENROUTER_API_KEY = 'sk-or-test';
   process.env.TI_TRIAGE_VERIFY = 'never';
   const t1 = await M.runJob('triage');
-  ok(t1.ok && llm.length === 1 && llm[0].auth === 'Bearer sk-or-test' && llm[0].structured && llm[0].temperature === 0 && llm[0].max_tokens >= 8000 && llm[0].reasoning.effort === 'low' && llm[0].reasoning.exclude === true, 'one structured request at temperature 0 with low reasoning effort and room for the answer');
+  ok(t1.ok && llm.length === 1 && llm[0].auth === 'Bearer sk-or-test' && llm[0].structured && llm[0].temperature === 0 && llm[0].max_tokens >= 8000 && llm[0].reasoning.effort === 'low' && llm[0].reasoning.exclude === true && llm[0].model === M.TRIAGE.MODELS[0] && llm[0].models.length === 3 && llm[0].models[2] === 'openrouter/free', 'one structured request at temperature 0 with low reasoning effort and room for the answer');
   const F = M.PSIRT_FEEDS.length - 2; // feeds that answer in this fixture: each carries the shared-CVE story and one bulletin of its own
   ok(t1.pool === 2 * F && t1.candidates === F + 1 && t1.labelled === 2 * F - 2 && t1.rejects.vector_not_listed === 1 && t1.rejects.why_has_link_or_markup === 1 && t1.rejects.id_not_in_batch === 1, 'rule checks reject off-list, linked and invented labels ' + JSON.stringify(t1.rejects));
   const tdoc = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/triage.json.gz')).toString());
