@@ -19,8 +19,21 @@ export const PSIRT_FEEDS = [
   { id: 'splunk', vendor: 'Splunk', klass: 'platform', url: 'https://advisory.splunk.com/feed.xml' },
   { id: 'tenable', vendor: 'Tenable', klass: 'platform', url: 'https://www.tenable.com/security/feed' },
   { id: 'aws', vendor: 'AWS security bulletins', klass: 'platform', url: 'https://aws.amazon.com/security/security-bulletins/rss/feed/' },
+  // Added 16 November 2026, each confirmed to answer with a feed that day. ACSC refuses this kind of client, and Citrix, F5,
+  // Juniper, Zyxel and WatchGuard publish no feed that answers with entries.
+  { id: 'checkpoint', vendor: 'Check Point advisories', klass: 'edge', url: 'https://advisories.checkpoint.com/advisories/feed/' },
+  { id: 'sophos', vendor: 'Sophos', klass: 'edge', url: 'https://www.sophos.com/en-us/security-advisories/feed' },
+  { id: 'gitlab', vendor: 'GitLab security releases', klass: 'platform', url: 'https://about.gitlab.com/security-releases.xml' },
+  { id: 'chrome', vendor: 'Chrome releases', klass: 'platform', url: 'https://chromereleases.googleblog.com/feeds/posts/default' },
+  { id: 'zdi', vendor: 'Zero Day Initiative', klass: 'research', url: 'https://www.zerodayinitiative.com/rss/published/' },
+  { id: 'jpcert', vendor: 'JPCERT/CC', klass: 'cert', url: 'https://www.jpcert.or.jp/english/rss/jpcert-en.rdf' },
+  { id: 'jvn', vendor: 'Japan Vulnerability Notes', klass: 'cert', url: 'https://jvn.jp/en/rss/jvn.rdf' },
+  { id: 'certbund', vendor: 'CERT-Bund (BSI)', klass: 'cert', url: 'https://wid.cert-bund.de/content/public/securityAdvisory/rss' },
+  { id: 'certfralerte', vendor: 'CERT-FR alerts', klass: 'cert', url: 'https://www.cert.ssi.gouv.fr/alerte/feed/' },
+  { id: 'certfravis', vendor: 'CERT-FR advisories', klass: 'cert', url: 'https://www.cert.ssi.gouv.fr/avis/feed/' },
+  { id: 'ncscnl', vendor: 'NCSC (Netherlands)', klass: 'cert', url: 'https://advisories.ncsc.nl/rss/advisories' },
 ];
-export const PSIRT_LIMITS = { TIMEOUT_MS: 15000, CONCURRENCY: 5, KEEP_DAYS: 120, WINDOW_DAYS: 14, MAX_ROWS: 400 };
+export const PSIRT_LIMITS = { TIMEOUT_MS: 15000, CONCURRENCY: 6, KEEP_DAYS: 120, WINDOW_DAYS: 14, MAX_ROWS: 900 };
 const CVE_RE = /CVE-\d{4}-\d{4,7}/gi;
 export const cvesIn = (s) => [...new Set((String(s || '').match(CVE_RE) || []).map((c) => c.toUpperCase()))];
 // One entry per item or entry block: title, link, date and the CVE identifiers found anywhere in the block.
@@ -50,8 +63,8 @@ export function kevIndex(doc) {
 // carry the CVE, and the vendor's share of KEV additions in the last two years. Each CVE's first score and rank are kept
 // (ti.kevrank), so the evaluation is forward-looking: a CVE counts as a hit when KEV lists it after the day it was first
 // ranked. The watchlist forecasts nothing about a level or a judgment; it orders the analyst's reading.
-export const KEVRANK = { W: { epss: 0.45, edge: 0.2, wording: 0.15, publishers: 0.1, vendor: 0.1 }, TOP: 25, EPSS_BATCH: 100, MAX_CVES: 400, K: 25, MIN_AGE_DAYS: 7 };
-export const KEV_VENDOR = { fortinet: 'Fortinet', paloalto: 'Palo Alto Networks', cisco: 'Cisco', sonicwall: 'SonicWall', ivanti: 'Ivanti', msrc: 'Microsoft', splunk: 'Splunk', tenable: 'Tenable', aws: 'Amazon' };
+export const KEVRANK = { W: { epss: 0.45, edge: 0.2, wording: 0.15, publishers: 0.1, vendor: 0.1 }, TOP: 25, EPSS_BATCH: 100, MAX_CVES: 800, K: 25, MIN_AGE_DAYS: 7 };
+export const KEV_VENDOR = { checkpoint: 'Check Point', sophos: 'Sophos', gitlab: 'GitLab', chrome: 'Google', fortinet: 'Fortinet', paloalto: 'Palo Alto Networks', cisco: 'Cisco', sonicwall: 'SonicWall', ivanti: 'Ivanti', msrc: 'Microsoft', splunk: 'Splunk', tenable: 'Tenable', aws: 'Amazon' };
 const EXPLOIT_WORDS = /\b(exploit(ed|ation)?|in the wild|actively|zero[- ]day|0[- ]day|unauthenticated|authentication bypass|remote code execution|rce|pre[- ]auth|command injection)\b/i;
 export function vendorPrior(kev, now = Date.now()) {
   const n = {};
@@ -167,7 +180,7 @@ export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, POOL: 200, MAX_TOKENS: 
   // were routed in the first day of production, in 20 to 35 seconds; the bare free router picked a slow or reasoning-heavy
   // model about half the time and those requests met the deadline or came back empty. The router stays as the last resort
   // for the day a pinned preview model is withdrawn. TI_TRIAGE_MODEL (comma-separated) overrides the list.
-  MODELS: ['particle-ai/particle-1:free', 'baidu/ernie-5.5-flash-preview:free', 'openrouter/free'], EVAL_BATCHES: 1 };
+  MODELS: ['particle-ai/particle-1:free', 'baidu/ernie-5.5-flash-preview:free', 'openrouter/free'], EVAL_BATCHES: 1, EVAL_BATCHES_CREDITED: 8, EVAL_BUDGET_MS: 420000, LABEL_BATCHES_CREDITED: 3, LABEL_BUDGET_MS: 90000 };
 export const TRIAGE_VECTORS = ['Exploitation & edge devices', 'Fraud', 'Identity & valid accounts', 'Phishing & social engineering', 'Ransomware & malware', 'Supply chain & third parties', 'DDoS', 'Insider'];
 export const TRIAGE_THEATERS = { 'T-RSY': 'Red Sea, Yemen and Saudi Arabia', 'T-HRM': 'Strait of Hormuz and the Gulf (Iran)', 'T-AFP': 'Afghanistan and Pakistan border', 'T-HOA': 'Horn of Africa',
   'T-LEV': 'Israel, Lebanon and Syria', 'T-UKR': 'Russia and Ukraine', 'T-SAH': 'Sahel and West Africa', 'T-SDN': 'Sudan', 'T-EUH': 'Europe: hybrid threats and sabotage',
@@ -225,6 +238,24 @@ export function triageCheck(items, answer) {
   return { ok, rejects, missing: items.length - ok.size };
 }
 const utcDay = () => new Date().toISOString().slice(0, 10);
+// The day's request cap follows the account. OpenRouter allows 50 free-model requests a day to an account that has never
+// bought credits and 1,000 a day to one that has; the key endpoint says which. The answer is kept for six hours. An
+// account on the free tier, or a key endpoint that does not answer, gets the conservative cap.
+export const TRIAGE_CAPS = { free: 45, credited: 600 };
+export async function triageCap() {
+  const E = ENV(), k = (await kvGet('triage:tier')) || {};
+  if (k.at && Date.now() - Date.parse(k.at) < 6 * 3600000 && k.cap) return k;
+  let tier = 'free', note = null;
+  if (/openrouter\.ai/.test(E.TI_TRIAGE_ENDPOINT || TRIAGE.ENDPOINT)) {
+    const r = await get('https://openrouter.ai/api/v1/key', { as: 'json', timeout: 10000, headers: { authorization: 'Bearer ' + (E.OPENROUTER_API_KEY || E.TI_TRIAGE_KEY) } });
+    const d = r.ok && r.json ? r.json.data || {} : null;
+    if (!d) note = 'key endpoint not read: ' + (r.error || `HTTP ${r.status}`);
+    else if (d.is_free_tier === false) tier = 'credited';
+  }
+  const out = { at: new Date().toISOString(), tier, cap: TRIAGE_CAPS[tier], note };
+  await kvPut('triage:tier', out);
+  return out;
+}
 // Requests labelling still needs today: one for each hour left in the UTC day and a quarter more for retries. The
 // evaluation and the verifier spend only what is left above this reserve, so labelling never goes dark for their sake
 // (on 16 November 2026 the shared budget was spent by 15:00 UTC and nine hourly runs labelled nothing).
@@ -336,12 +367,22 @@ export async function jobTriage() {
   let res = { labels: new Map(), rejects: {}, missing: 0, calls: [] };
   // CVE identifiers come from the advisory feed and from the title itself, never from the model.
   const pool_ = cand.map((c) => ({ ...c, cves: [...new Set([...(Array.isArray(c.cves) ? c.cves : []), ...cvesIn(c.title)])] }));
-  const clusters = clusterTitles(pool_).slice(0, TRIAGE.BATCH);
-  const items = clusters.map((c, i) => ({ id: i + 1, ...c.rep, members: c.members }));
-  if (items.length) res = await triageBatch(items, TRIAGE.DAILY_REQUESTS);
-  const rows = items.filter((i) => res.labels.has(i.id)).flatMap((i) => i.members.map((m) => ({ link: m.link, kind: m.kind, source: m.source, title: m.title, published: m.published, cves: m.cves,
-    ...res.labels.get(i.id), actors: res.labels.get(i.id).actors.filter((a) => String(m.title).toLowerCase().includes(a.toLowerCase())), cluster: i.members.length > 1 ? i.link : null,
-    model: res.model || null, prompt_v: TRIAGE.PROMPT_V })));
+  const clusters = clusterTitles(pool_), tier = await triageCap();
+  // One request a run on the free tier; a credited account works the backlog down with up to LABEL_BATCHES_CREDITED
+  // requests while the run is inside LABEL_BUDGET_MS.
+  const maxB = tier.tier === 'credited' ? TRIAGE.LABEL_BATCHES_CREDITED : 1, items = [], rows = [];
+  for (let b = 0; b < maxB && b * TRIAGE.BATCH < clusters.length && !res.stop && (b === 0 || Date.now() - t0 < TRIAGE.LABEL_BUDGET_MS); b++) {
+    const batch = clusters.slice(b * TRIAGE.BATCH, (b + 1) * TRIAGE.BATCH).map((c, i) => ({ id: i + 1, ...c.rep, members: c.members }));
+    const r = await triageBatch(batch, tier.cap);
+    items.push(...batch);
+    for (const [k, n] of Object.entries(r.rejects)) res.rejects[k] = (res.rejects[k] || 0) + n;
+    res.missing += r.missing; res.calls.push(...r.calls); res.stop = r.stop || null;
+    for (const i of batch) {
+      const l = r.labels.get(i.id);
+      if (l) for (const m of i.members) rows.push({ link: m.link, kind: m.kind, source: m.source, title: m.title, published: m.published, cves: m.cves, ...l,
+        actors: l.actors.filter((a) => String(m.title).toLowerCase().includes(a.toLowerCase())), cluster: i.members.length > 1 ? i.link : null, model: r.model || null, prompt_v: TRIAGE.PROMPT_V });
+    }
+  }
   if (rows.length) {
     await sql(`INSERT INTO ti.triage (link, kind, source, title, published, cves, relevance, vector, theater, actors, why, model, prompt_v, cluster)
       SELECT link, kind, source, title, published, cves, relevance, vector, theater, actors, why, model, prompt_v, cluster FROM jsonb_to_recordset($1::jsonb)
@@ -352,7 +393,7 @@ export async function jobTriage() {
   // The first verifier run (16 November 2026, 02:01 UTC) followed a slow labelling request and its retry; the invocation
   // was cut off near five minutes and the run left no record. The verifier now runs only when labelling finished inside
   // VERIFY_AFTER_MS, which bounds the job at about two and a half minutes.
-  const late = Date.now() - t0 > TRIAGE.VERIFY_AFTER_MS;
+  const late = Date.now() - t0 > TRIAGE.VERIFY_AFTER_MS * (tier.tier === 'credited' ? 2 : 1);
   // Every other run, by the time of the last verifier request (the schedule arrives up to 12 minutes late, so the clock
   // hour is no guide: both odd-hour slots of 16 November landed in an even hour and were skipped).
   const lastV = Date.parse(((await kvGet('triage:verify_at')) || {}).at || 0) || 0, due = Date.now() - lastV >= TRIAGE.VERIFY_EVERY_MS;
@@ -364,6 +405,7 @@ export async function jobTriage() {
   const out = { pool: pool_.length, candidates: items.length, waiting: Math.max(0, Number(waiting) - rows.length), labelled: rows.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls, verify,
     published: await putDoc('triage', await triageDoc({ last_run: last })), ms: Date.now() - t0 };
   // A run whose requests all failed is a failed run, so the health record and the alert workflow see it.
+  out.tier = tier.tier; out.cap = tier.cap;
   if (items.length && !rows.length && !res.stop) out.run_failed = 'no usable answer from the triage endpoint: ' + res.calls.map((c) => c.error || 'unparsed').join('; ');
   return out;
 }
@@ -379,7 +421,7 @@ export async function triageVerify() {
     ORDER BY at DESC LIMIT $2`, [TRIAGE.WINDOW_H, TRIAGE.BATCH]);
   if (!top.length) return { checked: 0 };
   const items = top.map((t, i) => ({ id: i + 1, ...t }));
-  const r = await triageBatch(items, TRIAGE.DAILY_REQUESTS, { retry: false, reserve: triageReserve() });
+  const r = await triageBatch(items, (await triageCap()).cap, { retry: false, reserve: triageReserve() });
   const rows = items.filter((i) => r.labels.has(i.id)).map((i) => ({ link: i.link, verify: r.labels.get(i.id).relevance === 3 ? 'confirmed' : 'lowered', second: r.labels.get(i.id).relevance, model: r.model || null }));
   if (rows.length) {
     await sql(`UPDATE ti.triage t SET verify = x.verify, verify_model = x.model, relevance = CASE WHEN x.verify = 'lowered' THEN 2 ELSE t.relevance END
@@ -420,11 +462,12 @@ export async function jobTriageeval(opts = {}) {
   // model cannot answer does not hold the replay (items 51 to 75 did, for three runs on 16 November 2026).
   st.tries = st.tries || {};
   const todo = gold.items.filter((g) => !st.done[g.id] && (st.tries[g.id] || 0) < TRIAGE.EVAL_TRIES).sort((a, b) => (st.tries[a.id] || 0) - (st.tries[b.id] || 0));
-  const calls = [];
+  const calls = [], cap = await triageCap(), tEnd = Date.now() + TRIAGE.EVAL_BUDGET_MS;
   let stop = null;
-  for (let b = 0; b < (opts.batches || TRIAGE.EVAL_BATCHES) && b * TRIAGE.BATCH < todo.length && !stop; b++) {
+  // A credited account replays several batches a run, inside a time budget; the free tier keeps to one.
+  for (let b = 0; b < (opts.batches || (cap.tier === 'credited' ? TRIAGE.EVAL_BATCHES_CREDITED : TRIAGE.EVAL_BATCHES)) && Date.now() < tEnd && b * TRIAGE.BATCH < todo.length && !stop; b++) {
     const slice = todo.slice(b * TRIAGE.BATCH, (b + 1) * TRIAGE.BATCH).map((g, i) => ({ id: i + 1, gid: g.id, title: g.title, g }));
-    const r = await triageBatch(slice, TRIAGE.EVAL_DAILY_REQUESTS, { reserve: triageReserve() });
+    const r = await triageBatch(slice, cap.cap, { reserve: triageReserve() });
     calls.push(...r.calls);
     stop = r.stop || null;
     for (const [k, v] of Object.entries(r.rejects)) st.rejects[k] = (st.rejects[k] || 0) + v;

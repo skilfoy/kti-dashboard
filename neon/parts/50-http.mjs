@@ -9,7 +9,7 @@ LEASE_S.cables = 180;
 // Advisory feeds every three hours at :19; machine triage hourly at :49 (after the blogs slice of the same run), with its
 // evaluation run on demand only (37f-triage.mjs).
 Object.assign(JOBS, { psirt: jobPsirt, triage: jobTriage, triageeval: jobTriageeval });
-Object.assign(LEASE_S, { psirt: 180, triage: 240, triageeval: 600 });
+Object.assign(LEASE_S, { psirt: 240, triage: 420, triageeval: 600 });
 export async function runJob(job, opts = {}) {
   const fn = JOBS[job];
   if (!fn) return { job, ok: false, error: 'unknown job' };

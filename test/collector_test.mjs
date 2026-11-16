@@ -480,13 +480,14 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
     <item><title>${id}: authentication bypass in SSL VPN (CVE-2026-11111)</title><link>https://${id}.example/a1</link><pubDate>${day(1)}</pubDate><description>Affects CVE-2026-11111 and cve-2026-22222.</description></item>
     <item><title>${id}: informational bulletin</title><link>https://${id}.example/a2</link><pubDate>${day(2)}</pubDate><description>No identifiers.</description></item>
     <item><title>${id}: old advisory CVE-2025-00001</title><link>https://${id}.example/old</link><pubDate>${day(40)}</pubDate></item></channel></rss>`;
-  let llm = [], llmMode = 'good', kevLater = false;
+  let llm = [], llmMode = 'good', kevLater = false, keyTier = 'free';
   EXTRA = async (u, opts, h) => {
     const f = M.PSIRT_FEEDS.find((x) => x.url === u);
     if (f) return f.id === 'ivanti' ? resp(503, 'busy') : f.id === 'certeu' ? resp(200, '<html>not a feed</html>') : resp(200, feedXml(f.id));
     if (u === M.KEV_URL) return resp(200, { vulnerabilities: [{ cveID: 'CVE-2026-11111', vendorProject: 'Fortinet', dateAdded: new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10), dueDate: '2026-12-03', knownRansomwareCampaignUse: 'Known' },
       ...(kevLater ? [{ cveID: 'CVE-2026-22222', vendorProject: 'Cisco', dateAdded: new Date().toISOString().slice(0, 10), knownRansomwareCampaignUse: 'Unknown' }] : [])] });
     if (u.startsWith(M.EPSS_URL)) return resp(200, { data: u.slice(M.EPSS_URL.length).split(',').map((c) => ({ cve: c, epss: c.endsWith('22222') ? '0.62' : '0.01', percentile: c.endsWith('22222') ? '0.98' : '0.2' })) });
+    if (u === 'https://openrouter.ai/api/v1/key') return keyTier === 'down' ? resp(500, 'x') : resp(200, { data: { label: 'k', is_free_tier: keyTier === 'free' } });
     if (u === M.TRIAGE.ENDPOINT) {
       const body = JSON.parse(opts.body);
       llm.push({ auth: h.authorization || h.Authorization, structured: !!body.response_format, temperature: body.temperature, max_tokens: body.max_tokens, model: body.model, models: body.models, reasoning: body.reasoning, user: body.messages[1].content });
@@ -583,6 +584,14 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(/kept for labelling|budget spent/.test((await M.triageVerify()).stop) && llm.length === 0 && M.triageReserve(new Date('2026-11-16T00:10:00Z')) === 29 && M.triageReserve(new Date('2026-11-16T23:10:00Z')) === 0
     && (await M.triageBudget(1, 45, 10)).grant === 0 && (await M.triageBudget(1, 46, 0)).grant === 1, 'the verifier and the evaluation leave labelling its requests');
   process.env.TI_TRIAGE_VERIFY = 'never';
+  // The request cap follows the account: a credited account gets the higher cap and several batches a run.
+  await db.query(`DELETE FROM ti.kv WHERE k = 'triage:tier'`); keyTier = 'credited';
+  const c1 = await M.triageCap();
+  await db.query(`DELETE FROM ti.kv WHERE k = 'triage:tier'`); keyTier = 'down';
+  const c2 = await M.triageCap();
+  await db.query(`DELETE FROM ti.kv WHERE k = 'triage:tier'`); keyTier = 'free';
+  const c3 = await M.triageCap(), c4 = await M.triageCap();
+  ok(c1.tier === 'credited' && c1.cap === M.TRIAGE_CAPS.credited && c2.tier === 'free' && /key endpoint/.test(c2.note) && c3.cap === M.TRIAGE_CAPS.free && c4.at === c3.at, 'request cap follows the account tier and is cached ' + JSON.stringify([c1.cap, c2.cap, c3.cap]));
   // Story clustering: same story from three publishers, a shared CVE with different wording, and an unrelated title.
   const cl = M.clusterTitles([{ title: 'Fortinet patches critical FortiOS SSL VPN authentication bypass', cves: [] }, { title: 'Critical FortiOS SSL VPN authentication bypass patched by Fortinet', cves: [] },
     { title: 'Exploitation of CVE-2026-33333 seen in the wild against gateways', cves: ['CVE-2026-33333'] }, { title: 'Gateways under attack: CVE-2026-33333 exploitation in the wild', cves: ['CVE-2026-33333'] },

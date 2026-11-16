@@ -13,6 +13,7 @@
     { field: 'to', label: 'To', cls: 'ti-wrap' },
   ];
 
+  TI.root.addEventListener('click', (ev) => { if (ev.target && ev.target.id === 'brief-print') window.print(); });
   function week(sec) {
     const line = sec.querySelector('#week-line');
     if (!line || !TI.ready('week_review')) return;
@@ -82,6 +83,20 @@
         m('indeterminate', TI.f.int(f.indeterminate)), ' indeterminate. Mean Brier score ', m('brier_mean', f.brier_mean == null ? '—' : d3.format('.3f')(f.brier_mean)),
         ' over ', m('scored', TI.f.int(f.scored)), ' scored outcomes. ', m('open', TI.f.int(f.open)), ' judgments carry an open horizon, the next on ', m('next_horizon', f.next_horizon || '—'), '.');
     }
+    const cal = sec.querySelector('#tbl-calibration');
+    if (cal && TI.tableState(cal, ['calibration'])) {
+      const pct = (x) => (x == null ? '' : d3.format('.0%')(x));
+      TI.table(cal, TI.rows('calibration'), [
+        { field: 'likelihood', label: 'Likelihood term' },
+        { field: 'probability', label: 'Stated range' },
+        { field: 'n', label: 'Scored', num: true, fmt: 'int' },
+        { field: 'held', label: 'Held', num: true, fmt: 'int' },
+        { field: 'observed', label: 'Observed rate', num: true, get: (r) => pct(r.observed) },
+        { field: 'gap', label: 'Observed minus stated', num: true, get: (r) => d3.format('+.0%')(r.gap), hideSm: true },
+        { field: 'brier', label: 'Mean Brier', num: true, hideSm: true },
+        { field: 'note', label: 'Note', cls: 'ti-wrap' },
+      ], { limit: 10, empty: 'No judgment has been scored yet.' });
+    }
     const ct = sec.querySelector('#tbl-corroboration');
     if (ct && TI.tableState(ct, ['judgment_corroboration'])) {
       TI.table(ct, TI.rows('judgment_corroboration'), [
@@ -107,7 +122,7 @@
         { field: 'inconsistent', label: 'Inconsistent', num: true, fmt: 'int' },
         { field: 'neutral', label: 'Not diagnostic', num: true, fmt: 'int', hideSm: true },
         { field: 'unrated', label: 'Unrated', num: true, fmt: 'int', hideSm: true },
-        { field: 'standing', label: 'Standing', attr: { 'data-status': (r) => (r.standing === 'least inconsistent' ? 'ok' : r.standing === 'more inconsistent' ? 'review' : '') } },
+        { field: 'standing', label: 'Standing', attr: { 'data-status': (r) => (r.standing === 'least inconsistent' ? (r.hypothesis === 'H1' ? 'ok' : 'review') : '') } },
       ], { limit: 60, empty: 'No ranked judgments.' });
     }
     const ll = sec.querySelector('#leads-line');

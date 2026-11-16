@@ -120,7 +120,7 @@
     </div>
 
     <div class="ti-card ti-section" id="brief-week">
-      <h2 class="ti-h2">Seven days in review <span class="ti-pir" id="week-range"></span></h2>
+      <h2 class="ti-h2">Seven days in review <span class="ti-pir" id="week-range"></span> <button class="ti-chip" type="button" id="brief-print" title="Print the brief or save it as a PDF">Print or save as PDF</button></h2>
       <p class="ti-lede" id="week-line"></p>
     </div>
 
@@ -982,6 +982,8 @@
         <p class="ti-card-note" id="forecast-note">Every live judgment names the date by which it is scored. Once that date passes, the reassessment records whether the judged statement held, with the cited items behind the call, before it sets a new horizon or retires the judgment. The Brier score is (p - outcome) squared, with p the midpoint of the stated probability range: 0 is a certain, correct forecast and a standing 50% scores 0.25. A handful of outcomes says little about calibration; the record is kept from the start so that it can.</p>
         <p class="ti-lede" id="forecast-line"></p>
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-outcomes" data-source="outcomes" data-row-key="outcome_id"></table></div>
+        <h4 class="ti-h3" style="margin-top: var(--cds-gap-md)">Calibration by likelihood term</h4>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-calibration" data-source="calibration" data-row-key="likelihood"></table></div>
         <h4 class="ti-h3" style="margin-top: var(--cds-gap-md)">Open horizons</h4>
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-horizons" data-source="judgments" data-row-key="judgment_id"></table></div>
       </div>

@@ -2040,6 +2040,292 @@
    "reviewed": "2026-11-15"
   },
   {
+   "id": "psirt-checkpoint",
+   "name": "Check Point security advisories",
+   "owner": "Check Point",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://advisories.checkpoint.com/advisories/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-sophos",
+   "name": "Sophos security advisories",
+   "owner": "Sophos",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.sophos.com/en-us/security-advisories/feed",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-gitlab",
+   "name": "GitLab security releases",
+   "owner": "GitLab",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://about.gitlab.com/security-releases.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-chrome",
+   "name": "Chrome releases",
+   "owner": "Google",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://chromereleases.googleblog.com/feeds/posts/default",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-zdi",
+   "name": "Zero Day Initiative published advisories",
+   "owner": "Trend Micro Zero Day Initiative",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.zerodayinitiative.com/rss/published/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-jpcert",
+   "name": "JPCERT/CC alerts",
+   "owner": "JPCERT/CC",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.jpcert.or.jp/english/rss/jpcert-en.rdf",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-jvn",
+   "name": "Japan Vulnerability Notes",
+   "owner": "JPCERT/CC and IPA",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://jvn.jp/en/rss/jvn.rdf",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-certbund",
+   "name": "CERT-Bund security advisories",
+   "owner": "BSI (Germany)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://wid.cert-bund.de/content/public/securityAdvisory/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-certfr-alerte",
+   "name": "CERT-FR alerts",
+   "owner": "ANSSI (France)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.cert.ssi.gouv.fr/alerte/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-certfr-avis",
+   "name": "CERT-FR advisories",
+   "owner": "ANSSI (France)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.cert.ssi.gouv.fr/avis/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-ncscnl",
+   "name": "NCSC-NL advisories",
+   "owner": "NCSC (Netherlands)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://advisories.ncsc.nl/rss/advisories",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
    "id": "openrouter-triage",
    "name": "OpenRouter free models (machine triage)",
    "owner": "OpenRouter and the model providers",
