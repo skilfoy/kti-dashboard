@@ -568,9 +568,15 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(v1.checked === 2 && v1.confirmed === 1 && v1.lowered === 1 && llm.length === 1 && vr.every((r) => (r.verify === 'lowered' && r.relevance === 2) || (r.verify === 'confirmed' && r.relevance === 3)) && vr[0].verify === vr[1].verify && vr[2].verify !== vr[0].verify
     && vr.every((r) => r.verify_model === 'test/free-model'), 'verifier confirms or lowers, and a story carries its members ' + JSON.stringify(v1));
   ok((await M.triageVerify()).checked === 0 && llm.length === 1, 'verified stories are not sent again');
+  await db.query(`UPDATE ti.triage SET verify = NULL`);
+  llmMode = 'refuse-structured'; llm = [];
+  const v2 = await M.triageVerify();
+  ok(v2.checked === 0 && llm.length === 1 && llm[0].structured, 'the verifier makes one request and does not retry');
+  llmMode = 'verify';
   await db.query(`UPDATE ti.kv SET v = jsonb_set(v, '{used}', '37') WHERE k = 'triage:budget'`);
   await db.query(`UPDATE ti.triage SET verify = NULL`);
-  ok(/budget kept/.test((await M.triageVerify()).stop) && llm.length === 1, 'verifier yields its request when the day is nearly spent');
+  llm = [];
+  ok(/budget kept/.test((await M.triageVerify()).stop) && llm.length === 0, 'verifier yields its request when the day is nearly spent');
   process.env.TI_TRIAGE_VERIFY = 'never';
   // Story clustering: same story from three publishers, a shared CVE with different wording, and an unrelated title.
   const cl = M.clusterTitles([{ title: 'Fortinet patches critical FortiOS SSL VPN authentication bypass', cves: [] }, { title: 'Critical FortiOS SSL VPN authentication bypass patched by Fortinet', cves: [] },
