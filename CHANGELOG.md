@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.5.0 (16 November 2026)
+
+- Labelling has first call on the day's model requests. The verifier and the evaluation spend only what is left above labelling's reserve for the remaining hours; on 16 November the shared budget ran out by 15:00 UTC and nine hourly runs labelled nothing.
+- Actor ledger. Names the triage tier kept over 30 days, with stories, publishers and the latest headline, matched in the browser to MITRE ATT&CK groups by name or alias and to the ranked judgments that name them.
+- Corroboration by judgment on Method: publishers and source categories behind each ranked judgment's supporting items, with a flag when support leans on one origin.
+- Advisories as STIX 2.1 on Method: vulnerability objects by CVE, labelled when KEV lists them, and one report per advisory.
+- Seven days in review on the Brief: level and trend moves, judgment and indicator changes, items added by theater, outcomes recorded and lead use.
+- The validator warns for each ranked judgment whose evidence still lacks ratings against its alternatives, so the daily run sees the backlog.
+
 ## 2.4.0 (15 November 2026)
 
 - KEV watchlist. Advisory CVEs that KEV does not list are ranked by a fixed weighted score over EPSS percentile, edge-device publisher, exploitation wording, publisher count and the vendor's share of KEV additions. First scores are kept and the ranking is scored against what KEV lists afterwards (NDCG and top-decile capture); the first figures appear after a week of tracking.

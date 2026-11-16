@@ -348,6 +348,30 @@
         { field: 'items', label: 'Entries', num: true, fmt: 'int' },
       ], { sort: 'vendor', empty: 'No feeds were read.' });
     }
+    const ta = sec.querySelector('#tbl-actors');
+    if (ta && TI.tableState(ta, ['live_triage', 'attack_groups', 'judgments'])) {
+      const groups = TI.rows('attack_groups'), judgments = TI.rows('judgments');
+      const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+      const gIdx = new Map();
+      for (const g of groups) for (const nm of [g.name].concat(String(g.aliases || '').split(','))) if (norm(nm).length >= 3) gIdx.set(norm(nm), g);
+      const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const rows = kindRows('live_triage', 'actor').map((a) => {
+        const g = gIdx.get(norm(a.actor)) || gIdx.get(norm(String(a.actor).replace(/\b(group|gang|team)\b/gi, '')));
+        const re = new RegExp('(^|[^a-z0-9])' + esc(String(a.actor).toLowerCase()) + '([^a-z0-9]|$)');
+        const js = judgments.filter((j) => re.test([j.title, j.situation, j.assessment, j.attribution_judgment].join(' ').toLowerCase())).map((j) => j.judgment_id);
+        return { ...a, attack_group: g ? `${g.name} (${g.group_id})` : '', nexus: g ? g.nexus || '' : '', judgments: js.join(', ') };
+      });
+      TI.table(ta, rows, [
+        { field: 'actor', label: 'Name' },
+        { field: 'stories', label: 'Stories', num: true, fmt: 'int' },
+        { field: 'publishers', label: 'Publishers', num: true, fmt: 'int', hideSm: true },
+        { field: 'last_seen', label: 'Last seen', fmt: 'date', cls: 'ti-nowrap' },
+        { field: 'attack_group', label: 'ATT&CK group' },
+        { field: 'nexus', label: 'Nexus per ATT&CK', hideSm: true },
+        { field: 'judgments', label: 'Named in' },
+        { field: 'latest_title', label: 'Latest headline', link: 'latest_link', cls: 'ti-wrap', hideSm: true },
+      ], { sort: 'stories', dir: 'desc', limit: 60, empty: 'No actor names in 30 days of leads.' });
+    }
     const tt = sec.querySelector('#tbl-triage');
     if (tt && TI.tableState(tt, ['live_triage'])) {
       const m = metaOf('live_triage') || {}, ev = m.eval, pct = (x) => (x == null ? 'n/a' : Math.round(x * 100) + '%');

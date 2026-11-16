@@ -337,6 +337,13 @@ if CHECK:
           "; ".join(f"{p['id']} {p['field']} {p['from']} to {p['to']}" for p in pending[:4]) +
           " (run pipeline/authored_build.py without --check so the run records them)")
 
+# Competing-hypotheses backlog: evidence rows of ranked judgments that carry no rating against the stated alternatives.
+# A warning, so the run sees the work it owes (runbook section 2, step 6) without a failed build.
+for j in J:
+    if (j.get("exec_rank") or 0) > 0 and j.get("status") != "Retired" and re.search(r"\bH\d+:", j.get("alternatives") or ""):
+        owed = [e["evid_id"] for e in E if e["judgment_id"] == j["judgment_id"] and not e.get("ach")]
+        if owed:
+            warnings.append(f"{j['judgment_id']}: {len(owed)} evidence rows lack an ach rating against the alternatives (first {owed[0]}); rate them when this judgment is reviewed")
 if errors:
     print("VALIDATOR FAILED")
     for e in errors:
