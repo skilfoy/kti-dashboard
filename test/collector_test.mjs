@@ -479,6 +479,8 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const feedXml = (id) => `<?xml version="1.0"?><rss version="2.0"><channel><title>${id}</title>
     <item><title>${id}: authentication bypass in SSL VPN (CVE-2026-11111)</title><link>https://${id}.example/a1</link><pubDate>${day(1)}</pubDate><description>Affects CVE-2026-11111 and cve-2026-22222.</description></item>
     <item><title>${id}: informational bulletin</title><link>https://${id}.example/a2</link><pubDate>${day(2)}</pubDate><description>No identifiers.</description></item>
+    <item><title>${id}: informational bulletin</title><link>https://${id}.example/a2</link><pubDate>${day(2)}</pubDate><description>Listed twice by the feed.</description></item>
+    <item><title>shared page carried by every feed</title><link>https://shared.example/old-page</link><pubDate>${day(41)}</pubDate></item>
     <item><title>${id}: old advisory CVE-2025-00001</title><link>https://${id}.example/old</link><pubDate>${day(40)}</pubDate></item></channel></rss>`;
   let llm = [], llmMode = 'good', kevLater = false, keyTier = 'free';
   EXTRA = async (u, opts, h) => {
@@ -507,7 +509,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
     return null;
   };
   const adv = M.parseAdvisories(feedXml('x'));
-  ok(adv.length === 3 && adv[0].cves.join() === 'CVE-2026-11111,CVE-2026-22222' && adv[1].cves.length === 0 && M.parseAdvisories('<html></html>') === null, 'advisory parser and CVE extraction');
+  ok(adv.length === 5 && adv[0].cves.join() === 'CVE-2026-11111,CVE-2026-22222' && adv[1].cves.length === 0 && M.parseAdvisories('<html></html>') === null, 'advisory parser and CVE extraction');
   const p1 = await M.runJob('psirt');
   ok(p1.ok && p1.feeds === M.PSIRT_FEEDS.length && p1.feeds_ok === p1.feeds - 2 && p1.failed.map((f) => f.feed).sort().join() === 'certeu,ivanti', 'psirt run with two failing feeds ' + JSON.stringify(p1.failed));
   const pdoc = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/psirt.json.gz')).toString());
@@ -515,8 +517,8 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const hit = pdoc.rows.find((r) => r.kev.length);
   ok(hit.kev.join() === 'CVE-2026-11111' && hit.ransomware === true && /^\d{4}-\d\d-\d\d$/.test(hit.kev_added) && hit.vendor && hit.klass, 'KEV cross-reference fields');
   // KEV watchlist: the one CVE outside KEV is ranked with its signals, its first score is kept, and a later KEV listing counts as a hit.
-  const wl = pdoc.rows.filter((r) => r.kind === 'kevrank');
-  ok(wl.length === 1 && wl[0].cve === 'CVE-2026-22222' && wl[0].epss_percentile === 0.98 && wl[0].edge === true && wl[0].wording === true && wl[0].publishers === M.PSIRT_FEEDS.length - 2 && wl[0].score > 0.8
+  const wlAll = pdoc.rows.filter((r) => r.kind === 'kevrank'), wl = wlAll.filter((r) => r.cve === 'CVE-2026-22222');
+  ok(wlAll.length === 1 && wl.length === 1 && wl[0].epss_percentile === 0.98 && wl[0].edge === true && wl[0].wording === true && wl[0].publishers === M.PSIRT_FEEDS.length - 2 && wl[0].score > 0.8
     && pdoc.watchlist.candidates === 1 && pdoc.watchlist.eval.tracked === 0, 'KEV watchlist ranks the unlisted CVE with its signals ' + JSON.stringify(wl[0]));
   ok(M.vendorPrior(M.kevIndex({ vulnerabilities: [{ cveID: 'CVE-1-1', vendorProject: 'Fortinet', dateAdded: new Date().toISOString().slice(0, 10) }, { cveID: 'CVE-1-2', vendorProject: 'Fortinet', dateAdded: '2019-01-01' }, { cveID: 'CVE-1-3', vendorProject: 'Cisco', dateAdded: new Date().toISOString().slice(0, 10) }] })).fortinet === 1, 'vendor prior counts two years of KEV additions');
   const ks = M.kevrankScore([{ first_score: 0.9, in_kev_at: 'x' }, { first_score: 0.8, in_kev_at: null }, { first_score: 0.1, in_kev_at: 'x' }, ...Array.from({ length: 17 }, () => ({ first_score: 0.05, in_kev_at: null }))]);
@@ -525,9 +527,9 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   kevLater = true;
   const p2 = await M.runJob('psirt');
   const pdoc2 = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/psirt.json.gz')).toString());
-  ok(pdoc2.watchlist.eval.tracked === 1 && pdoc2.watchlist.eval.added === 1 && pdoc2.watchlist.candidates === 0 && !pdoc2.rows.some((r) => r.kind === 'kevrank'), 'a CVE that KEV lists later leaves the watchlist and counts as a hit ' + JSON.stringify(pdoc2.watchlist.eval));
+  ok(pdoc2.watchlist.eval.tracked === 1 && pdoc2.watchlist.eval.added === 1 && pdoc2.watchlist.candidates === 0 && !pdoc2.rows.some((r) => r.kind === 'kevrank' && r.cve === 'CVE-2026-22222'), 'a CVE that KEV lists later leaves the watchlist and counts as a hit ' + JSON.stringify(pdoc2.watchlist.eval));
   kevLater = false;
-  ok(p2.ok && (await db.query(`SELECT count(*)::int AS n FROM ti.advisory`)).rows[0].n === (M.PSIRT_FEEDS.length - 2) * 3, 'psirt second run upserts without duplicates; the 40-day-old advisory stays stored and off the document');
+  ok(p2.ok && (await db.query(`SELECT count(*)::int AS n FROM ti.advisory`)).rows[0].n === (M.PSIRT_FEEDS.length - 2) * 3 + 1, 'psirt second run upserts without duplicates: an entry a feed lists twice and a page every feed carries are stored once; old advisories stay stored and off the document');
 
   // Dark without a key: no request, nothing published.
   await db.query(`DELETE FROM ti.blog_item`); // the blogs test's items would fill the batch; the advisories alone are counted here

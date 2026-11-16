@@ -2040,32 +2040,6 @@
    "reviewed": "2026-11-15"
   },
   {
-   "id": "psirt-checkpoint",
-   "name": "Check Point security advisories",
-   "owner": "Check Point",
-   "category": "Vulnerabilities",
-   "feeds": [
-    "live_psirt",
-    "page:sources"
-   ],
-   "url": "https://advisories.checkpoint.com/advisories/feed/",
-   "access": "open",
-   "secret": null,
-   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
-   "attribution": "",
-   "commercial_use": "",
-   "cadence": "every three hours",
-   "health_feed": null,
-   "jobs": [
-    "psirt"
-   ],
-   "status": "live",
-   "gap_note": "",
-   "source_ids": [],
-   "added": "2026-11-16",
-   "reviewed": "2026-11-16"
-  },
-  {
    "id": "psirt-sophos",
    "name": "Sophos security advisories",
    "owner": "Sophos",
