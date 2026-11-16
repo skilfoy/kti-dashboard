@@ -604,6 +604,15 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(e1.ok && e1.scored === 50 && e1.calls === 2 && e1.eval.items === 50 && e1.eval.promoted === false && e1.eval.complete === false && e1.eval.theater_accuracy <= 1, 'evaluation scores two batches and withholds promotion ' + JSON.stringify(e1.eval));
   const e2 = await M.runJob('triageeval', { batches: 1 });
   ok(e2.ok && e2.scored === 75, 'evaluation resumes where it stopped');
+  // A batch the model cannot answer goes to the back of the queue; the replay moves on and the errors are kept.
+  llmMode = 'limited-off'; let evalFail = true;
+  const prevExtra = EXTRA;
+  EXTRA = async (u, opts, h) => (u === M.TRIAGE.ENDPOINT && evalFail ? resp(200, { model: 'test/free-model', choices: [{ finish_reason: 'error', message: { content: '' } }] }) : prevExtra(u, opts, h));
+  const e3 = await M.runJob('triageeval', { batches: 1 });
+  evalFail = false; llmMode = 'eval';
+  const e4 = await M.runJob('triageeval', { batches: 1 });
+  ok(e3.ok && e3.scored === 75 && /finish_reason error/.test(e3.eval.last_calls[0].error) && e4.scored === 100 && e4.eval.unanswered === 0, 'an unanswered evaluation batch does not hold the replay ' + JSON.stringify([e3.scored, e4.scored]));
+  EXTRA = prevExtra;
   const s = M.triageScore({ a: { g_theater: 'T-UKR', g_vector: 'DDoS', p_theater: 'T-UKR', p_vector: 'DDoS' }, b: { g_theater: 'T-GLB', g_vector: null, p_theater: 'T-UKR', p_vector: 'Fraud' } });
   ok(s.theater_accuracy === 0.5 && s.vector_accuracy === 1 && s.vector_false_positive_rate === 1 && !M.triagePromoted(s)
     && M.triagePromoted({ items: 400, theater_accuracy: 0.85, vector_accuracy: 0.75, vector_false_positive_rate: 0.1 }), 'scoring and promotion thresholds');

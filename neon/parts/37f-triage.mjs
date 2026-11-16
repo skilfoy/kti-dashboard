@@ -161,7 +161,7 @@ export async function jobPsirt(opts = {}) {
 // vector and theater from the closed lists, actors that occur in the title, and a short reason without links; anything
 // else is rejected and counted. A daily request budget in ti.kv keeps the job inside the free tier. Without
 // OPENROUTER_API_KEY in the function environment the job records "held" and makes no request.
-export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, POOL: 200, MAX_TOKENS: 12000, DAILY_REQUESTS: 40, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 70000, VERIFY_AFTER_MS: 80000, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
+export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, POOL: 200, MAX_TOKENS: 12000, DAILY_REQUESTS: 40, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 70000, VERIFY_AFTER_MS: 80000, VERIFY_EVERY_MS: 100 * 60000, EVAL_TRIES: 3, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
   ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions', MODEL: 'openrouter/free', EVAL_BATCHES: 1 };
 export const TRIAGE_VECTORS = ['Exploitation & edge devices', 'Fraud', 'Identity & valid accounts', 'Phishing & social engineering', 'Ransomware & malware', 'Supply chain & third parties', 'DDoS', 'Insider'];
 export const TRIAGE_THEATERS = { 'T-RSY': 'Red Sea, Yemen and Saudi Arabia', 'T-HRM': 'Strait of Hormuz and the Gulf (Iran)', 'T-AFP': 'Afghanistan and Pakistan border', 'T-HOA': 'Horn of Africa',
@@ -235,8 +235,13 @@ export async function triageCall(messages, { structured = true } = {}) {
     // content). Low effort with a wide allowance leaves room for the labels; the reasoning text is not returned.
     reasoning: { effort: 'low', exclude: true } };
   if (structured) { body.response_format = { type: 'json_schema', json_schema: TRIAGE_SCHEMA }; body.provider = { require_parameters: true }; }
-  const r = await get(E.TI_TRIAGE_ENDPOINT || TRIAGE.ENDPOINT, { method: 'POST', as: 'json', timeout: TRIAGE.TIMEOUT_MS, body: JSON.stringify(body),
-    headers: { authorization: 'Bearer ' + key, 'content-type': 'application/json', 'http-referer': 'https://intel.kilfoycyber.com', 'x-title': 'KTI machine triage' } });
+  // A hard deadline around the whole exchange. The request timeout alone did not bound a slow response body: on
+  // 16 November 2026 one labelling run took 576 seconds and one evaluation run 1,035.
+  const r = await Promise.race([
+    get(E.TI_TRIAGE_ENDPOINT || TRIAGE.ENDPOINT, { method: 'POST', as: 'json', timeout: TRIAGE.TIMEOUT_MS, body: JSON.stringify(body),
+      headers: { authorization: 'Bearer ' + key, 'content-type': 'application/json', 'http-referer': 'https://intel.kilfoycyber.com', 'x-title': 'KTI machine triage' } }),
+    new Promise((res) => setTimeout(() => res({ ok: false, status: 0, ms: TRIAGE.TIMEOUT_MS + 5000, error: 'deadline passed', json: null }), TRIAGE.TIMEOUT_MS + 5000)),
+  ]);
   const j = r.json || {};
   const text = j.choices && j.choices[0] && j.choices[0].message ? j.choices[0].message.content : null;
   const err = j.error ? String(j.error.message || j.error.code || 'error').slice(0, 200) : null;
@@ -327,13 +332,16 @@ export async function jobTriage() {
       AS x(link text, kind text, source text, title text, published timestamptz, cves jsonb, relevance int, vector text, theater text, actors jsonb, why text, model text, prompt_v text, cluster text) ON CONFLICT (link) DO NOTHING`, [rows]);
   }
   await sql(`DELETE FROM ti.triage WHERE at < now() - make_interval(days => $1)`, [TRIAGE.KEEP_DAYS]);
-  const vmode = ENV().TI_TRIAGE_VERIFY || 'odd-hours'; // 'always' and 'never' are for tests and for switching the verifier off
+  const vmode = ENV().TI_TRIAGE_VERIFY || 'alternate'; // 'always' and 'never' are for tests and for switching the verifier off
   // The first verifier run (16 November 2026, 02:01 UTC) followed a slow labelling request and its retry; the invocation
   // was cut off near five minutes and the run left no record. The verifier now runs only when labelling finished inside
   // VERIFY_AFTER_MS, which bounds the job at about two and a half minutes.
   const late = Date.now() - t0 > TRIAGE.VERIFY_AFTER_MS;
-  const verify = vmode === 'never' ? { checked: 0, skipped: 'off' } : late ? { checked: 0, skipped: 'labelling ran long' }
-    : vmode === 'always' || new Date().getUTCHours() % 2 === 1 ? await triageVerify() : { checked: 0, skipped: 'even hour' };
+  // Every other run, by the time of the last verifier request (the schedule arrives up to 12 minutes late, so the clock
+  // hour is no guide: both odd-hour slots of 16 November landed in an even hour and were skipped).
+  const lastV = Date.parse(((await kvGet('triage:verify_at')) || {}).at || 0) || 0, due = Date.now() - lastV >= TRIAGE.VERIFY_EVERY_MS;
+  let verify = { checked: 0, skipped: vmode === 'never' ? 'off' : late ? 'labelling ran long' : 'not due' };
+  if (vmode !== 'never' && !late && (vmode === 'always' || due)) { verify = await triageVerify(); if (verify.calls) await kvPut('triage:verify_at', { at: new Date().toISOString() }); }
   const last = { at: new Date().toISOString(), pool: pool_.length, candidates: items.length, labelled: rows.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls };
   await kvPut('triage:last', last);
   await recordVolume([['triage_labelled', rows.length]]);
@@ -394,7 +402,10 @@ export async function jobTriageeval(opts = {}) {
   const gold = JSON.parse(ref.buf.toString('utf8'));
   let st = (await kvGet('triage:eval:state')) || {};
   if (opts.reset || st.prompt_v !== TRIAGE.PROMPT_V || st.gold_sha !== gold.sha) st = { prompt_v: TRIAGE.PROMPT_V, gold_sha: gold.sha, started: new Date().toISOString(), done: {}, rejects: {}, models: {} };
-  const todo = gold.items.filter((g) => !st.done[g.id]);
+  // Items a request left unlabelled go to the back of the queue and are given up after EVAL_TRIES attempts, so one batch a
+  // model cannot answer does not hold the replay (items 51 to 75 did, for three runs on 16 November 2026).
+  st.tries = st.tries || {};
+  const todo = gold.items.filter((g) => !st.done[g.id] && (st.tries[g.id] || 0) < TRIAGE.EVAL_TRIES).sort((a, b) => (st.tries[a.id] || 0) - (st.tries[b.id] || 0));
   const calls = [];
   let stop = null;
   for (let b = 0; b < (opts.batches || TRIAGE.EVAL_BATCHES) && b * TRIAGE.BATCH < todo.length && !stop; b++) {
@@ -404,11 +415,13 @@ export async function jobTriageeval(opts = {}) {
     stop = r.stop || null;
     for (const [k, v] of Object.entries(r.rejects)) st.rejects[k] = (st.rejects[k] || 0) + v;
     if (r.model && r.labels.size) st.models[r.model] = (st.models[r.model] || 0) + r.labels.size;
-    for (const it of slice) { const l = r.labels.get(it.id); if (l) st.done[it.gid] = { g_theater: it.g.theater, g_vector: it.g.vector || null, p_theater: l.theater, p_vector: l.vector }; }
+    for (const it of slice) { const l = r.labels.get(it.id); if (l) st.done[it.gid] = { g_theater: it.g.theater, g_vector: it.g.vector || null, p_theater: l.theater, p_vector: l.vector }; else if (!r.stop) st.tries[it.gid] = (st.tries[it.gid] || 0) + 1; }
+    st.last_calls = r.calls.map((c) => ({ model: c.model, status: c.status, ms: c.ms, error: c.error, structured: c.structured }));
   }
   await kvPut('triage:eval:state', st);
   const score = triageScore(st.done);
-  const summary = score && { ...score, gold_items: gold.items.length, complete: Object.keys(st.done).length >= gold.items.length, promoted: triagePromoted(score), thresholds: TRIAGE_PROMOTE, rejects: st.rejects, models: st.models,
+  const givenUp = Object.values(st.tries).filter((n) => n >= TRIAGE.EVAL_TRIES).length;
+  const summary = score && { ...score, gold_items: gold.items.length, unanswered: givenUp, last_calls: st.last_calls || [], complete: Object.keys(st.done).length + givenUp >= gold.items.length, promoted: triagePromoted(score), thresholds: TRIAGE_PROMOTE, rejects: st.rejects, models: st.models,
     prompt_version: TRIAGE.PROMPT_V, started: st.started, at: new Date().toISOString() };
   if (summary) await kvPut('triage:eval', summary);
   return { scored: Object.keys(st.done).length, of: gold.items.length, stop, calls: calls.length, eval: summary, published: await putDoc('triage', await triageDoc()), ms: Date.now() - t0 };
