@@ -81,3 +81,8 @@ CREATE INDEX IF NOT EXISTS triage_at ON ti.triage (at);
 INSERT INTO ti.lease (job) VALUES ('psirt'),('triage'),('triageeval') ON CONFLICT DO NOTHING;
 -- Added 2026-11-15 (collector 2026-11-15.3): the story a triage row belongs to (the representative's link; null when alone).
 ALTER TABLE ti.triage ADD COLUMN IF NOT EXISTS cluster text;
+-- Added 2026-11-15 (collector 2026-11-15.4): the verifier's result on relevance 3 stories, and the KEV watchlist's first
+-- score and rank per CVE with the time KEV later listed it.
+ALTER TABLE ti.triage ADD COLUMN IF NOT EXISTS verify text;
+ALTER TABLE ti.triage ADD COLUMN IF NOT EXISTS verify_model text;
+CREATE TABLE IF NOT EXISTS ti.kevrank (cve text PRIMARY KEY, first_seen timestamptz NOT NULL DEFAULT now(), first_score real NOT NULL, first_rank int NOT NULL, of_n int NOT NULL, in_kev_at timestamptz);

@@ -238,6 +238,16 @@ for e in E:
     check(e["item_id"] in item_ids, f"{e['evid_id']}: unknown item {e['item_id']}")
     check(e["judgment_id"] in j_ids, f"{e['evid_id']}: unknown judgment")
     check(e["role"] in ("Supports", "Weakens", "Context"), f"{e['evid_id']}: bad role")
+    # Analysis of competing hypotheses: an evidence row may rate its item against the judgment's stated alternatives,
+    # as "H2:I; H3:N" (C consistent, I inconsistent, N not diagnostic). H1, the judgment itself, is read from `role`.
+    if e.get("ach"):
+        alts = set(re.findall(r"\bH(\d+):", next((j.get("alternatives") or "" for j in J if j["judgment_id"] == e["judgment_id"]), "")))
+        parts = [p.strip() for p in str(e["ach"]).split(";") if p.strip()]
+        ok_form = all(re.match(r"^H\d+:[CIN]$", p) for p in parts)
+        check(ok_form, f"{e['evid_id']}: ach must read like 'H2:I; H3:N' with ratings C, I or N")
+        if ok_form:
+            hs = [p[1:].split(":")[0] for p in parts]
+            check(len(hs) == len(set(hs)) and all(h in alts for h in hs), f"{e['evid_id']}: ach names a hypothesis the judgment's alternatives do not state, or one twice")
 for c in C:
     check(c["source_id"] in src_ids, f"{c['cell']}: unknown source")
     check(c["pir_id"] in pir_ids, f"{c['cell']}: unknown PIR")

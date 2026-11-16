@@ -41,8 +41,60 @@ export function parseAdvisories(xml) {
 }
 export function kevIndex(doc) {
   const m = new Map();
-  for (const v of (doc && doc.vulnerabilities) || []) m.set(String(v.cveID).toUpperCase(), { added: v.dateAdded || null, due: v.dueDate || null, ransomware: /known/i.test(v.knownRansomwareCampaignUse || '') });
+  for (const v of (doc && doc.vulnerabilities) || []) m.set(String(v.cveID).toUpperCase(), { added: v.dateAdded || null, due: v.dueDate || null, vendor: v.vendorProject || null, ransomware: /known/i.test(v.knownRansomwareCampaignUse || '') });
   return m;
+}
+// ---------------------------------------------------------------- KEV watchlist: which advisory CVEs are likeliest to reach KEV (G72)
+// A transparent score over public signals, ranked, and scored against what CISA later adds. Signals: the EPSS percentile
+// (FIRST), whether the publisher is an edge-device vendor, exploitation wording in the advisory title, how many publishers
+// carry the CVE, and the vendor's share of KEV additions in the last two years. Each CVE's first score and rank are kept
+// (ti.kevrank), so the evaluation is forward-looking: a CVE counts as a hit when KEV lists it after the day it was first
+// ranked. The watchlist forecasts nothing about a level or a judgment; it orders the analyst's reading.
+export const KEVRANK = { W: { epss: 0.45, edge: 0.2, wording: 0.15, publishers: 0.1, vendor: 0.1 }, TOP: 25, EPSS_BATCH: 100, MAX_CVES: 400, K: 25, MIN_AGE_DAYS: 7 };
+export const KEV_VENDOR = { fortinet: 'Fortinet', paloalto: 'Palo Alto Networks', cisco: 'Cisco', sonicwall: 'SonicWall', ivanti: 'Ivanti', msrc: 'Microsoft', splunk: 'Splunk', tenable: 'Tenable', aws: 'Amazon' };
+const EXPLOIT_WORDS = /\b(exploit(ed|ation)?|in the wild|actively|zero[- ]day|0[- ]day|unauthenticated|authentication bypass|remote code execution|rce|pre[- ]auth|command injection)\b/i;
+export function vendorPrior(kev, now = Date.now()) {
+  const n = {};
+  for (const v of kev.values()) if (v.vendor && v.added && now - Date.parse(v.added) < 730 * 86400000) n[v.vendor] = (n[v.vendor] || 0) + 1;
+  const max = Math.max(1, ...Object.values(KEV_VENDOR).map((name) => n[name] || 0));
+  return Object.fromEntries(Object.entries(KEV_VENDOR).map(([id, name]) => [id, (n[name] || 0) / max]));
+}
+// One row per CVE outside KEV, from the advisories that name it.
+export function kevCandidates(adv, epss, prior) {
+  const by = new Map();
+  for (const a of adv) for (const c of a.cves) {
+    if (a.kev.includes(c)) continue;
+    const r = by.get(c) || by.set(c, { cve: c, feeds: new Set(), edge: false, wording: false, vendor: 0, title: a.title, link: a.link, published: a.published }).get(c);
+    r.feeds.add(a.feed); r.edge = r.edge || a.klass === 'edge'; r.wording = r.wording || EXPLOIT_WORDS.test(a.title); r.vendor = Math.max(r.vendor, prior[a.feed] || 0);
+  }
+  const W = KEVRANK.W, r3 = (x) => Math.round(x * 1000) / 1000;
+  return [...by.values()].map((r) => {
+    const e = epss.get(r.cve) || null, pub = Math.min(1, (r.feeds.size - 1) / 2);
+    const score = W.epss * (e ? e.percentile : 0) + W.edge * (r.edge ? 1 : 0) + W.wording * (r.wording ? 1 : 0) + W.publishers * pub + W.vendor * r.vendor;
+    return { kind: 'kevrank', cve: r.cve, score: r3(score), epss: e ? e.epss : null, epss_percentile: e ? r3(e.percentile) : null, edge: r.edge, wording: r.wording, publishers: r.feeds.size, vendor_prior: r3(r.vendor), title: r.title, link: r.link, published: r.published };
+  }).sort((a, b) => b.score - a.score || a.cve.localeCompare(b.cve));
+}
+// Forward evaluation over CVEs first ranked at least MIN_AGE_DAYS ago: how many KEV later listed, where they stood.
+export function kevrankScore(rows, k = KEVRANK.K) {
+  const n = rows.length, hits = rows.filter((r) => r.in_kev_at);
+  if (!n) return { tracked: 0, added: 0 };
+  const sorted = [...rows].sort((a, b) => b.first_score - a.first_score);
+  const dcg = sorted.slice(0, k).reduce((s, r, i) => s + (r.in_kev_at ? 1 / Math.log2(i + 2) : 0), 0);
+  const ideal = Array.from({ length: Math.min(k, hits.length) }, (_, i) => 1 / Math.log2(i + 2)).reduce((s, x) => s + x, 0);
+  const top = sorted.slice(0, Math.max(1, Math.ceil(n / 10)));
+  const r3 = (x) => Math.round(x * 1000) / 1000;
+  return { tracked: n, added: hits.length, base_rate: r3(hits.length / n), ndcg_at_k: ideal ? r3(dcg / ideal) : null, k, top_decile: top.length, top_decile_added: top.filter((r) => r.in_kev_at).length,
+    top_decile_rate: r3(top.filter((r) => r.in_kev_at).length / top.length), recall_top_decile: hits.length ? r3(top.filter((r) => r.in_kev_at).length / hits.length) : null };
+}
+export const EPSS_URL = 'https://api.first.org/data/v1/epss?cve=';
+export async function epssFor(cves) {
+  const out = new Map();
+  for (let i = 0; i < cves.length; i += KEVRANK.EPSS_BATCH) {
+    const r = await get(EPSS_URL + cves.slice(i, i + KEVRANK.EPSS_BATCH).join(','), { as: 'json', timeout: 15000 });
+    if (!r.ok || !r.json) return { map: out, note: 'EPSS not read for every CVE this run: ' + (r.error || `HTTP ${r.status}`) };
+    for (const d of r.json.data || []) out.set(String(d.cve).toUpperCase(), { epss: Number(d.epss), percentile: Number(d.percentile) });
+  }
+  return { map: out, note: null };
 }
 export const KEV_URL = 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
 export async function jobPsirt(opts = {}) {
@@ -78,6 +130,23 @@ export async function jobPsirt(opts = {}) {
     kev_entries: kev.size, kev_note: kevNote, generated: new Date().toISOString(), served_from: 'store',
     feeds: feeds.map(({ items, url, ...f }) => ({ ...f, url, items: items.length })), advisories: adv.length, kev_hits: adv.filter((a) => a.kev.length).length,
     count: adv.length, rows: adv };
+  // KEV watchlist: skipped when the KEV catalog was not read, since every CVE would look unlisted.
+  if (kev.size) {
+    const want = [...new Set(adv.flatMap((a) => a.cves.filter((c) => !a.kev.includes(c))))].slice(0, KEVRANK.MAX_CVES);
+    const ep = await epssFor(want);
+    const ranked = kevCandidates(adv, ep.map, vendorPrior(kev));
+    if (ranked.length) {
+      await sql(`INSERT INTO ti.kevrank (cve, first_score, first_rank, of_n) SELECT cve, score, rank, n FROM jsonb_to_recordset($1::jsonb) AS x(cve text, score real, rank int, n int) ON CONFLICT (cve) DO NOTHING`,
+        [ranked.map((r, i) => ({ cve: r.cve, score: r.score, rank: i + 1, n: ranked.length }))]);
+    }
+    await sql(`UPDATE ti.kevrank SET in_kev_at = now() WHERE in_kev_at IS NULL AND cve IN (SELECT jsonb_array_elements_text($1::jsonb))`, [[...kev.keys()]]);
+    const tracked = await sql(`SELECT cve, first_score, first_rank, first_seen, in_kev_at FROM ti.kevrank WHERE first_seen < now() - make_interval(days => $1)`, [KEVRANK.MIN_AGE_DAYS]);
+    const [{ n: all }] = await sql(`SELECT count(*)::int AS n FROM ti.kevrank`);
+    doc.watchlist = { method: `Advisory CVEs that KEV does not list, ranked by a fixed weighted score: EPSS percentile ${KEVRANK.W.epss}, edge-device publisher ${KEVRANK.W.edge}, exploitation wording in the title ${KEVRANK.W.wording}, number of publishers ${KEVRANK.W.publishers}, the vendor's share of KEV additions in two years ${KEVRANK.W.vendor}. Each CVE's first score and rank are kept, and the score is judged on what KEV lists afterwards, over CVEs first ranked at least ${KEVRANK.MIN_AGE_DAYS} days ago.`,
+      epss_note: ep.note, candidates: ranked.length, tracked_total: all, eval: kevrankScore(tracked) };
+    doc.rows = doc.rows.concat(ranked.slice(0, KEVRANK.TOP));
+    doc.count = doc.rows.length;
+  }
   await recordVolume([['psirt_advisories_14d', adv.length], ['psirt_kev_hits_14d', doc.kev_hits]]);
   const failed = feeds.filter((f) => !f.ok).map((f) => ({ feed: f.id, status: f.status, error: f.error }));
   return { feeds: feeds.length, feeds_ok: feeds.length - failed.length, failed, read: rows.length, advisories: adv.length, kev_hits: doc.kev_hits, kev_note: kevNote, published: await putDoc('psirt', doc), ms: Date.now() - t0 };
@@ -112,6 +181,12 @@ Answer with JSON only, in the form {"labels": [ ... ]}, one object per headline,
 export const TRIAGE_SCHEMA = { name: 'triage_labels', strict: true, schema: { type: 'object', additionalProperties: false, required: ['labels'], properties: { labels: { type: 'array', items: {
   type: 'object', additionalProperties: false, required: ['id', 'relevance', 'vector', 'theater', 'actors', 'why'], properties: { id: { type: 'integer' }, relevance: { type: 'integer', enum: [0, 1, 2, 3] },
     vector: { anyOf: [{ type: 'string', enum: TRIAGE_VECTORS }, { type: 'null' }] }, theater: { type: 'string', enum: Object.keys(TRIAGE_THEATERS) }, actors: { type: 'array', items: { type: 'string' } }, why: { type: 'string' } } } } } } };
+// A threat actor name has at least one word that is a name: demonyms, agencies, vendors and generic nouns ("Extortion
+// Group", "North Korean", "FBI") are how headlines talk, and the lead watch would match them against any judgment.
+const GENERIC_ACTOR = new Set(('group groups gang gangs hacker hackers actor actors threat threats extortion ransomware malware cybercriminal cybercriminals criminals attacker attackers state sponsored nation backed linked apt team crew operator operators '
+  + 'campaign botnet stealer trojan spyware north south korean korea russian russia chinese china iranian iran israeli israel ukrainian ukraine american us usa uk european pro the and of new '
+  + 'fbi cisa nsa doj europol interpol ncsc microsoft google apple amazon aws cisco fortinet ivanti citrix vmware oracle sap meta openai github cloudflare okta crowdstrike mandiant unit42 talos kaspersky sophos').split(' '));
+export const isNamedActor = (a) => String(a || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).some((w) => !GENERIC_ACTOR.has(w) && (w.length >= 3 || /\d/.test(w)));
 // The first JSON object in a model answer (models wrap answers in code fences or prose despite the instruction).
 export function triageJson(text) {
   const s = String(text || '');
@@ -136,7 +211,7 @@ export function triageCheck(items, answer) {
     if (vector !== null && !TRIAGE_VECTORS.includes(vector)) { no('vector_not_listed'); continue; }
     if (!Object.prototype.hasOwnProperty.call(TRIAGE_THEATERS, l.theater)) { no('theater_not_listed'); continue; }
     const low = String(it.title).toLowerCase();
-    const actors = (Array.isArray(l.actors) ? l.actors : []).filter((a) => typeof a === 'string' && a.trim().length >= 3 && a.length <= 60 && low.includes(a.trim().toLowerCase())).map((a) => a.trim()).slice(0, 6);
+    const actors = (Array.isArray(l.actors) ? l.actors : []).filter((a) => typeof a === 'string' && a.trim().length >= 3 && a.length <= 60 && isNamedActor(a) && low.includes(a.trim().toLowerCase())).map((a) => a.trim()).slice(0, 6);
     let why = typeof l.why === 'string' ? l.why.replace(/\s+/g, ' ').trim() : '';
     if (/https?:|www\.|<[a-z/!]/i.test(why)) { no('why_has_link_or_markup'); continue; }
     if (why.length > TRIAGE.WHY_MAX) why = why.slice(0, TRIAGE.WHY_MAX - 1).replace(/\s+\S*$/, '') + '…';
@@ -186,7 +261,7 @@ export async function triageBatch(items, cap) {
   return { labels: new Map(), rejects: { no_usable_answer: 1 }, missing: items.length, calls };
 }
 export async function triageDoc(extra = {}) {
-  const all = await sql(`SELECT link, kind, source, title, published, relevance, vector, theater, actors, cves, why, model, prompt_v, at, cluster FROM ti.triage
+  const all = await sql(`SELECT link, kind, source, title, published, relevance, vector, theater, actors, cves, why, model, prompt_v, at, cluster, verify, verify_model FROM ti.triage
     WHERE COALESCE(published, at) > now() - make_interval(hours => $1) AND relevance >= 1 ORDER BY relevance DESC, COALESCE(published, at) DESC`, [TRIAGE.WINDOW_H]);
   // One row per story: the representative, with the other publishers that carried it. KEV marks come from the catalog
   // the psirt job last read.
@@ -252,14 +327,37 @@ export async function jobTriage() {
       AS x(link text, kind text, source text, title text, published timestamptz, cves jsonb, relevance int, vector text, theater text, actors jsonb, why text, model text, prompt_v text, cluster text) ON CONFLICT (link) DO NOTHING`, [rows]);
   }
   await sql(`DELETE FROM ti.triage WHERE at < now() - make_interval(days => $1)`, [TRIAGE.KEEP_DAYS]);
+  const vmode = ENV().TI_TRIAGE_VERIFY || 'odd-hours'; // 'always' and 'never' are for tests and for switching the verifier off
+  const verify = vmode === 'never' ? { checked: 0, skipped: 'off' } : vmode === 'always' || new Date().getUTCHours() % 2 === 1 ? await triageVerify() : { checked: 0, skipped: 'even hour' };
   const last = { at: new Date().toISOString(), pool: pool_.length, candidates: items.length, labelled: rows.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls };
   await kvPut('triage:last', last);
   await recordVolume([['triage_labelled', rows.length]]);
-  const out = { pool: pool_.length, candidates: items.length, waiting: Math.max(0, Number(waiting) - rows.length), labelled: rows.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls,
+  const out = { pool: pool_.length, candidates: items.length, waiting: Math.max(0, Number(waiting) - rows.length), labelled: rows.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls, verify,
     published: await putDoc('triage', await triageDoc({ last_run: last })), ms: Date.now() - t0 };
   // A run whose requests all failed is a failed run, so the health record and the alert workflow see it.
   if (items.length && !rows.length && !res.stop) out.run_failed = 'no usable answer from the triage endpoint: ' + res.calls.map((c) => c.error || 'unparsed').join('; ');
   return out;
+}
+// Verifier (G73). A second free-model request re-labels the stories the tier marked relevance 3 and knows nothing of the
+// first label. A story keeps relevance 3 only when the second answer also says 3; otherwise it drops to 2 and the row
+// records the disagreement. The verifier can lower a label and never raise one. It runs in the odd UTC hours, only when
+// unverified relevance 3 stories exist, and stops while the day's shared request budget is within five of its cap, so
+// labelling and the evaluation keep their requests. Its worth is measured in the lead feedback record (Method), since
+// the gold set carries no relevance labels to replay it against.
+export async function triageVerify() {
+  const top = await sql(`SELECT link, title, source, cluster, model FROM ti.triage WHERE relevance = 3 AND verify IS NULL AND (cluster IS NULL OR cluster = link) AND at > now() - make_interval(hours => $1)
+    ORDER BY at DESC LIMIT $2`, [TRIAGE.WINDOW_H, TRIAGE.BATCH]);
+  if (!top.length) return { checked: 0 };
+  const b = (await kvGet('triage:budget')) || {};
+  if (b.day === utcDay() && (+b.used || 0) > TRIAGE.DAILY_REQUESTS - 5) return { checked: 0, stop: 'budget kept for labelling and the evaluation' };
+  const items = top.map((t, i) => ({ id: i + 1, ...t }));
+  const r = await triageBatch(items, TRIAGE.DAILY_REQUESTS);
+  const rows = items.filter((i) => r.labels.has(i.id)).map((i) => ({ link: i.link, verify: r.labels.get(i.id).relevance === 3 ? 'confirmed' : 'lowered', second: r.labels.get(i.id).relevance, model: r.model || null }));
+  if (rows.length) {
+    await sql(`UPDATE ti.triage t SET verify = x.verify, verify_model = x.model, relevance = CASE WHEN x.verify = 'lowered' THEN 2 ELSE t.relevance END
+      FROM jsonb_to_recordset($1::jsonb) AS x(link text, verify text, second int, model text) WHERE t.link = x.link OR t.cluster = x.link`, [rows]);
+  }
+  return { checked: rows.length, confirmed: rows.filter((x) => x.verify === 'confirmed').length, lowered: rows.filter((x) => x.verify === 'lowered').length, unanswered: items.length - rows.length, stop: r.stop || null, calls: r.calls };
 }
 // Evaluation (hourly at :19, one batch a run, until every gold item is scored). Replays the analyst-labelled evidence items (ref/triage-gold.json,
 // built from data/authored/items.json: title, theater, vector) through the same prompt and checks, and scores the labels

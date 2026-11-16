@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.0 (15 November 2026)
+
+- KEV watchlist. Advisory CVEs that KEV does not list are ranked by a fixed weighted score over EPSS percentile, edge-device publisher, exploitation wording, publisher count and the vendor's share of KEV additions. First scores are kept and the ranking is scored against what KEV lists afterwards (NDCG and top-decile capture); the first figures appear after a week of tracking.
+- Verifier. A second free-model request re-labels relevance 3 stories; disagreement lowers the story to 2. It can lower a label and never raise one.
+- Competing hypotheses. Evidence rows can rate their item against each alternative a judgment states (`ach`), the validator checks the ratings, and Method publishes the matrix per ranked judgment. The daily run fills the ratings as it reviews each judgment.
+- Lead watch tightened. Generic phrases ("Extortion Group", "North Korean", agency and vendor names) no longer count as actors, in the collector and in the watch; a relevance 3 lead that carries a ranked judgment's theater is raised.
+
 ## 2.3.0 (15 November 2026)
 
 The machine tier in production, measured, and wired to the analyst run.

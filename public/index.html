@@ -887,6 +887,9 @@
         <h3 class="ti-h3">Vendor and CERT advisories, 14 days <span class="ti-pir">KEV cross-reference</span> <span class="ti-count" id="psirt-asof"></span></h3>
         <p class="ti-card-note" id="psirt-sum" data-source="live_psirt"></p>
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-psirt" data-source="live_psirt" data-row-key="link"></table></div>
+        <h4 class="ti-h4">KEV watchlist: unlisted advisory CVEs ranked by likelihood of reaching KEV</h4>
+        <p class="ti-card-note" id="kevrank-sum" data-source="live_psirt"></p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-kevrank" data-source="live_psirt" data-row-key="cve"></table></div>
         <h4 class="ti-h4">Advisory feeds read</h4>
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-psirt-feeds" data-source="live_psirt" data-row-key="id"></table></div>
       </div>
@@ -946,6 +949,12 @@
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-verify-states" data-source="verification_summary" data-row-key="state"></table></div>
         <h4 class="ti-h3" style="margin-top: var(--cds-gap-md)">Items to review</h4>
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-verify" data-source="verification" data-row-key="item_id"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="method-ach">
+        <h3 class="ti-h3">Competing hypotheses</h3>
+        <p class="ti-card-note">Each ranked judgment states the alternatives the analyst weighed. Every evidence item is rated against the judgment and against each alternative: consistent, inconsistent or not diagnostic. The method keeps the hypothesis with the least inconsistent evidence, which guards against a judgment that survives only because its supporting evidence was the evidence looked for. A judgment whose alternative carries no more inconsistent evidence than it does is due a rewrite or a lower likelihood.</p>
+        <p class="ti-lede" id="ach-line"></p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-ach" data-source="ach_matrix" data-row-key="key"></table></div>
       </div>
       <div class="ti-card ti-section" id="method-leads">
         <h3 class="ti-h3">Lead feedback</h3>

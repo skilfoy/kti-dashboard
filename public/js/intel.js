@@ -324,6 +324,22 @@
         { field: 'cves', label: 'CVEs', get: (r) => (r.cves || []).slice(0, 4).join(', ') + ((r.cves || []).length > 4 ? ` +${r.cves.length - 4}` : ''), hideSm: true },
         { field: 'kev', label: 'In KEV', get: (r) => ((r.kev || []).length ? (r.kev || []).join(', ') + (r.ransomware ? ' (ransomware use known)' : '') : ''), attr: { 'data-status': (r) => ((r.kev || []).length ? 'review' : '') } },
       ], { sort: 'published', dir: 'desc', limit: 150, empty: 'No advisories in 14 days.' });
+      const tk = sec.querySelector('#tbl-kevrank');
+      if (tk) {
+        const wl = m.watchlist || {}, ev = wl.eval || {}, pc = (x) => (x == null ? 'n/a' : Math.round(x * 100) + '%');
+        note(sec, 'kevrank-sum', wl.method || 'The watchlist has not been built yet.', ' ', ev.tracked
+          ? `Scored so far: of ${int(ev.tracked)} CVEs first ranked a week or more ago, KEV has since listed ${int(ev.added)} (${pc(ev.base_rate)}); the top tenth by first score holds ${int(ev.top_decile_added)} of them (${pc(ev.recall_top_decile)} of the listed, ${pc(ev.top_decile_rate)} of the tenth). NDCG at ${ev.k}: ${ev.ndcg_at_k == null ? 'n/a' : ev.ndcg_at_k}.`
+          : 'No CVE has been tracked for a week yet, so the ranking is unscored; the first figures appear from 22 November 2026.', wl.epss_note ? ' ' + wl.epss_note + '.' : '');
+        TI.table(tk, kindRows('live_psirt', 'kevrank'), [
+          { field: 'score', label: 'Score', num: true, get: (r) => d3.format('.2f')(r.score) },
+          { field: 'cve', label: 'CVE', cls: 'ti-nowrap' },
+          { field: 'title', label: 'Advisory', link: 'link', cls: 'ti-wrap' },
+          { field: 'epss_percentile', label: 'EPSS pct.', num: true, get: (r) => (r.epss_percentile == null ? '' : Math.round(r.epss_percentile * 100)) },
+          { field: 'edge', label: 'Edge', get: (r) => (r.edge ? 'yes' : ''), hideSm: true },
+          { field: 'wording', label: 'Exploit wording', get: (r) => (r.wording ? 'yes' : ''), hideSm: true },
+          { field: 'publishers', label: 'Publishers', num: true, fmt: 'int', hideSm: true },
+        ], { sort: 'score', dir: 'desc', limit: 25, empty: 'No unlisted advisory CVEs in 14 days.' });
+      }
       const tpf = sec.querySelector('#tbl-psirt-feeds');
       if (tpf) TI.table(tpf, feeds, [
         { field: 'vendor', label: 'Publisher', link: 'url' },
@@ -343,6 +359,7 @@
         : 'The tier has not been scored against the analyst\'s labels yet; vector and theater labels stay hidden until it has.');
       const cols = [
         { field: 'relevance', label: 'Rel.', num: true, fmt: 'int' },
+        { field: 'verify', label: 'Second model', get: (r) => (r.verify === 'confirmed' ? 'agrees' : r.verify === 'lowered' ? 'lowered from 3' : ''), hideSm: true },
         { field: 'published', label: 'Published', fmt: 'date', cls: 'ti-nowrap' },
         { field: 'title', label: 'Title', link: 'link', cls: 'ti-wrap' },
         { field: 'source', label: 'Source', hideSm: true },
