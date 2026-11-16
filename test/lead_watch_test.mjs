@@ -6,13 +6,15 @@ import { watchLeads, plan, issueBody, fingerprint, TITLE } from '../pipeline/lea
 let n = 0;
 const ok = (c, m) => { assert.ok(c, m); n++; };
 const root = process.argv[2] || '.';
-const J = [{ judgment_id: 'KJ-05', exec_rank: 5, status: 'Active', title: 'North Korean revenue operations', situation: 'Lazarus Group and TraderTraitor target exchanges.', assessment: '', attribution_judgment: '' },
+const J = [{ judgment_id: 'KJ-02', exec_rank: 1, status: 'Active', theater_id: 'T-HRM', title: 'Hormuz stays closed', situation: 'Extortion Group pressure and North Korean hackers are mentioned here.', assessment: '', attribution_judgment: '' },
+  { judgment_id: 'KJ-05', exec_rank: 5, status: 'Active', title: 'North Korean revenue operations', situation: 'Lazarus Group and TraderTraitor target exchanges.', assessment: '', attribution_judgment: '' },
   { judgment_id: 'KJ-08', exec_rank: 0, status: 'Active', title: 'PRC coercion', situation: 'Volt Typhoon prepositioning.', assessment: '', attribution_judgment: '' }];
 const row = (o) => ({ relevance: 3, title: 't', link: 'https://x.example/' + Math.random(), actors: [], cves: [], kev: [], published: '2026-11-15T10:00:00Z', ...o });
 const doc = { rows: [row({ title: 'Edge flaw exploited', link: 'https://a.example/1', kev: ['CVE-2026-11111'] }), row({ title: 'Lazarus Group hits exchange', link: 'https://a.example/2', actors: ['Lazarus Group'] }),
-  row({ title: 'Volt Typhoon report', actors: ['Volt Typhoon'] }), row({ title: 'KEV but background', relevance: 2, kev: ['CVE-2026-22222'] }), row({ title: 'APT in title', actors: ['APT'] }), row({ title: 'Unrelated breach' })] };
+  row({ title: 'Volt Typhoon report', actors: ['Volt Typhoon'] }), row({ title: 'KEV but background', relevance: 2, kev: ['CVE-2026-22222'] }), row({ title: 'APT in title', actors: ['APT'] }), row({ title: 'Unrelated breach' }),
+  row({ title: 'Extortion Group claims theft', actors: ['Extortion Group'] }), row({ title: 'North Korean hackers', actors: ['North Korean'] }), row({ title: 'Tanker seized', link: 'https://a.example/3', theater: 'T-HRM' }), row({ title: 'Global story', theater: 'T-GLB' })] };
 const hits = watchLeads(doc, J);
-ok(hits.length === 2 && hits.some((h) => /CISA KEV/.test(h.why[0])) && hits.some((h) => /KJ-05 names/.test(h.why[0])), 'raises KEV and ranked-judgment actor leads only: ' + JSON.stringify(hits.map((h) => h.why)));
+ok(hits.length === 3 && hits.some((h) => /CISA KEV/.test(h.why[0])) && hits.some((h) => /KJ-05 names/.test(h.why[0])) && hits.some((h) => /labelled T-HRM, the theater of KJ-02/.test(h.why[0])), 'raises KEV, named-actor and theater leads; generic actor phrases raise nothing: ' + JSON.stringify(hits.map((h) => h.why)));
 ok(watchLeads({ rows: [] }, J).length === 0 && watchLeads(null, J).length === 0, 'empty and missing documents raise nothing');
 const body = issueBody(hits, '2026-11-15T12:00Z');
 ok(body.includes('fp:' + fingerprint(hits)) && body.includes('https://a.example/1') && /unreviewed model tier/.test(body), 'issue body lists the leads and carries the fingerprint');

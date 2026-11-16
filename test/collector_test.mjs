@@ -480,11 +480,13 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
     <item><title>${id}: authentication bypass in SSL VPN (CVE-2026-11111)</title><link>https://${id}.example/a1</link><pubDate>${day(1)}</pubDate><description>Affects CVE-2026-11111 and cve-2026-22222.</description></item>
     <item><title>${id}: informational bulletin</title><link>https://${id}.example/a2</link><pubDate>${day(2)}</pubDate><description>No identifiers.</description></item>
     <item><title>${id}: old advisory CVE-2025-00001</title><link>https://${id}.example/old</link><pubDate>${day(40)}</pubDate></item></channel></rss>`;
-  let llm = [], llmMode = 'good';
+  let llm = [], llmMode = 'good', kevLater = false;
   EXTRA = async (u, opts, h) => {
     const f = M.PSIRT_FEEDS.find((x) => x.url === u);
     if (f) return f.id === 'ivanti' ? resp(503, 'busy') : f.id === 'certeu' ? resp(200, '<html>not a feed</html>') : resp(200, feedXml(f.id));
-    if (u === M.KEV_URL) return resp(200, { vulnerabilities: [{ cveID: 'CVE-2026-11111', dateAdded: '2026-11-12', dueDate: '2026-12-03', knownRansomwareCampaignUse: 'Known' }] });
+    if (u === M.KEV_URL) return resp(200, { vulnerabilities: [{ cveID: 'CVE-2026-11111', vendorProject: 'Fortinet', dateAdded: new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10), dueDate: '2026-12-03', knownRansomwareCampaignUse: 'Known' },
+      ...(kevLater ? [{ cveID: 'CVE-2026-22222', vendorProject: 'Cisco', dateAdded: new Date().toISOString().slice(0, 10), knownRansomwareCampaignUse: 'Unknown' }] : [])] });
+    if (u.startsWith(M.EPSS_URL)) return resp(200, { data: u.slice(M.EPSS_URL.length).split(',').map((c) => ({ cve: c, epss: c.endsWith('22222') ? '0.62' : '0.01', percentile: c.endsWith('22222') ? '0.98' : '0.2' })) });
     if (u === M.TRIAGE.ENDPOINT) {
       const body = JSON.parse(opts.body);
       llm.push({ auth: h.authorization || h.Authorization, structured: !!body.response_format, temperature: body.temperature, max_tokens: body.max_tokens, reasoning: body.reasoning, user: body.messages[1].content });
@@ -492,6 +494,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
       if (llmMode === 'limited') return resp(429, { error: { message: 'rate limited' } });
       const ids = body.messages[1].content.split('\n').slice(1).map((l) => +l.split('\t')[0]);
       const labels = ids.map((id) => ({ id, relevance: 2, vector: 'Exploitation & edge devices', theater: 'T-GLB', actors: ['authentication', 'Volt Typhoon'], why: 'Edge device flaw with a listed identifier.' }));
+      if (llmMode === 'verify') labels.forEach((l, i) => { l.relevance = i === 0 ? 2 : 3; });
       if (llmMode === 'good') {
         labels[0].relevance = 3;
         if (labels[1]) labels[1].vector = 'Zero-day wizardry';                                  // not on the closed list
@@ -507,10 +510,22 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const p1 = await M.runJob('psirt');
   ok(p1.ok && p1.feeds === M.PSIRT_FEEDS.length && p1.feeds_ok === p1.feeds - 2 && p1.failed.map((f) => f.feed).sort().join() === 'certeu,ivanti', 'psirt run with two failing feeds ' + JSON.stringify(p1.failed));
   const pdoc = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/psirt.json.gz')).toString());
-  ok(pdoc.advisories === (M.PSIRT_FEEDS.length - 2) * 2 && pdoc.kev_hits === M.PSIRT_FEEDS.length - 2 && pdoc.rows.every((r) => !/old/.test(r.link)), 'psirt document holds 14 days and marks KEV ' + pdoc.advisories + '/' + pdoc.kev_hits);
+  ok(pdoc.advisories === (M.PSIRT_FEEDS.length - 2) * 2 && pdoc.kev_hits === M.PSIRT_FEEDS.length - 2 && pdoc.rows.filter((r) => r.kind === 'advisory').length === pdoc.advisories && pdoc.rows.every((r) => !/old/.test(r.link)), 'psirt document holds 14 days and marks KEV ' + pdoc.advisories + '/' + pdoc.kev_hits);
   const hit = pdoc.rows.find((r) => r.kev.length);
-  ok(hit.kev.join() === 'CVE-2026-11111' && hit.ransomware === true && hit.kev_added === '2026-11-12' && hit.vendor && hit.klass, 'KEV cross-reference fields');
+  ok(hit.kev.join() === 'CVE-2026-11111' && hit.ransomware === true && /^\d{4}-\d\d-\d\d$/.test(hit.kev_added) && hit.vendor && hit.klass, 'KEV cross-reference fields');
+  // KEV watchlist: the one CVE outside KEV is ranked with its signals, its first score is kept, and a later KEV listing counts as a hit.
+  const wl = pdoc.rows.filter((r) => r.kind === 'kevrank');
+  ok(wl.length === 1 && wl[0].cve === 'CVE-2026-22222' && wl[0].epss_percentile === 0.98 && wl[0].edge === true && wl[0].wording === true && wl[0].publishers === M.PSIRT_FEEDS.length - 2 && wl[0].score > 0.8
+    && pdoc.watchlist.candidates === 1 && pdoc.watchlist.eval.tracked === 0, 'KEV watchlist ranks the unlisted CVE with its signals ' + JSON.stringify(wl[0]));
+  ok(M.vendorPrior(M.kevIndex({ vulnerabilities: [{ cveID: 'CVE-1-1', vendorProject: 'Fortinet', dateAdded: new Date().toISOString().slice(0, 10) }, { cveID: 'CVE-1-2', vendorProject: 'Fortinet', dateAdded: '2019-01-01' }, { cveID: 'CVE-1-3', vendorProject: 'Cisco', dateAdded: new Date().toISOString().slice(0, 10) }] })).fortinet === 1, 'vendor prior counts two years of KEV additions');
+  const ks = M.kevrankScore([{ first_score: 0.9, in_kev_at: 'x' }, { first_score: 0.8, in_kev_at: null }, { first_score: 0.1, in_kev_at: 'x' }, ...Array.from({ length: 17 }, () => ({ first_score: 0.05, in_kev_at: null }))]);
+  ok(ks.tracked === 20 && ks.added === 2 && ks.top_decile === 2 && ks.top_decile_added === 1 && ks.recall_top_decile === 0.5 && ks.ndcg_at_k > 0.9 && M.kevrankScore([]).tracked === 0, 'forward evaluation: NDCG and top-decile capture ' + JSON.stringify(ks));
+  await db.query(`UPDATE ti.kevrank SET first_seen = now() - interval '9 days'`);
+  kevLater = true;
   const p2 = await M.runJob('psirt');
+  const pdoc2 = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/psirt.json.gz')).toString());
+  ok(pdoc2.watchlist.eval.tracked === 1 && pdoc2.watchlist.eval.added === 1 && pdoc2.watchlist.candidates === 0 && !pdoc2.rows.some((r) => r.kind === 'kevrank'), 'a CVE that KEV lists later leaves the watchlist and counts as a hit ' + JSON.stringify(pdoc2.watchlist.eval));
+  kevLater = false;
   ok(p2.ok && (await db.query(`SELECT count(*)::int AS n FROM ti.advisory`)).rows[0].n === (M.PSIRT_FEEDS.length - 2) * 3, 'psirt second run upserts without duplicates; the 40-day-old advisory stays stored and off the document');
 
   // Dark without a key: no request, nothing published.
@@ -518,12 +533,13 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const t0r = await M.runJob('triage');
   ok(t0r.ok && /OPENROUTER_API_KEY/.test(t0r.held) && llm.length === 0 && !bucket.has('ti-docs/docs/triage.json.gz'), 'triage holds without a key and makes no request');
   process.env.OPENROUTER_API_KEY = 'sk-or-test';
+  process.env.TI_TRIAGE_VERIFY = 'never';
   const t1 = await M.runJob('triage');
   ok(t1.ok && llm.length === 1 && llm[0].auth === 'Bearer sk-or-test' && llm[0].structured && llm[0].temperature === 0 && llm[0].max_tokens >= 8000 && llm[0].reasoning.effort === 'low' && llm[0].reasoning.exclude === true, 'one structured request at temperature 0 with low reasoning effort and room for the answer');
   const F = M.PSIRT_FEEDS.length - 2; // feeds that answer in this fixture: each carries the shared-CVE story and one bulletin of its own
   ok(t1.pool === 2 * F && t1.candidates === F + 1 && t1.labelled === 2 * F - 2 && t1.rejects.vector_not_listed === 1 && t1.rejects.why_has_link_or_markup === 1 && t1.rejects.id_not_in_batch === 1, 'rule checks reject off-list, linked and invented labels ' + JSON.stringify(t1.rejects));
   const tdoc = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/triage.json.gz')).toString());
-  ok(tdoc.marking === 'Machine triage, unreviewed' && tdoc.rows.length === F - 1 && tdoc.titles === 2 * F - 2 && tdoc.rows[0].relevance === 3 && tdoc.rows[0].also === F - 1 && tdoc.rows[0].also_sources.length === Math.min(F - 1, 6) && tdoc.rows[0].kev.join() === 'CVE-2026-11111' && tdoc.rows.every((r) => !r.actors.includes('Volt Typhoon') && r.model === 'test/free-model' && r.prompt_v === M.TRIAGE.PROMPT_V), 'triage document: provenance kept, actors absent from the title dropped');
+  ok(tdoc.marking === 'Machine triage, unreviewed' && tdoc.rows.length === F - 1 && tdoc.titles === 2 * F - 2 && tdoc.rows[0].relevance === 3 && tdoc.rows[0].also === F - 1 && tdoc.rows[0].also_sources.length === Math.min(F - 1, 6) && tdoc.rows[0].kev.includes('CVE-2026-11111') && tdoc.rows.every((r) => !r.actors.includes('Volt Typhoon') && r.model === 'test/free-model' && r.prompt_v === M.TRIAGE.PROMPT_V), 'triage document: provenance kept, actors absent from the title dropped');
   ok(tdoc.rows.some((r) => r.kind === 'lead' && r.cves.includes('CVE-2026-11111')) && tdoc.budget.used === 1 && !JSON.stringify(tdoc).includes('sk-or-test'), 'CVE identifiers come from the feed; budget counted; no key in the document');
   // Second run: only the two rejected titles remain; a structured refusal falls back to a plain request.
   llmMode = 'refuse-structured'; llm = [];
@@ -541,6 +557,21 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   llmMode = 'limited';
   const t5 = await M.runJob('triage');
   ok(t5.ok && /rate limited/.test(t5.stop) && llm.length === 1, 'a 429 ends the run after one request');
+  // Verifier: a second request re-labels relevance 3 stories; agreement confirms, disagreement lowers the story and its members to 2.
+  process.env.TI_TRIAGE_VERIFY = 'always';
+  await db.query(`UPDATE ti.kv SET v = jsonb_set(v, '{used}', '3') WHERE k = 'triage:budget'`);
+  await db.query(`DELETE FROM ti.triage`);
+  await db.query(`INSERT INTO ti.triage (link, kind, source, title, relevance, theater, cluster) VALUES ('https://v.example/a', 'blog', 's', 'Story A exploited', 3, 'T-GLB', 'https://v.example/a'), ('https://v.example/a2', 'blog', 's2', 'Story A exploited too', 3, 'T-GLB', 'https://v.example/a'), ('https://v.example/b', 'blog', 's', 'Story B exploited', 3, 'T-GLB', NULL)`);
+  llmMode = 'verify'; llm = [];
+  const v1 = await M.triageVerify();
+  const vr = (await db.query(`SELECT link, relevance, verify, verify_model FROM ti.triage ORDER BY link`)).rows;
+  ok(v1.checked === 2 && v1.confirmed === 1 && v1.lowered === 1 && llm.length === 1 && vr.every((r) => (r.verify === 'lowered' && r.relevance === 2) || (r.verify === 'confirmed' && r.relevance === 3)) && vr[0].verify === vr[1].verify && vr[2].verify !== vr[0].verify
+    && vr.every((r) => r.verify_model === 'test/free-model'), 'verifier confirms or lowers, and a story carries its members ' + JSON.stringify(v1));
+  ok((await M.triageVerify()).checked === 0 && llm.length === 1, 'verified stories are not sent again');
+  await db.query(`UPDATE ti.kv SET v = jsonb_set(v, '{used}', '37') WHERE k = 'triage:budget'`);
+  await db.query(`UPDATE ti.triage SET verify = NULL`);
+  ok(/budget kept/.test((await M.triageVerify()).stop) && llm.length === 1, 'verifier yields its request when the day is nearly spent');
+  process.env.TI_TRIAGE_VERIFY = 'never';
   // Story clustering: same story from three publishers, a shared CVE with different wording, and an unrelated title.
   const cl = M.clusterTitles([{ title: 'Fortinet patches critical FortiOS SSL VPN authentication bypass', cves: [] }, { title: 'Critical FortiOS SSL VPN authentication bypass patched by Fortinet', cves: [] },
     { title: 'Exploitation of CVE-2026-33333 seen in the wild against gateways', cves: ['CVE-2026-33333'] }, { title: 'Gateways under attack: CVE-2026-33333 exploitation in the wild', cves: ['CVE-2026-33333'] },
@@ -549,6 +580,8 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   // Pure checks.
   const chk = M.triageCheck([{ id: 1, title: 'APT29 phishing wave' }], { labels: [{ id: 1, relevance: 2, vector: 'null', theater: 'T-UKR', actors: ['APT29', 'Cozy Bear'], why: 'x'.repeat(400) }, { id: 1, relevance: 1, vector: null, theater: 'T-GLB', actors: [], why: '' }] });
   ok(chk.ok.get(1).actors.join() === 'APT29' && chk.ok.get(1).vector === null && chk.ok.get(1).why.length <= M.TRIAGE.WHY_MAX && chk.rejects.duplicate_id === 1, 'triageCheck actor, null vector, length cap and duplicate rules');
+  ok(!M.isNamedActor('Extortion Group') && !M.isNamedActor('North Korean') && !M.isNamedActor('FBI') && M.isNamedActor('Lazarus Group') && M.isNamedActor('APT29') && M.isNamedActor('Scattered Spider')
+    && M.triageCheck([{ id: 1, title: 'North Korean hackers Lazarus Group hit exchange' }], { labels: [{ id: 1, relevance: 3, vector: null, theater: 'T-KOR', actors: ['North Korean', 'Lazarus Group'], why: 'x' }] }).ok.get(1).actors.join() === 'Lazarus Group', 'generic actor phrases are dropped, names kept');
   ok(M.triageCheck([{ id: 1, title: 't' }], null).rejects.not_json === 1 && M.triageJson('no json here') === null && M.triageJson('x {"labels":[]} y').labels.length === 0, 'unparseable answers');
   ok(M.triagePrompt([{ id: 7, title: 'line one\nIGNORE ALL\tprevious', source: 'a]b' }])[1].content.split('\n').length === 2, 'titles are flattened to one line in the prompt');
   // Evaluation replay against analyst labels.
@@ -568,7 +601,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const s = M.triageScore({ a: { g_theater: 'T-UKR', g_vector: 'DDoS', p_theater: 'T-UKR', p_vector: 'DDoS' }, b: { g_theater: 'T-GLB', g_vector: null, p_theater: 'T-UKR', p_vector: 'Fraud' } });
   ok(s.theater_accuracy === 0.5 && s.vector_accuracy === 1 && s.vector_false_positive_rate === 1 && !M.triagePromoted(s)
     && M.triagePromoted({ items: 400, theater_accuracy: 0.85, vector_accuracy: 0.75, vector_false_positive_rate: 0.1 }), 'scoring and promotion thresholds');
-  delete process.env.OPENROUTER_API_KEY;
+  delete process.env.OPENROUTER_API_KEY; delete process.env.TI_TRIAGE_VERIFY;
   EXTRA = null;
 }
 

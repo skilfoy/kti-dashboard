@@ -68,6 +68,22 @@
         m('indeterminate', TI.f.int(f.indeterminate)), ' indeterminate. Mean Brier score ', m('brier_mean', f.brier_mean == null ? '—' : d3.format('.3f')(f.brier_mean)),
         ' over ', m('scored', TI.f.int(f.scored)), ' scored outcomes. ', m('open', TI.f.int(f.open)), ' judgments carry an open horizon, the next on ', m('next_horizon', f.next_horizon || '—'), '.');
     }
+    const al = sec.querySelector('#ach-line'), at = sec.querySelector('#tbl-ach');
+    if (at && TI.tableState(at, ['ach_matrix'])) {
+      const rows = TI.rows('ach_matrix'), alt = rows.filter((r) => r.hypothesis !== 'H1');
+      const total = alt.reduce((s, r) => s + r.evidence, 0), rated = alt.reduce((s, r) => s + r.evidence - r.unrated, 0);
+      if (al) al.textContent = `${TI.f.int(rated)} of ${TI.f.int(total)} evidence ratings against the stated alternatives are in. ` + (rated < total ? 'The daily run rates the evidence of the judgments it reviews; a hypothesis stands or falls only once its ratings are complete.' : 'Every alternative is fully rated.');
+      TI.table(at, rows, [
+        { field: 'judgment_id', label: 'Judgment', cls: 'ti-nowrap' },
+        { field: 'hypothesis', label: 'H' },
+        { field: 'text', label: 'Hypothesis', cls: 'ti-wrap' },
+        { field: 'consistent', label: 'Consistent', num: true, fmt: 'int' },
+        { field: 'inconsistent', label: 'Inconsistent', num: true, fmt: 'int' },
+        { field: 'neutral', label: 'Not diagnostic', num: true, fmt: 'int', hideSm: true },
+        { field: 'unrated', label: 'Unrated', num: true, fmt: 'int', hideSm: true },
+        { field: 'standing', label: 'Standing', attr: { 'data-status': (r) => (r.standing === 'least inconsistent' ? 'ok' : r.standing === 'more inconsistent' ? 'review' : '') } },
+      ], { limit: 60, empty: 'No ranked judgments.' });
+    }
     const ll = sec.querySelector('#leads-line');
     if (ll && TI.ready('lead_use')) {
       const s = TI.rows('lead_use')[0] || {};

@@ -348,6 +348,30 @@ dash.calc('forecast_record', {
   },
 });
 
+// ---- Analysis of competing hypotheses over the ranked judgments ----
+dash.calc('ach_matrix', {
+  title: 'Competing hypotheses',
+  description: 'For each ranked judgment, the judgment (H1) and each stated alternative, with the count of evidence items rated consistent, inconsistent or not diagnostic for it. H1 is read from each evidence row\'s role (Supports, Weakens, Context); the alternatives from the row\'s ach ratings. In this method the hypothesis with the least inconsistent evidence stands, so rows are ordered by inconsistent count within a judgment; unrated counts show how much of the evidence the analyst has yet to rate.',
+  inputs: ['judgments', 'evidence'],
+  fn: (judgments, evidence) => {
+    const out = [];
+    for (const j of judgments.filter((x) => (x.exec_rank || 0) > 0 && x.status !== 'Retired').sort((a, b) => a.exec_rank - b.exec_rank)) {
+      const ev = evidence.filter((e) => e.judgment_id === j.judgment_id);
+      const alts = [...String(j.alternatives || '').matchAll(/\bH(\d+):\s*([\s\S]*?)(?=\s*\bH\d+:|$)/g)].map((m) => ({ h: 'H' + m[1], text: m[2].trim() }));
+      const rate = (e, h) => (h === 'H1' ? { Supports: 'C', Weakens: 'I', Context: 'N' }[e.role] : (String(e.ach || '').match(new RegExp('\\b' + h + ':([CIN])')) || [])[1]) || null;
+      const rows = [{ h: 'H1', text: j.title }, ...alts].map((x) => {
+        const r = ev.map((e) => rate(e, x.h));
+        const n = (k) => r.filter((v) => v === k).length;
+        return { key: j.judgment_id + '-' + x.h, judgment_id: j.judgment_id, exec_rank: j.exec_rank, hypothesis: x.h, text: x.text, consistent: n('C'), inconsistent: n('I'), neutral: n('N'), unrated: r.filter((v) => !v).length, evidence: ev.length,
+          rated_share: ev.length ? Math.round(((ev.length - r.filter((v) => !v).length) / ev.length) * 1000) / 1000 : null };
+      });
+      const complete = rows.every((r) => r.unrated === 0), least = Math.min(...rows.map((r) => r.inconsistent));
+      for (const r of rows) out.push({ ...r, standing: !complete ? 'rating incomplete' : r.inconsistent === least ? 'least inconsistent' : 'more inconsistent' });
+    }
+    return out;
+  },
+});
+
 // ---- Lead feedback: what the analyst run did with the machine leads it opened ----
 dash.calc('lead_use', {
   title: 'Lead feedback summary',

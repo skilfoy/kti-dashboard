@@ -1,6 +1,7 @@
 // Intraday lead watch, without a model. Reads the machine triage document and keeps one GitHub issue, labelled
-// lead-watch, open while a relevance 3 lead of the last 72 hours names a CVE that CISA KEV lists or an actor that a
-// ranked key judgment names. The daily analyst run reads the issue first (runbook section 1). The watch moves no
+// lead-watch, open while a relevance 3 lead of the last 72 hours names a CVE that CISA KEV lists, names an actor that a
+// ranked key judgment names (generic phrases such as "North Korean hackers" do not count), or carries the theater of a
+// ranked judgment. The daily analyst run reads the issue first (runbook section 1). The watch moves no
 // level and writes no authored data: it only makes sure the next analyst run looks.
 // Usage: node pipeline/lead_watch.mjs <repo root>   (needs GITHUB_TOKEN with issues: write and GITHUB_REPOSITORY;
 // DRY_RUN=1 prints the action only).
@@ -12,6 +13,11 @@ import { pathToFileURL } from 'node:url';
 export const LABEL = 'lead-watch';
 export const TITLE = 'Lead watch: leads that touch KEV or a ranked judgment';
 export const TRIAGE_URL = 'https://intel.kilfoycyber.com/api/context?type=triage';
+// Generic phrases are how headlines talk, not actor names; the collector drops them too (isNamedActor in 37f-triage.mjs).
+const GENERIC = new Set(('group groups gang gangs hacker hackers actor actors threat threats extortion ransomware malware cybercriminal cybercriminals criminals attacker attackers state sponsored nation backed linked apt team crew operator operators '
+  + 'campaign botnet stealer trojan spyware north south korean korea russian russia chinese china iranian iran israeli israel ukrainian ukraine american us usa uk european pro the and of new '
+  + 'fbi cisa nsa doj europol interpol ncsc microsoft google apple amazon aws cisco fortinet ivanti citrix vmware oracle sap meta openai github cloudflare okta crowdstrike mandiant unit42 talos kaspersky sophos').split(' '));
+export const isNamedActor = (a) => String(a || '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).some((x) => !GENERIC.has(x) && (x.length >= 3 || /\d/.test(x)));
 const esc = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Leads worth an analyst's first look: relevance 3 and a KEV CVE, or an actor named in a ranked judgment's text.
@@ -24,11 +30,14 @@ export function watchLeads(doc, judgments) {
     const why = [];
     if ((r.kev || []).length) why.push('names ' + r.kev.join(', ') + ', listed in CISA KEV');
     for (const a of r.actors || []) {
-      if (String(a).length < 4) continue;
+      if (String(a).length < 4 || !isNamedActor(a)) continue;
       const re = new RegExp('(^|[^a-z0-9])' + esc(a.toLowerCase()) + '([^a-z0-9]|$)');
       const js = ranked.filter((j) => re.test(text(j).toLowerCase())).map((j) => j.judgment_id);
       if (js.length) why.push(`names ${a}, which ${js.join(', ')} ${js.length > 1 ? 'name' : 'names'}`);
     }
+    // A lead the tier ties to a theater that a ranked judgment is about (never the catch-all T-GLB).
+    const tj = r.theater && r.theater !== 'T-GLB' ? ranked.filter((j) => j.theater_id === r.theater).map((j) => j.judgment_id) : [];
+    if (tj.length) why.push(`labelled ${r.theater}, the theater of ${tj.join(', ')}`);
     if (why.length) hits.push({ title: String(r.title).slice(0, 200), link: r.link, source: r.source || '', published: r.published || null, why });
   }
   return hits.sort((a, b) => String(b.published).localeCompare(String(a.published))).slice(0, 25);
