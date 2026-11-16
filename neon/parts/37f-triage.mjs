@@ -161,7 +161,7 @@ export async function jobPsirt(opts = {}) {
 // vector and theater from the closed lists, actors that occur in the title, and a short reason without links; anything
 // else is rejected and counted. A daily request budget in ti.kv keeps the job inside the free tier. Without
 // OPENROUTER_API_KEY in the function environment the job records "held" and makes no request.
-export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, POOL: 200, MAX_TOKENS: 12000, DAILY_REQUESTS: 40, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 75000, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
+export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, POOL: 200, MAX_TOKENS: 12000, DAILY_REQUESTS: 40, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 70000, VERIFY_AFTER_MS: 80000, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
   ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions', MODEL: 'openrouter/free', EVAL_BATCHES: 1 };
 export const TRIAGE_VECTORS = ['Exploitation & edge devices', 'Fraud', 'Identity & valid accounts', 'Phishing & social engineering', 'Ransomware & malware', 'Supply chain & third parties', 'DDoS', 'Insider'];
 export const TRIAGE_THEATERS = { 'T-RSY': 'Red Sea, Yemen and Saudi Arabia', 'T-HRM': 'Strait of Hormuz and the Gulf (Iran)', 'T-AFP': 'Afghanistan and Pakistan border', 'T-HOA': 'Horn of Africa',
@@ -246,9 +246,9 @@ export async function triageCall(messages, { structured = true } = {}) {
 }
 // One batch: a structured request, then one plain retry when the endpoint or model refuses structured output (a 4xx other
 // than 401, 402 and 429) or the answer fails to parse. Each request spends from the budget.
-export async function triageBatch(items, cap) {
+export async function triageBatch(items, cap, { retry = true } = {}) {
   const messages = triagePrompt(items), calls = [];
-  for (const structured of [true, false]) {
+  for (const structured of retry ? [true, false] : [true]) {
     const b = await triageBudget(1, cap);
     if (!b.grant) return { labels: new Map(), rejects: {}, missing: items.length, calls, stop: 'daily request budget spent', budget: b };
     const c = await triageCall(messages, { structured });
@@ -328,7 +328,12 @@ export async function jobTriage() {
   }
   await sql(`DELETE FROM ti.triage WHERE at < now() - make_interval(days => $1)`, [TRIAGE.KEEP_DAYS]);
   const vmode = ENV().TI_TRIAGE_VERIFY || 'odd-hours'; // 'always' and 'never' are for tests and for switching the verifier off
-  const verify = vmode === 'never' ? { checked: 0, skipped: 'off' } : vmode === 'always' || new Date().getUTCHours() % 2 === 1 ? await triageVerify() : { checked: 0, skipped: 'even hour' };
+  // The first verifier run (16 November 2026, 02:01 UTC) followed a slow labelling request and its retry; the invocation
+  // was cut off near five minutes and the run left no record. The verifier now runs only when labelling finished inside
+  // VERIFY_AFTER_MS, which bounds the job at about two and a half minutes.
+  const late = Date.now() - t0 > TRIAGE.VERIFY_AFTER_MS;
+  const verify = vmode === 'never' ? { checked: 0, skipped: 'off' } : late ? { checked: 0, skipped: 'labelling ran long' }
+    : vmode === 'always' || new Date().getUTCHours() % 2 === 1 ? await triageVerify() : { checked: 0, skipped: 'even hour' };
   const last = { at: new Date().toISOString(), pool: pool_.length, candidates: items.length, labelled: rows.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls };
   await kvPut('triage:last', last);
   await recordVolume([['triage_labelled', rows.length]]);
@@ -345,13 +350,14 @@ export async function jobTriage() {
 // labelling and the evaluation keep their requests. Its worth is measured in the lead feedback record (Method), since
 // the gold set carries no relevance labels to replay it against.
 export async function triageVerify() {
+  // One request, no retry: the verifier shares an invocation with labelling and must not push it past the function's time limit.
   const top = await sql(`SELECT link, title, source, cluster, model FROM ti.triage WHERE relevance = 3 AND verify IS NULL AND (cluster IS NULL OR cluster = link) AND at > now() - make_interval(hours => $1)
     ORDER BY at DESC LIMIT $2`, [TRIAGE.WINDOW_H, TRIAGE.BATCH]);
   if (!top.length) return { checked: 0 };
   const b = (await kvGet('triage:budget')) || {};
   if (b.day === utcDay() && (+b.used || 0) > TRIAGE.DAILY_REQUESTS - 5) return { checked: 0, stop: 'budget kept for labelling and the evaluation' };
   const items = top.map((t, i) => ({ id: i + 1, ...t }));
-  const r = await triageBatch(items, TRIAGE.DAILY_REQUESTS);
+  const r = await triageBatch(items, TRIAGE.DAILY_REQUESTS, { retry: false });
   const rows = items.filter((i) => r.labels.has(i.id)).map((i) => ({ link: i.link, verify: r.labels.get(i.id).relevance === 3 ? 'confirmed' : 'lowered', second: r.labels.get(i.id).relevance, model: r.model || null }));
   if (rows.length) {
     await sql(`UPDATE ti.triage t SET verify = x.verify, verify_model = x.model, relevance = CASE WHEN x.verify = 'lowered' THEN 2 ELSE t.relevance END
