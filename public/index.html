@@ -119,6 +119,11 @@
       <p class="ti-card-note">The validator writes one event whenever a tracked value moves and refuses a build whose values differ from the log. The full log and the forecast record are on the <a href="#method-changes">Method page</a>; the same changes are published per run as a <a href="/feed.json">JSON feed</a>.</p>
     </div>
 
+    <div class="ti-card ti-section" id="brief-week">
+      <h2 class="ti-h2">Seven days in review <span class="ti-pir" id="week-range"></span></h2>
+      <p class="ti-lede" id="week-line"></p>
+    </div>
+
     <div class="ti-section" id="key-judgments">
       <h2 class="ti-h2">Key judgments <span class="ti-pir">PIR-1 to PIR-7</span></h2>
       <p class="ti-lede">Only MEDIUM or HIGH confidence judgments appear here, at most six. Likelihood uses ICD-203 terms; confidence is computed from the evidence each judgment cites, so a likely event can carry moderate confidence. Open a card for its argument map.</p>
@@ -883,6 +888,11 @@
         <p class="ti-card-note" id="triage-eval" data-source="live_triage"></p>
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-triage" data-source="live_triage" data-row-key="link"></table></div>
       </div>
+      <div class="ti-card ti-section" id="src-actors">
+        <h3 class="ti-h3">Actors named in leads, 30 days <span class="ti-pir">unreviewed</span></h3>
+        <p class="ti-card-note" data-source="live_triage">Names the triage tier found in headlines and kept: each occurs in the title it came from and is more than a demonym, an agency or a vendor. A name is matched to a MITRE ATT&amp;CK group by its name or a listed alias, and to the ranked judgments whose text names it. The ledger counts headlines; it attributes nothing.</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-actors" data-source="live_triage attack_groups judgments" data-row-key="actor"></table></div>
+      </div>
       <div class="ti-card ti-section" id="src-psirt">
         <h3 class="ti-h3">Vendor and CERT advisories, 14 days <span class="ti-pir">KEV cross-reference</span> <span class="ti-count" id="psirt-asof"></span></h3>
         <p class="ti-card-note" id="psirt-sum" data-source="live_psirt"></p>
@@ -956,6 +966,11 @@
         <p class="ti-lede" id="ach-line"></p>
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-ach" data-source="ach_matrix" data-row-key="key"></table></div>
       </div>
+      <div class="ti-card ti-section" id="method-corroboration">
+        <h3 class="ti-h3">Corroboration behind each ranked judgment</h3>
+        <p class="ti-card-note">Several reports that trace to one publisher or one kind of source corroborate less than their number suggests. For each ranked judgment the table counts the publishers and source categories behind its supporting items and names the publisher cited most. A flag marks support that leans on one origin.</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-corroboration" data-source="judgment_corroboration" data-row-key="judgment_id"></table></div>
+      </div>
       <div class="ti-card ti-section" id="method-leads">
         <h3 class="ti-h3">Lead feedback</h3>
         <p class="ti-card-note">The machine triage tier and the advisory feeds hand the analyst run a ranked list of leads. The run records what it did with each lead it opened: used it as evidence, found the event already held, rejected it, or found the page did not support it. The share used or already held is the tier's precision where it counts, at the number of leads an analyst run reads.</p>
@@ -985,6 +1000,9 @@
         <h3 class="ti-h3">STIX 2.1 export</h3>
         <p class="ti-card-note">Key judgments as STIX opinion-style notes with their cited reports, marked TLP:GREEN and PAP:AMBER. Select all and copy.</p>
         <textarea class="ti-export" id="stix-out" readonly aria-label="STIX bundle" data-source="judgments confidence evidence items"></textarea>
+        <h4 class="ti-h4">Advisories and KEV status</h4>
+        <p class="ti-card-note">The 14-day advisory list as STIX: one vulnerability object per CVE (labelled when CISA KEV lists it) and one report per advisory that references its CVEs and links the publisher's page. Built in the browser from the live advisory document; marked TLP:GREEN.</p>
+        <textarea class="ti-export" id="stix-adv-out" readonly aria-label="STIX bundle of advisories" data-source="live_psirt"></textarea>
       </div>
     </template>
   </section>

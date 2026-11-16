@@ -348,6 +348,44 @@ dash.calc('forecast_record', {
   },
 });
 
+// ---- Corroboration behind each ranked judgment ----
+dash.calc('judgment_corroboration', {
+  title: 'Corroboration by judgment',
+  description: 'For each ranked judgment, the supporting evidence items counted by independent origin: distinct publishers, distinct source categories (official, industry, media, research, party claim), and the share that comes from the single most-cited publisher. A judgment is flagged when one publisher carries more than half of its support or when all support comes from one category, since agreement among reports that share an origin is one report.',
+  inputs: ['judgments', 'evidence', 'items'],
+  fn: (judgments, evidence, items) => {
+    const byId = new Map(items.map((i) => [i.item_id, i]));
+    return judgments.filter((j) => (j.exec_rank || 0) > 0 && j.status !== 'Retired').sort((a, b) => a.exec_rank - b.exec_rank).map((j) => {
+      const sup = evidence.filter((e) => e.judgment_id === j.judgment_id && e.role === 'Supports').map((e) => byId.get(e.item_id)).filter(Boolean);
+      const count = (f) => { const m = new Map(); for (const i of sup) m.set(f(i), (m.get(f(i)) || 0) + 1); return m; };
+      const pubs = count((i) => i.source_name || i.source_id), cats = count((i) => i.category);
+      const top = [...pubs.entries()].sort((a, b) => b[1] - a[1])[0] || ['', 0];
+      const share = sup.length ? Math.round((top[1] / sup.length) * 1000) / 1000 : null;
+      const flag = !sup.length ? 'no supporting items' : share > 0.5 ? 'one publisher carries most support' : cats.size === 1 ? 'one source category' : pubs.size < 3 ? 'fewer than three publishers' : '';
+      return { judgment_id: j.judgment_id, exec_rank: j.exec_rank, title: j.title, supporting: sup.length, publishers: pubs.size, categories: cats.size, category_list: [...cats.keys()].sort().join(', '),
+        top_publisher: top[0], top_share: share, flag };
+    });
+  },
+});
+
+// ---- Seven days in review ----
+dash.calc('week_review', {
+  title: 'Seven days in review',
+  description: 'Counts over the seven days ending at the latest run: logged changes by kind, evidence items added, the theaters with the most new items, forecast outcomes recorded, and what the analyst run did with machine leads.',
+  inputs: ['history', 'items', 'outcomes', 'leads', 'ledger'],
+  fn: (history, items, outcomes, leads, ledger) => {
+    const end = ((ledger.slice(-1)[0] || {}).at || '').slice(0, 10), from = end ? new Date(Date.parse(end) - 6 * 864e5).toISOString().slice(0, 10) : '';
+    const inWin = (d) => !!d && d >= from && d <= end;
+    const ev = history.filter((h) => inWin(h.date)), it = items.filter((i) => inWin(i.reported || i.date));
+    const n = (k, f) => ev.filter((h) => h.kind === k && (!f || h.field === f)).length;
+    const th = new Map(); for (const i of it) th.set(i.theater_name || i.theater_id, (th.get(i.theater_name || i.theater_id) || 0) + 1);
+    const ld = leads.filter((l) => inWin(l.date)), good = ld.filter((l) => l.disposition === 'used' || l.disposition === 'duplicate').length;
+    return [{ from, to: end, level_moves: n('theater', 'threatcon'), trend_moves: n('theater', 'trend'), judgment_changes: n('judgment'), indicator_changes: n('indicator'), vector_changes: n('vector'), changes: ev.length,
+      items_added: it.length, theaters: [...th.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, c]) => `${k} (${c})`).join(', '), outcomes: outcomes.filter((o) => inWin(o.resolved)).length,
+      leads_opened: ld.length, leads_used: ld.filter((l) => l.disposition === 'used').length, lead_precision: ld.length ? Math.round((good / ld.length) * 1000) / 1000 : null }];
+  },
+});
+
 // ---- Analysis of competing hypotheses over the ranked judgments ----
 dash.calc('ach_matrix', {
   title: 'Competing hypotheses',

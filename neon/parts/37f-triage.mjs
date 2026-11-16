@@ -161,7 +161,7 @@ export async function jobPsirt(opts = {}) {
 // vector and theater from the closed lists, actors that occur in the title, and a short reason without links; anything
 // else is rejected and counted. A daily request budget in ti.kv keeps the job inside the free tier. Without
 // OPENROUTER_API_KEY in the function environment the job records "held" and makes no request.
-export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, POOL: 200, MAX_TOKENS: 12000, DAILY_REQUESTS: 40, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 70000, VERIFY_AFTER_MS: 80000, VERIFY_EVERY_MS: 100 * 60000, EVAL_TRIES: 3, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
+export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, POOL: 200, MAX_TOKENS: 12000, DAILY_REQUESTS: 45, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 70000, VERIFY_AFTER_MS: 80000, VERIFY_EVERY_MS: 100 * 60000, EVAL_TRIES: 3, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
   ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions',
   // Tried in order by OpenRouter (its `models` fallback list, three at most). The first two answered every request they
   // were routed in the first day of production, in 20 to 35 seconds; the bare free router picked a slow or reasoning-heavy
@@ -225,10 +225,14 @@ export function triageCheck(items, answer) {
   return { ok, rejects, missing: items.length - ok.size };
 }
 const utcDay = () => new Date().toISOString().slice(0, 10);
-// Spends from the day's request budget; returns how many of `want` requests may be sent.
-export async function triageBudget(want, cap) {
+// Requests labelling still needs today: one for each hour left in the UTC day and a quarter more for retries. The
+// evaluation and the verifier spend only what is left above this reserve, so labelling never goes dark for their sake
+// (on 16 November 2026 the shared budget was spent by 15:00 UTC and nine hourly runs labelled nothing).
+export const triageReserve = (now = new Date()) => Math.ceil((24 - now.getUTCHours() - 1) * 1.25);
+// Spends from the day's request budget; returns how many of `want` requests may be sent. `reserve` requests are held back.
+export async function triageBudget(want, cap, reserve = 0) {
   const day = utcDay(), b = (await kvGet('triage:budget')) || {};
-  const used = b.day === day ? (+b.used || 0) : 0, grant = Math.max(0, Math.min(want, cap - used));
+  const used = b.day === day ? (+b.used || 0) : 0, grant = Math.max(0, Math.min(want, cap - reserve - used));
   if (grant) await kvPut('triage:budget', { day, used: used + grant, cap });
   return { grant, used: used + grant, cap, day };
 }
@@ -257,11 +261,11 @@ export async function triageCall(messages, { structured = true } = {}) {
 }
 // One batch: a structured request, then one plain retry when the endpoint or model refuses structured output (a 4xx other
 // than 401, 402 and 429) or the answer fails to parse. Each request spends from the budget.
-export async function triageBatch(items, cap, { retry = true } = {}) {
+export async function triageBatch(items, cap, { retry = true, reserve = 0 } = {}) {
   const messages = triagePrompt(items), calls = [];
   for (const structured of retry ? [true, false] : [true]) {
-    const b = await triageBudget(1, cap);
-    if (!b.grant) return { labels: new Map(), rejects: {}, missing: items.length, calls, stop: 'daily request budget spent', budget: b };
+    const b = await triageBudget(1, cap, reserve);
+    if (!b.grant) return { labels: new Map(), rejects: {}, missing: items.length, calls, stop: reserve ? 'requests kept for labelling' : 'daily request budget spent', budget: b };
     const c = await triageCall(messages, { structured });
     calls.push({ structured, status: c.status, ms: c.ms, model: c.model, error: c.error, tokens: c.tokens });
     if ([401, 402, 429].includes(c.status)) return { labels: new Map(), rejects: {}, missing: items.length, calls, stop: c.status === 429 ? 'rate limited by the endpoint' : `endpoint refused the key or balance (HTTP ${c.status})`, budget: b };
@@ -285,12 +289,18 @@ export async function triageDoc(extra = {}) {
     const cves = [...new Set([...(r.cves || []), ...also.flatMap((a) => a.cves || [])])];
     return { ...r, cves, kev: cves.filter((c) => kev.has(c)), actors: [...new Set([...(r.actors || []), ...also.flatMap((a) => a.actors || [])])], also: also.length, also_sources: [...new Set(also.map((a) => a.source).filter(Boolean))].slice(0, 6) };
   });
+  // Actor ledger: every name the tier kept (it occurs in the title and is not a generic phrase), over the stored 30 days.
+  const act = await sql(`SELECT a.name AS actor, count(*)::int AS titles, count(DISTINCT COALESCE(t.cluster, t.link))::int AS stories, count(DISTINCT t.source)::int AS publishers,
+      min(COALESCE(t.published, t.at)) AS first_seen, max(COALESCE(t.published, t.at)) AS last_seen, max(t.relevance)::int AS top_relevance,
+      (array_agg(t.title ORDER BY COALESCE(t.published, t.at) DESC))[1] AS latest_title, (array_agg(t.link ORDER BY COALESCE(t.published, t.at) DESC))[1] AS latest_link
+    FROM ti.triage t, jsonb_array_elements_text(t.actors) AS a(name) GROUP BY a.name ORDER BY stories DESC, last_seen DESC LIMIT 120`);
   const [n] = await sql(`SELECT count(*)::int AS all_rows, count(*) FILTER (WHERE at > now() - interval '24 hours')::int AS d1 FROM ti.triage`);
   return { source: 'Machine triage of the titles collected from CTI blogs and vendor or CERT advisories, by a free hosted language model',
     terms: 'Titles and links belong to their publishers. Labels are machine output and are unreviewed.',
-    method: `Every hour new titles are grouped into stories (titles that share most of their words, or a CVE identifier) and up to ${TRIAGE.BATCH} stories are labelled in one request at temperature 0: relevance 0 to 3, one of eight intrusion vectors or none, one theater or none, and actors named in the title. A label is kept only when it names an id of the batch, a vector and theater from the closed lists and a reason without links; actors that do not occur in the title are dropped; CVE identifiers come from the advisory feed, never from the model. The tier sets no ThreatCon and writes no judgment or evidence item: the daily analyst run reads this list as leads and opens the sources itself. Requests are capped at ${TRIAGE.DAILY_REQUESTS} a day.`,
+    method: `Every hour new titles are grouped into stories (titles that share most of their words, or a CVE identifier) and up to ${TRIAGE.BATCH} stories are labelled in one request at temperature 0: relevance 0 to 3, one of eight intrusion vectors or none, one theater or none, and actors named in the title. A label is kept only when it names an id of the batch, a vector and theater from the closed lists and a reason without links; actors that do not occur in the title are dropped; CVE identifiers come from the advisory feed, never from the model. The tier sets no ThreatCon and writes no judgment or evidence item: the daily analyst run reads this list as leads and opens the sources itself. Requests are capped at ${TRIAGE.DAILY_REQUESTS} a day; labelling has first call on them, and the verifier and the evaluation spend what is left.`,
     marking: 'Machine triage, unreviewed', prompt_version: TRIAGE.PROMPT_V, eval: (await kvGet('triage:eval')) || null, budget: (await kvGet('triage:budget')) || null,
-    labelled_total: n.all_rows, labelled_24h: n.d1, generated: new Date().toISOString(), served_from: 'store', ...extra, stories: rows.length, titles: all.length, count: rows.length, rows: rows.map(({ kind, ...r }) => ({ kind: 'lead', from: kind, ...r })) };
+    labelled_total: n.all_rows, labelled_24h: n.d1, generated: new Date().toISOString(), served_from: 'store', ...extra, stories: rows.length, titles: all.length, actors: act.length, count: rows.length + act.length,
+    rows: rows.map(({ kind, ...r }) => ({ kind: 'lead', from: kind, ...r })).concat(act.map((a) => ({ kind: 'actor', ...a }))) };
 }
 // Story clustering (G71). Several publishers carry the same story, and one request should cover each story once. Titles
 // are reduced to a set of content words; a title joins the first earlier cluster whose representative shares 60 percent
@@ -368,10 +378,8 @@ export async function triageVerify() {
   const top = await sql(`SELECT link, title, source, cluster, model FROM ti.triage WHERE relevance = 3 AND verify IS NULL AND (cluster IS NULL OR cluster = link) AND at > now() - make_interval(hours => $1)
     ORDER BY at DESC LIMIT $2`, [TRIAGE.WINDOW_H, TRIAGE.BATCH]);
   if (!top.length) return { checked: 0 };
-  const b = (await kvGet('triage:budget')) || {};
-  if (b.day === utcDay() && (+b.used || 0) > TRIAGE.DAILY_REQUESTS - 5) return { checked: 0, stop: 'budget kept for labelling and the evaluation' };
   const items = top.map((t, i) => ({ id: i + 1, ...t }));
-  const r = await triageBatch(items, TRIAGE.DAILY_REQUESTS, { retry: false });
+  const r = await triageBatch(items, TRIAGE.DAILY_REQUESTS, { retry: false, reserve: triageReserve() });
   const rows = items.filter((i) => r.labels.has(i.id)).map((i) => ({ link: i.link, verify: r.labels.get(i.id).relevance === 3 ? 'confirmed' : 'lowered', second: r.labels.get(i.id).relevance, model: r.model || null }));
   if (rows.length) {
     await sql(`UPDATE ti.triage t SET verify = x.verify, verify_model = x.model, relevance = CASE WHEN x.verify = 'lowered' THEN 2 ELSE t.relevance END
@@ -416,7 +424,7 @@ export async function jobTriageeval(opts = {}) {
   let stop = null;
   for (let b = 0; b < (opts.batches || TRIAGE.EVAL_BATCHES) && b * TRIAGE.BATCH < todo.length && !stop; b++) {
     const slice = todo.slice(b * TRIAGE.BATCH, (b + 1) * TRIAGE.BATCH).map((g, i) => ({ id: i + 1, gid: g.id, title: g.title, g }));
-    const r = await triageBatch(slice, TRIAGE.EVAL_DAILY_REQUESTS);
+    const r = await triageBatch(slice, TRIAGE.EVAL_DAILY_REQUESTS, { reserve: triageReserve() });
     calls.push(...r.calls);
     stop = r.stop || null;
     for (const [k, v] of Object.entries(r.rejects)) st.rejects[k] = (st.rejects[k] || 0) + v;

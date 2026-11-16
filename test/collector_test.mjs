@@ -538,7 +538,11 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(t1.ok && llm.length === 1 && llm[0].auth === 'Bearer sk-or-test' && llm[0].structured && llm[0].temperature === 0 && llm[0].max_tokens >= 8000 && llm[0].reasoning.effort === 'low' && llm[0].reasoning.exclude === true && llm[0].model === M.TRIAGE.MODELS[0] && llm[0].models.length === 3 && llm[0].models[2] === 'openrouter/free', 'one structured request at temperature 0 with low reasoning effort and room for the answer');
   const F = M.PSIRT_FEEDS.length - 2; // feeds that answer in this fixture: each carries the shared-CVE story and one bulletin of its own
   ok(t1.pool === 2 * F && t1.candidates === F + 1 && t1.labelled === 2 * F - 2 && t1.rejects.vector_not_listed === 1 && t1.rejects.why_has_link_or_markup === 1 && t1.rejects.id_not_in_batch === 1, 'rule checks reject off-list, linked and invented labels ' + JSON.stringify(t1.rejects));
-  const tdoc = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/triage.json.gz')).toString());
+  const tdocAll = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/triage.json.gz')).toString());
+  const ledger = tdocAll.rows.filter((r) => r.kind === 'actor');
+  ok(ledger.length === 1 && ledger[0].actor === 'authentication' && ledger[0].stories === 1 && ledger[0].titles === F && ledger[0].publishers === F && ledger[0].top_relevance === 3 && /^https:/.test(ledger[0].latest_link) && tdocAll.actors === 1,
+    'actor ledger: one row per kept name with its stories, publishers and latest title ' + JSON.stringify(ledger[0]));
+  const tdoc = { ...tdocAll, rows: tdocAll.rows.filter((r) => r.kind === 'lead') };
   ok(tdoc.marking === 'Machine triage, unreviewed' && tdoc.rows.length === F - 1 && tdoc.titles === 2 * F - 2 && tdoc.rows[0].relevance === 3 && tdoc.rows[0].also === F - 1 && tdoc.rows[0].also_sources.length === Math.min(F - 1, 6) && tdoc.rows[0].kev.includes('CVE-2026-11111') && tdoc.rows.every((r) => !r.actors.includes('Volt Typhoon') && r.model === 'test/free-model' && r.prompt_v === M.TRIAGE.PROMPT_V), 'triage document: provenance kept, actors absent from the title dropped');
   ok(tdoc.rows.some((r) => r.kind === 'lead' && r.cves.includes('CVE-2026-11111')) && tdoc.budget.used === 1 && !JSON.stringify(tdoc).includes('sk-or-test'), 'CVE identifiers come from the feed; budget counted; no key in the document');
   // Second run: only the two rejected titles remain; a structured refusal falls back to a plain request.
@@ -548,7 +552,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const t3 = await M.runJob('triage');
   ok(t3.ok && t3.candidates === 0 && llm.length === 2, 'nothing new: no request');
   // Budget: a spent day stops requests; a 429 stops the run without failing it.
-  await db.query(`UPDATE ti.kv SET v = jsonb_set(v, '{used}', '40') WHERE k = 'triage:budget'`);
+  await db.query(`UPDATE ti.kv SET v = jsonb_set(v, '{used}', '45') WHERE k = 'triage:budget'`);
   await db.query(`DELETE FROM ti.triage WHERE link LIKE '%fortinet%'`);
   llm = [];
   const t4 = await M.runJob('triage');
@@ -573,10 +577,11 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const v2 = await M.triageVerify();
   ok(v2.checked === 0 && llm.length === 1 && llm[0].structured, 'the verifier makes one request and does not retry');
   llmMode = 'verify';
-  await db.query(`UPDATE ti.kv SET v = jsonb_set(v, '{used}', '37') WHERE k = 'triage:budget'`);
+  await db.query(`UPDATE ti.kv SET v = jsonb_set(v, '{used}', '45') WHERE k = 'triage:budget'`);
   await db.query(`UPDATE ti.triage SET verify = NULL`);
   llm = [];
-  ok(/budget kept/.test((await M.triageVerify()).stop) && llm.length === 0, 'verifier yields its request when the day is nearly spent');
+  ok(/kept for labelling|budget spent/.test((await M.triageVerify()).stop) && llm.length === 0 && M.triageReserve(new Date('2026-11-16T00:10:00Z')) === 29 && M.triageReserve(new Date('2026-11-16T23:10:00Z')) === 0
+    && (await M.triageBudget(1, 45, 10)).grant === 0 && (await M.triageBudget(1, 46, 0)).grant === 1, 'the verifier and the evaluation leave labelling its requests');
   process.env.TI_TRIAGE_VERIFY = 'never';
   // Story clustering: same story from three publishers, a shared CVE with different wording, and an unrelated title.
   const cl = M.clusterTitles([{ title: 'Fortinet patches critical FortiOS SSL VPN authentication bypass', cves: [] }, { title: 'Critical FortiOS SSL VPN authentication bypass patched by Fortinet', cves: [] },
@@ -599,6 +604,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const gold = JSON.parse(goldBuf);
   ok(gold.items.length >= 1000 && gold.items.every((g) => g.id && g.title && M.TRIAGE_THEATERS[g.theater] && (g.vector === null || M.TRIAGE_VECTORS.includes(g.vector))), 'gold set is well formed: ' + gold.items.length + ' items');
   bucket.set('ti-docs/ref/triage-gold.json', goldBuf);
+  await db.query(`UPDATE ti.kv SET v = jsonb_set(v, '{used}', '0') WHERE k = 'triage:budget'`); // the evaluation spends only above labelling's reserve, which depends on the hour
   llmMode = 'eval'; llm = [];
   const e1 = await M.runJob('triageeval', { batches: 2 });
   ok(e1.ok && e1.scored === 50 && e1.calls === 2 && e1.eval.items === 50 && e1.eval.promoted === false && e1.eval.complete === false && e1.eval.theater_accuracy <= 1, 'evaluation scores two batches and withholds promotion ' + JSON.stringify(e1.eval));

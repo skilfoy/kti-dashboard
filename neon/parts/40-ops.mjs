@@ -57,8 +57,10 @@ KNOWN_GAPS.greynoise = { note: "GreyNoise's free lookup rate-limits cloud egress
 // Open-data sources of the cables job (37e-cables.mjs): Overpass's status page and a one-line Wikidata SPARQL ASK, sent
 // with the same identifying User-Agent and an Accept header (overpass-api.de answers a bare request with HTTP 406).
 const OPEN_DATA_HEADERS = (accept) => () => ({ accept, 'user-agent': cableUserAgent(ENV().SEC_USER_AGENT || 'contact not set') });
-PROBES.push(['overpass', 'https://overpass-api.de/api/status', [200], OPEN_DATA_HEADERS('text/plain')],
-  ['wikidata', WIKIDATA_SPARQL + '?format=json&query=' + encodeURIComponent('ASK {}'), [200, 206], OPEN_DATA_HEADERS('application/sparql-results+json')]);
+// Overpass has no probe: its status page did not answer this host within the probe deadline from 14 November 2026 on,
+// while the weekly cables job read the interpreter without trouble (8 and 15 November). That job's own run record is the
+// check; a failed run raises the collector alert.
+PROBES.push(['wikidata', WIKIDATA_SPARQL + '?format=json&query=' + encodeURIComponent('ASK {}'), [200, 206], OPEN_DATA_HEADERS('application/sparql-results+json')]);
 // GreyNoise: with GREYNOISE_API_KEY in the function environment the probe sends it (header "key"); without it the
 // keyless community lookup is used as before. The key lives only here, in the collector's Neon environment.
 export const greynoiseHeaders = () => (ENV().GREYNOISE_API_KEY ? { key: ENV().GREYNOISE_API_KEY, accept: 'application/json' } : { accept: 'application/json' });

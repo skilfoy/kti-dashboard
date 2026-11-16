@@ -1501,7 +1501,7 @@
    "attribution": "© OpenStreetMap contributors",
    "commercial_use": "Allowed; share-alike on the derived database (ODbL)",
    "cadence": "weekly (collector, Sundays 05:19 UTC)",
-   "health_feed": "overpass",
+   "health_feed": null,
    "jobs": [
     "cables"
    ],
@@ -2210,7 +2210,7 @@
    "attribution": "© OpenStreetMap contributors",
    "commercial_use": "",
    "cadence": "weekly (collector)",
-   "health_feed": "overpass",
+   "health_feed": null,
    "jobs": [
     "cables"
    ],

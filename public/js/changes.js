@@ -13,7 +13,21 @@
     { field: 'to', label: 'To', cls: 'ti-wrap' },
   ];
 
+  function week(sec) {
+    const line = sec.querySelector('#week-line');
+    if (!line || !TI.ready('week_review')) return;
+    const w = TI.rows('week_review')[0] || {};
+    const m = (field, text) => { const e = v('span', 'week_review', field, null, text); e.setAttribute('data-row', '0'); return e; };
+    const int = TI.f.int, rng = sec.querySelector('#week-range');
+    if (rng) rng.textContent = w.from ? `${w.from} to ${w.to}` : '';
+    TI.clear(line);
+    line.append(m('level_moves', int(w.level_moves)), ' ThreatCon level moves and ', m('trend_moves', int(w.trend_moves)), ' trend moves; ', m('judgment_changes', int(w.judgment_changes)), ' changes to a judgment, ',
+      m('indicator_changes', int(w.indicator_changes)), ' to a warning indicator and ', m('vector_changes', int(w.vector_changes)), ' to a vector. ', m('items_added', int(w.items_added)), ' evidence items added',
+      w.theaters ? ', most in ' : '', w.theaters ? m('theaters', w.theaters) : '', '. ', m('outcomes', int(w.outcomes)), ' forecast outcomes recorded. ',
+      w.leads_opened ? h('span', {}, 'The analyst run opened ', m('leads_opened', int(w.leads_opened)), ' machine leads and used ', m('leads_used', int(w.leads_used)), ' as evidence (', m('lead_precision', d3.format('.0%')(w.lead_precision)), ' used or already held).') : 'No machine leads were recorded in the period.');
+  }
   function brief(sec) {
+    week(sec);
     const box = sec.querySelector('#since-list');
     if (!box) return;
     const ids = ['run_changes', 'run_summary'];
@@ -67,6 +81,18 @@
       line.append(m('resolved', TI.f.int(f.resolved)), ' horizons scored: ', m('held', TI.f.int(f.held)), ' held, ', m('not_held', TI.f.int(f.not_held)), ' did not hold, ',
         m('indeterminate', TI.f.int(f.indeterminate)), ' indeterminate. Mean Brier score ', m('brier_mean', f.brier_mean == null ? '—' : d3.format('.3f')(f.brier_mean)),
         ' over ', m('scored', TI.f.int(f.scored)), ' scored outcomes. ', m('open', TI.f.int(f.open)), ' judgments carry an open horizon, the next on ', m('next_horizon', f.next_horizon || '—'), '.');
+    }
+    const ct = sec.querySelector('#tbl-corroboration');
+    if (ct && TI.tableState(ct, ['judgment_corroboration'])) {
+      TI.table(ct, TI.rows('judgment_corroboration'), [
+        { field: 'judgment_id', label: 'Judgment', cls: 'ti-nowrap' },
+        { field: 'title', label: 'Title', cls: 'ti-wrap', hideSm: true },
+        { field: 'supporting', label: 'Supporting items', num: true, fmt: 'int' },
+        { field: 'publishers', label: 'Publishers', num: true, fmt: 'int' },
+        { field: 'categories', label: 'Categories', num: true, fmt: 'int', hideSm: true },
+        { field: 'top_publisher', label: 'Most cited', get: (r) => (r.top_publisher ? `${r.top_publisher} (${d3.format('.0%')(r.top_share)})` : '') },
+        { field: 'flag', label: 'Flag', attr: { 'data-status': (r) => (r.flag ? 'review' : 'ok') }, get: (r) => r.flag || 'independent' },
+      ], { limit: 20, empty: 'No ranked judgments.' });
     }
     const al = sec.querySelector('#ach-line'), at = sec.querySelector('#tbl-ach');
     if (at && TI.tableState(at, ['ach_matrix'])) {
