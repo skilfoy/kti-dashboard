@@ -20,8 +20,8 @@ export const PSIRT_FEEDS = [
   { id: 'tenable', vendor: 'Tenable', klass: 'platform', url: 'https://www.tenable.com/security/feed' },
   { id: 'aws', vendor: 'AWS security bulletins', klass: 'platform', url: 'https://aws.amazon.com/security/security-bulletins/rss/feed/' },
   // Added 16 November 2026, each confirmed to answer with a feed that day. ACSC refuses this kind of client, and Citrix, F5,
-  // Juniper, Zyxel and WatchGuard publish no feed that answers with entries.
-  { id: 'checkpoint', vendor: 'Check Point advisories', klass: 'edge', url: 'https://advisories.checkpoint.com/advisories/feed/' },
+  // Juniper, Zyxel and WatchGuard publish no feed that answers with entries. Check Point's feed carries advisory numbers
+  // alone (no product, no CVE, relative links), which gives a reader and the triage tier nothing to work with.
   { id: 'sophos', vendor: 'Sophos', klass: 'edge', url: 'https://www.sophos.com/en-us/security-advisories/feed' },
   { id: 'gitlab', vendor: 'GitLab security releases', klass: 'platform', url: 'https://about.gitlab.com/security-releases.xml' },
   { id: 'chrome', vendor: 'Chrome releases', klass: 'platform', url: 'https://chromereleases.googleblog.com/feeds/posts/default' },
@@ -64,7 +64,7 @@ export function kevIndex(doc) {
 // (ti.kevrank), so the evaluation is forward-looking: a CVE counts as a hit when KEV lists it after the day it was first
 // ranked. The watchlist forecasts nothing about a level or a judgment; it orders the analyst's reading.
 export const KEVRANK = { W: { epss: 0.45, edge: 0.2, wording: 0.15, publishers: 0.1, vendor: 0.1 }, TOP: 25, EPSS_BATCH: 100, MAX_CVES: 800, K: 25, MIN_AGE_DAYS: 7 };
-export const KEV_VENDOR = { checkpoint: 'Check Point', sophos: 'Sophos', gitlab: 'GitLab', chrome: 'Google', fortinet: 'Fortinet', paloalto: 'Palo Alto Networks', cisco: 'Cisco', sonicwall: 'SonicWall', ivanti: 'Ivanti', msrc: 'Microsoft', splunk: 'Splunk', tenable: 'Tenable', aws: 'Amazon' };
+export const KEV_VENDOR = { sophos: 'Sophos', gitlab: 'GitLab', chrome: 'Google', fortinet: 'Fortinet', paloalto: 'Palo Alto Networks', cisco: 'Cisco', sonicwall: 'SonicWall', ivanti: 'Ivanti', msrc: 'Microsoft', splunk: 'Splunk', tenable: 'Tenable', aws: 'Amazon' };
 const EXPLOIT_WORDS = /\b(exploit(ed|ation)?|in the wild|actively|zero[- ]day|0[- ]day|unauthenticated|authentication bypass|remote code execution|rce|pre[- ]auth|command injection)\b/i;
 export function vendorPrior(kev, now = Date.now()) {
   const n = {};
@@ -117,7 +117,14 @@ export async function jobPsirt(opts = {}) {
     const items = r.ok ? parseAdvisories(r.text) : null;
     return { ...f, ok: !!items, status: r.status, ms: r.ms, error: items ? null : r.ok ? 'answer is not a feed' : (r.error || `HTTP ${r.status}`), items: items || [] };
   });
-  const rows = feeds.flatMap((f) => f.items.map((i) => ({ link: i.link, feed: f.id, title: i.title, published: i.published, cves: i.cves })));
+  // One row per link: a feed can list an entry twice, and two feeds can carry the same page (the first deploy with 25
+  // feeds failed on exactly that, 16 November 2026). The first feed in PSIRT_FEEDS order keeps the link; CVEs are merged.
+  const byLink = new Map();
+  for (const f of feeds) for (const i of f.items) {
+    const r = byLink.get(i.link);
+    if (r) r.cves = [...new Set([...r.cves, ...i.cves])].slice(0, 40); else byLink.set(i.link, { link: i.link, feed: f.id, title: i.title, published: i.published, cves: i.cves });
+  }
+  const rows = [...byLink.values()];
   if (!feeds.some((f) => f.ok)) throw new Error('no advisory feed answered: ' + feeds.map((f) => `${f.id} ${f.error}`).join('; '));
   let kev = new Map(), kevNote = null;
   const k = await get(KEV_URL, { timeout: 20000, as: 'json' });

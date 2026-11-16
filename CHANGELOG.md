@@ -4,7 +4,7 @@
 
 - Competing hypotheses rated across the evidence base: all 370 evidence rows of the seven ranked judgments now carry a rating against each stated alternative (ledger R-0032). Every judgment holds against its tested alternatives. Four alternatives are marked as ones little evidence bears on, which names where collection is thin: a US clearance of Hormuz by force (KJ-02), law-enforcement pressure cutting extortion (KJ-04), enforcement reducing North Korean placements (KJ-05) and eviction of the PRC actor from carriers (KJ-07).
 - The model request cap follows the OpenRouter account. A credited account (1,000 free-model requests a day) gets a cap of 600, up to three labelling requests a run and up to eight evaluation batches a run; an account on the free tier keeps 45 and one.
-- Eleven more advisory feeds, each confirmed live: Check Point, Sophos, GitLab, Chrome releases, Zero Day Initiative, JPCERT/CC, Japan Vulnerability Notes, CERT-Bund (BSI), CERT-FR alerts and advisories, NCSC-NL. Twenty-five in all.
+- Ten more advisory feeds, each confirmed live: Sophos, GitLab, Chrome releases, Zero Day Initiative, JPCERT/CC, Japan Vulnerability Notes, CERT-Bund (BSI), CERT-FR alerts and advisories, NCSC-NL. Twenty-four in all. An entry a feed lists twice, or a page two feeds carry, is stored once (the first deploy of this release failed on a duplicate and the loader fell back to the previous bundle, as designed).
 - Calibration by likelihood term on Method, and a print or save-as-PDF button on the Brief.
 
 ## 2.5.0 (16 November 2026)
