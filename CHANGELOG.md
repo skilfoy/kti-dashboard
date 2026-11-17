@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.7.1 (17 November 2026)
+
+- Theater news, first production run: 43 of 46 feeds answered with 959 titles of the last 72 hours. Three refused the collector and are replaced: ReliefWeb (HTTP 406) by UN News, The EastAfrican (404) by Addis Standard, which adds Ethiopian press to the Horn of Africa, and Dawn (403) by Pakistan Today, which keeps Pakistani press beside The Hindu for South Asia.
+- Runbook: after a function deploy, a warm instance of the previous deployment can answer for a few minutes; confirm the version with a run that includes a job the previous version also has.
+- Collector 2026-11-17.2.
+
 ## 2.7.0 (17 November 2026)
 
 - Theater news. A new hourly collector job reads 46 news feeds for titles, links and publication times: both parties' press where a theater has two (Ukrinform and Meduza, the Jerusalem Post and Middle East Eye, Dawn and The Hindu, Yonhap and NK News, Radio Tamazuj and Dabanga), regional outlets for the theaters that international wires cover thinly (the Horn of Africa, Sudan, the Sahel, Central Asia, Afghanistan and Pakistan, the Balkans and NATO's eastern flank), and maritime and defense trade press. The Sources page lists each outlet, what it answered and its titles of the last 72 hours. The triage tier reads the titles with the blogs and advisories, taking each kind in turn so none crowds out the others.
