@@ -2,6 +2,7 @@
 
 ## 2.7.2 (17 November 2026)
 
+- Infra job: four runs between 08:40 and 10:12 UTC on 17 November failed with "ON CONFLICT DO UPDATE command cannot affect row a second time" when a feed listed one address in two spellings (IPv6 in upper and lower case reads as one inet). Both upserts now keep one row per key. Collector 2026-11-17.3.
 - Four panels threw or misread on live data while every offline check passed, because list and record cells arrive from the runtime as JSON text: the Sources page's advisory table and machine triage card, and the Method page's STIX export. The triage card and the Theaters page read the evaluation record as text, so the site kept the model's labels and the theater leads hidden after the evaluation passed on 16 November. All now read cells through `TI.list` and `TI.obj`.
 - The Site workflow gains a browser check on the production service's current answers (`test/save_live.mjs`), so page code that throws on real data shapes fails the check before it reaches the public site.
 - Theaters page: the leads table takes the full page width. Sources page: the news table names each theater beside its id.

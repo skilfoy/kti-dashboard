@@ -225,10 +225,13 @@ export async function jobInfra() {
   const seenAt = new Date().toISOString();
   const okLayers = LAYERS.filter((l) => fetched[l].ok);
   const infraRows = okLayers.flatMap((l) => fetched[l].rows.map(({ as_feed, ...x }) => x));
+  // One row per key: a feed can list an address twice, or in two spellings of one inet (17 November 2026: four runs
+  // failed with "ON CONFLICT DO UPDATE command cannot affect row a second time").
   await sqlTx([
     [`INSERT INTO ti.ip_geo (ip, ok, lat, lon, cc, country, region, city, asn, as_name, isp, provider, fetched_at)
-      SELECT ip::inet, ok, lat, lon, cc, country, region, city, asn, as_name, isp, provider, now()
+      SELECT DISTINCT ON (ip::inet) ip::inet, ok, lat, lon, cc, country, region, city, asn, as_name, isp, provider, now()
       FROM jsonb_to_recordset($1::jsonb) AS x(ip text, ok boolean, lat real, lon real, cc text, country text, region text, city text, asn text, as_name text, isp text, provider text)
+      ORDER BY ip::inet, ok DESC
       ON CONFLICT (ip) DO UPDATE SET ok = EXCLUDED.ok OR ti.ip_geo.ok,
         lat = CASE WHEN EXCLUDED.ok THEN EXCLUDED.lat ELSE ti.ip_geo.lat END, lon = CASE WHEN EXCLUDED.ok THEN EXCLUDED.lon ELSE ti.ip_geo.lon END,
         cc = CASE WHEN EXCLUDED.ok THEN EXCLUDED.cc ELSE ti.ip_geo.cc END, country = CASE WHEN EXCLUDED.ok THEN EXCLUDED.country ELSE ti.ip_geo.country END,
@@ -237,9 +240,10 @@ export async function jobInfra() {
         isp = CASE WHEN EXCLUDED.ok THEN EXCLUDED.isp ELSE ti.ip_geo.isp END, provider = CASE WHEN EXCLUDED.ok THEN EXCLUDED.provider ELSE ti.ip_geo.provider END,
         fetched_at = now()`, [geoRows]],
     [`INSERT INTO ti.infra (layer, ip, port, family, threat, status, confidence, count, tags, ref, cc_feed, first_seen, last_seen, first_obs, last_obs)
-      SELECT layer, ip::inet, port, family, threat, status, confidence, count, tags, ref, cc_feed, first_seen, last_seen, $2::timestamptz, $2::timestamptz
+      SELECT DISTINCT ON (layer, ip::inet, port) layer, ip::inet, port, family, threat, status, confidence, count, tags, ref, cc_feed, first_seen, last_seen, $2::timestamptz, $2::timestamptz
       FROM jsonb_to_recordset($1::jsonb) AS x(layer text, ip text, port int, family text, threat text, status text, confidence int, count int, tags text, ref text, cc_feed text,
         first_seen timestamptz, last_seen timestamptz)
+      ORDER BY layer, ip::inet, port, last_seen DESC NULLS LAST
       ON CONFLICT (layer, ip, port) DO UPDATE SET family = EXCLUDED.family, threat = EXCLUDED.threat, status = EXCLUDED.status, confidence = EXCLUDED.confidence,
         count = EXCLUDED.count, tags = EXCLUDED.tags, ref = EXCLUDED.ref, cc_feed = EXCLUDED.cc_feed, first_seen = coalesce(EXCLUDED.first_seen, ti.infra.first_seen),
         last_seen = coalesce(EXCLUDED.last_seen, ti.infra.last_seen), last_obs = $2::timestamptz`, [infraRows, seenAt]],
