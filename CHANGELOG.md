@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.2 (17 November 2026)
+
+- Corroboration depth for agentic reports: a draft citing fewer than eight distinct sources (or all of them, when fewer were seen) goes back to the model once to corroborate each key fact from the listed sources; the revision is kept when it cites more. The first practitioner report (Optimizely, retail SOC direction) started at once and finished in 144 seconds but cited 4 sources.
+- Collector 2026-11-17.8.
+
 ## 3.0.1 (17 November 2026)
 
 - First production runs of 3.0: the sources job read 520 feeds in 150 seconds with none failing (19 healed: 17 through Google News, 2 through discovery) and stored 15,190 entries; the store held 21,835 entries from 1,891 publishers. A search for Optimizely returns 77 entries from 72 publishers. The first agentic report (an intelligence brief on the Optimizely script hijacking) took about three minutes on nvidia/nemotron-3-ultra-550b-a55b:free.
