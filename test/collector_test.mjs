@@ -3,6 +3,7 @@
 // store-built GDELT window against the live /api/gdelt-events handler on the same exports.
 // node test/collector_test.mjs <repository root>   (after python3 pipeline/collector_build.py .)
 import { PGlite } from '@electric-sql/pglite';
+import { pg_trgm } from '@electric-sql/pglite/contrib/pg_trgm';
 import zlib from 'node:zlib';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -16,7 +17,7 @@ let pass = 0;
 const ok = (c, m) => { assert.ok(c, m); pass++; };
 
 // ---------------------------------------------------------------- Postgres
-const db = await PGlite.create();
+const db = await PGlite.create({ extensions: { pg_trgm } });
 await db.exec(fs.readFileSync(path.join(TF, 'neon', 'schema.sql'), 'utf8'));
 const RAW = Object.fromEntries(Array.from({ length: 6000 }, (_, i) => [i, (v) => v]));
 let sqlCalls = 0;
@@ -532,7 +533,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(p2.ok && (await db.query(`SELECT count(*)::int AS n FROM ti.advisory`)).rows[0].n === (M.PSIRT_FEEDS.length - 2) * 3 + 1, 'psirt second run upserts without duplicates: an entry a feed lists twice and a page every feed carries are stored once; old advisories stay stored and off the document');
 
   // Dark without a key: no request, nothing published.
-  await db.query(`DELETE FROM ti.blog_item`); // the blogs test's items would fill the batch; the advisories alone are counted here
+  await db.query(`DELETE FROM ti.blog_item`); await db.query(`DELETE FROM ti.item`); // the blogs test's items would fill the batch; the advisories alone are counted here
   const t0r = await M.runJob('triage');
   ok(t0r.ok && /OPENROUTER_API_KEY/.test(t0r.held) && llm.length === 0 && !bucket.has('ti-docs/docs/triage.json.gz'), 'triage holds without a key and makes no request');
   process.env.OPENROUTER_API_KEY = 'sk-or-test';
@@ -671,18 +672,19 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(new Set(M.NEWS_FEEDS.map((f) => f.id)).size === M.NEWS_FEEDS.length && M.NEWS_FEEDS.every((f) => /^https:\/\//.test(f.url))
     && Object.keys(M.TRIAGE_THEATERS).filter((k) => k !== 'T-GLB').every((k) => M.NEWS_FEEDS.some((f) => f.region === k)), 'every theater has at least one news feed');
   ok(Object.entries(M.BLOG_FEEDS).every(([k, v]) => /^https:\/\//.test(k) && /^https:\/\//.test(v)) && Object.keys(M.BLOG_FEEDS).length >= 20, 'explicit blog feeds are https');
-  await db.query(`DELETE FROM ti.triage`); await db.query(`DELETE FROM ti.blog_item`); await db.query(`DELETE FROM ti.advisory`);
+  await db.query(`DELETE FROM ti.triage`); await db.query(`DELETE FROM ti.blog_item`); await db.query(`DELETE FROM ti.item WHERE category <> 'geopolitics'`); await db.query(`DELETE FROM ti.advisory`);
   await db.query(`DELETE FROM ti.kv WHERE k IN ('triage:budget', 'triage:tier')`);
   process.env.OPENROUTER_API_KEY = 'sk-or-test'; process.env.TI_TRIAGE_VERIFY = 'never';
   const tr = await M.runJob('triage');
   const tdoc = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/triage.json.gz')).toString());
   const leads = tdoc.rows.filter((r) => r.kind === 'lead');
-  ok(tr.ok && tr.pool === F * 2 + 1 && leads.length > 0 && leads.every((r) => r.from === 'news' && r.theater === 'T-UKR') && /theater news/.test(tdoc.source),
+  const nItems = (await db.query(`SELECT count(*)::int AS n FROM ti.item`)).rows[0].n;
+  ok(tr.ok && tr.pool === nItems && nItems >= F * 2 - 2 && leads.length > 0 && leads.every((r) => r.from === 'geopolitics' && r.theater === 'T-UKR') && /theater news/.test(tdoc.source),
     'triage takes the news titles into its pool ' + JSON.stringify({ pool: tr.pool, labelled: tr.labelled, leads: leads.length }));
   // A later title of a story already labelled joins it with no request; stories labelled in different runs merge in the
   // document when they carry the same theater and their titles pass the loose test.
   const rep0 = leads[0], calls0 = tr.calls.length;
-  await db.query(`INSERT INTO ti.news (link, feed, source, title, published) VALUES ('https://late.example/1', 'late', 'Late Wire', $1, now())`, ['Update: ' + rep0.title]);
+  await db.query(`INSERT INTO ti.item (link, fp, feed, source, host, title, published, category, region) VALUES ('https://late.example/1', 'fp-late-1', 'late', 'Late Wire', 'late.example', $1, now(), 'geopolitics', 'Global')`, ['Update: ' + rep0.title]);
   const tr2 = await M.runJob('triage');
   const j = (await db.query(`SELECT cluster, theater, relevance FROM ti.triage WHERE link = 'https://late.example/1'`)).rows[0];
   ok(tr2.ok && tr2.joined === 1 && tr2.calls.length === 0 && j && j.cluster === rep0.link && j.theater === rep0.theater && j.relevance === rep0.relevance,
@@ -696,6 +698,90 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(m1 && m1.also === 1 && m1.also_sources[0] === 'France 24' && !md.rows.some((r) => r.link === 'https://m.example/2') && md.rows.some((r) => r.link === 'https://m.example/3'),
     'same-story leads from different runs merge under one theater, not across theaters');
   delete process.env.OPENROUTER_API_KEY; delete process.env.TI_TRIAGE_VERIFY;
+  EXTRA = prevExtra;
+}
+
+// Source network (3.0): registry from the bucket, conditional reads, healing through discovery and Google News, one row
+// per story across a direct feed and Google News, search over the store, and the agentic report with tool calls.
+{
+  const reg = { generated: '2026-11-17T12:00:00+00:00', lists: [], rejected: [{ name: 'Gone', url: 'https://gone.example/feed', why: 'HTTP 404' }], feeds: [
+    { id: 'direct-1', name: 'Direct Wire', url: 'https://direct.example/feed/', category: 'cyber-news', region: 'Global', tier: 1, lang: 'en' },
+    { id: 'blocked-1', name: 'Blocked Daily', url: 'https://blocked.example/rss', category: 'geopolitics', region: 'T-SAS', tier: 2, lang: 'en' },
+    { id: 'moved-1', name: 'Moved Blog', url: 'https://moved.example/old.xml', category: 'research', region: 'Global', tier: 3, lang: 'en' },
+    { id: 'gn-1', name: 'Google News: data breach', url: M.gnewsUrl('data breach', 1), category: 'topic-cyber', region: 'Global', tier: 1, lang: 'en', gnews: true } ] };
+  bucket.set('ti-docs/ref/feeds.json', Buffer.from(JSON.stringify(reg)));
+  const now = new Date().toUTCString(), rss2 = (items) => `<rss><channel>${items.map(([t, l, src]) => `<item><title>${t}</title><link>${l}</link><pubDate>${now}</pubDate><description>About ${t} &amp; more</description>${src ? `<source url="https://${src}">${t.split(' - ').pop()}</source>` : ''}</item>`).join('')}</channel></rss>`;
+  let seenIfNone = 0, gnSite = 0;
+  const prevExtra = EXTRA;
+  EXTRA = async (u, opts, h) => {
+    if (u === 'https://direct.example/feed/') { if (h['if-none-match'] === '"v1"') { seenIfNone++; return new Response(null, { status: 304 }); } return resp(200, rss2([['Optimizely supply chain attack hits 178 sites', 'https://direct.example/a1'], ['Unrelated item', 'https://direct.example/a2']]), { etag: '"v1"' }); }
+    if (u === 'https://blocked.example/rss' || u === 'https://blocked.example/') return resp(403, 'blocked');
+    if (u === 'https://moved.example/old.xml') return resp(404, 'gone');
+    if (u === 'https://moved.example/') return resp(200, '<html><head><link rel="alternate" type="application/rss+xml" href="/new.xml"></head></html>');
+    if (u === 'https://moved.example/new.xml') return resp(200, rss2([['Moved blog post on ShinyHunters vishing', 'https://moved.example/p1']]));
+    if (u.startsWith('https://news.google.com/rss/search')) {
+      const qq = new URL(u).searchParams.get('q') || '';
+      if (qq.startsWith('site:blocked.example')) { gnSite++; return resp(200, rss2([['Blocked Daily reports border clash - Blocked Daily', 'https://news.google.com/rss/articles/b1', 'blocked.example']])); }
+      if (qq.startsWith('data breach')) return resp(200, rss2([['Optimizely supply chain attack hits 178 sites - Direct Wire', 'https://news.google.com/rss/articles/g1', 'direct.example'], ['Retailer discloses data breach - Other Paper', 'https://news.google.com/rss/articles/g2', 'other.example']]));
+      if (/optimizely/i.test(qq)) return resp(200, rss2([['Optimizely confirms incident - Vendor Blog', 'https://news.google.com/rss/articles/g3', 'vendor.example']]));
+    }
+    if (u.startsWith('https://www.bing.com/news/search')) return resp(200, rss2([['Optimizely incident analysis', 'http://www.bing.com/news/apiclick.aspx?url=https%3A%2F%2Fanalysis.example%2Foptimizely&c=1']]));
+    if (u === 'https://analysis.example/optimizely') return resp(200, '<html><head><title>Analysis</title></head><body><article>' + '<p>The injected script swapped wallet addresses and skimmed cards on 178 sites.</p>'.repeat(20) + '</article></body></html>');
+    return prevExtra ? prevExtra(u, opts, h) : null;
+  };
+  await db.query(`DELETE FROM ti.item`);
+  const s1 = await M.runJob('sources', { holder: 'manual' });
+  const items = (await db.query(`SELECT link, feed, source, host, title, category, region FROM ti.item ORDER BY link`)).rows;
+  const fs1 = Object.fromEntries((await db.query(`SELECT id, via, alt, status, fails, etag FROM ti.feed`)).rows.map((r) => [r.id, r]));
+  ok(s1.ok && s1.read === 4 && s1.failed === 0 && s1.healed === 2 && fs1['blocked-1'].via === 'gnews' && fs1['moved-1'].via === 'discovered' && fs1['moved-1'].alt === 'https://moved.example/new.xml' && fs1['direct-1'].etag === '"v1"',
+    'every feed is read; a refused feed heals through Google News and a moved one through discovery ' + JSON.stringify({ s1, fs1 }));
+  ok(items.filter((i) => /optimizely supply chain/i.test(i.title)).length === 1 && items.some((i) => i.host === 'other.example' && i.source === 'Other Paper' && i.title === 'Retailer discloses data breach') && items.some((i) => i.feed === 'blocked-1' && i.host === 'blocked.example' && i.title === 'Blocked Daily reports border clash' && i.region === 'T-SAS'),
+    'a story read directly and through Google News is stored once; Google News items keep their publisher and lose the " - Publisher" suffix ' + JSON.stringify(items.map((i) => [i.feed, i.host, i.title])));
+  await db.query(`UPDATE ti.feed SET next_at = now() - interval '1 minute'`);
+  const s2 = await M.runJob('sources', { holder: 'manual' });
+  ok(s2.ok && seenIfNone === 1 && s2.unchanged >= 1 && s2.failed === 0 && (await db.query(`SELECT count(*)::int AS n FROM ti.item`)).rows[0].n === items.length, 'a second read sends the stored ETag and adds no duplicate');
+  const sdoc = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/sources.json.gz')).toString());
+  ok(sdoc.feeds === 4 && sdoc.feeds_ok === 4 && sdoc.healed === 2 && sdoc.rows.length === 4 && sdoc.rejected === 1, 'the source network document lists every feed and its healed route');
+  // Search: whole words, prefixes, phrases; the triage label rides along.
+  await db.query(`INSERT INTO ti.triage (link, kind, source, title, published, cves, relevance, vector, theater, actors, why, model, prompt_v) VALUES ('https://direct.example/a1', 'cyber-news', 'Direct Wire', 'Optimizely supply chain attack hits 178 sites', now(), '[]', 3, 'Supply chain & third parties', 'T-GLB', '[]', 'w', 'm', 'triage-1') ON CONFLICT DO NOTHING`);
+  const q1 = await M.search({ q: 'optimizely' }), q2 = await M.search({ q: 'optimiz' }), q3 = await M.search({ q: '"supply chain" -retailer' }), q4 = await M.search({ q: 'shinyhunters', category: 'cyber-news' });
+  ok(q1.total === 1 && q1.hits[0].relevance === 3 && q1.hits[0].vector === 'Supply chain & third parties' && /«/.test(q1.hits[0].snippet) && q2.total === 1 && q3.total === 1 && q4.total === 0 && q1.by_day.length === 1,
+    'search finds whole words, prefixes and phrases, applies filters, and carries the triage label ' + JSON.stringify({ q1: q1.total, q2: q2.total, q3: q3.total, q4: q4.total }));
+  ok((await M.search({ q: 'x' })).total === 0, 'a one-character query returns nothing');
+  // Agentic report: a tool round (web search), then the final answer; an invented citation is dropped.
+  process.env.OPENROUTER_API_KEY = 'sk-or-test';
+  await db.query(`DELETE FROM ti.kv WHERE k IN ('report:models', 'report:budget')`);
+  let calls = [];
+  const prev2 = EXTRA;
+  EXTRA = async (u, opts, h) => {
+    if (u === M.REPORT.MODELS_URL) return resp(200, { data: [{ id: 'paid/model', pricing: { prompt: '0.1', completion: '0.1' }, supported_parameters: ['tools'], context_length: 1000000 },
+      { id: 'test/big:free', pricing: { prompt: '0', completion: '0' }, supported_parameters: ['tools', 'reasoning'], context_length: 1000000 }, { id: 'test/small:free', pricing: { prompt: '0', completion: '0' }, supported_parameters: ['tools'], context_length: 8000 }] });
+    if (u === M.REPORT.ENDPOINT) {
+      const b = JSON.parse(opts.body); calls.push(b);
+      if (calls.length === 1) return resp(200, { choices: [{ finish_reason: 'tool_calls', message: { content: '', tool_calls: [{ id: 't1', type: 'function', function: { name: 'web_search', arguments: '{"query":"Optimizely incident"}' } }, { id: 't2', type: 'function', function: { name: 'fetch_page', arguments: '{"source":"https://analysis.example/optimizely"}' } }] } }] });
+      const toolText = b.messages.filter((m) => m.role === 'tool').map((m) => m.content).join('\n');
+      const n = (toolText.match(/\[(\d+)\] Optimizely incident analysis/) || [])[1];
+      return resp(200, { choices: [{ finish_reason: 'stop', message: { content: `## Bottom line up front\nAttackers injected a skimmer through Optimizely [1][${n}]. Invented claim [99].\n\n## Corroboration\n- Skimmer: [1][${n}]` } }] });
+    }
+    return prev2(u, opts, h);
+  };
+  const st = await M.startReport({ q: 'Optimizely', type: 'brief', ip: 'abc' });
+  const again = await M.startReport({ q: 'optimizely', type: 'brief', ip: 'abc' });
+  ok(st.id && /^R-\d{8}-[0-9a-f]{8}$/.test(st.id) && again.id === st.id && again.reused && bucket.has(`ti-docs/reports/queue/${st.id}.json`), 'a report is queued, announced to the bucket, and an identical request reuses it');
+  const trig = await M.default.fetch(new Request('https://ti.example/report-run', { method: 'POST', headers: { 'x-neon-trigger-invocation-id': 'inv-1', 'content-type': 'application/json' }, body: JSON.stringify({ data: { key: `reports/queue/${st.id}.json` } }) }));
+  const tr = await trig.json(), rep = await M.getReport(st.id);
+  const src = rep.sources || [];
+  ok(trig.status === 200 && tr.ok && rep.status === 'done' && rep.model === 'test/big:free' && calls.length === 2 && calls[0].tools.length === 3 && !calls[1].tools === false
+    && !/\[99\]/.test(rep.body) && src.length === 2 && src.some((x) => x.url === 'https://analysis.example/optimizely') && src.some((x) => x.via === 'corpus'),
+    'the upload trigger runs the report: a free model with tools, web search through Bing News with the publisher link unwrapped, an invented citation dropped ' + JSON.stringify({ tr, status: rep.status, err: rep.error, src, calls: calls.length }));
+  ok((await M.getReport('nope')) === null && (await M.listReports()).some((r) => r.id === st.id), 'reports are listed and ids are checked');
+  for (let k = 0; k < 6; k++) await M.startReport({ q: 'topic ' + k, type: 'exec', ip: 'flood' });
+  const lim = await M.startReport({ q: 'topic 9', type: 'exec', ip: 'flood' });
+  ok(lim.status === 429 && /an hour/.test(lim.error), 'reports are limited per address');
+  const ws = await M.webSearch('Optimizely incident');
+  ok(ws.results.some((x) => x.via === 'bing-news' && x.url === 'https://analysis.example/optimizely') && ws.results.some((x) => x.via === 'google-news') && ws.tried.includes('google-news') && !ws.tried.includes('tavily'), 'free web search without keys: Bing News and Google News');
+  ok((await M.fetchPage('http://169.254.169.254/latest')).ok === false && (await M.fetchPage('https://x.neon.tech/')).ok === false, 'fetch_page refuses internal addresses');
+  delete process.env.OPENROUTER_API_KEY;
   EXTRA = prevExtra;
 }
 
@@ -796,11 +882,11 @@ ok(!M.KNOWN_GAPS.greynoise && M.feedState({ feed: 'greynoise', ok: true, status:
   ok((await call('/status', { headers: { 'x-ti-key': 'k'.repeat(48) } })).status === 200, 'operator key accepted when configured');
   const t = await call('/', { method: 'POST', headers: { 'x-neon-trigger-invocation-id': 'abc', 'content-type': 'application/json' }, body: JSON.stringify({ version: 1, trigger: { type: 'schedule' }, data: { scheduled_at: '2026-10-17T18:15:00Z' } }) });
   const tj = await t.json();
-  ok(t.status === 200 && tj.jobs.map((j) => j.job).join() === 'gdelt,health,ioda,lists,leaksites,links,triageeval', 'trigger plan at :15 ' + tj.jobs.map((j) => j.job));
+  ok(t.status === 200 && tj.jobs.map((j) => j.job).join() === 'gdelt,health,ioda,sources,lists,leaksites,links,triageeval,reports', 'trigger plan at :15 ' + tj.jobs.map((j) => j.job));
   const st = await (await call('/status', bearer(mint()))).json();
   ok(st.gdelt_files.files >= 288 && st.version === M.VERSION && st.runs.length > 0, 'status ' + JSON.stringify(st.gdelt_files));
-  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:34:00Z'))) === '["gdelt","infra","snap","news"]', 'news at :34');
-  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:00:00Z'))) === '["gdelt","infra","snap"]' && JSON.stringify(M.plan(new Date('2026-10-17T18:45:00Z'))) === '["gdelt","health","ioda","retention","fires","maritime","blogs","triage"]'
+  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:34:00Z'))) === '["gdelt","infra","snap","sources","reports"]', 'sources in every slot, reports last');
+  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:00:00Z'))) === '["gdelt","infra","snap","sources","reports"]' && JSON.stringify(M.plan(new Date('2026-10-17T18:45:00Z'))) === '["gdelt","health","ioda","retention","fires","maritime","sources","triage","reports"]'
     && M.plan(new Date('2026-10-17T07:19:00Z')).includes('psirt') && !M.plan(new Date('2026-10-17T08:19:00Z')).includes('psirt') && M.plan(new Date('2026-10-17T08:19:00Z')).includes('triageeval') && !M.plan(new Date('2026-10-17T08:49:00Z')).includes('triageeval'), 'plan');
 }
 

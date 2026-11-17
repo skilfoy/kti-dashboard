@@ -4,7 +4,7 @@
   const { h } = TI;
   const LIVE = ['live_ransomware', 'live_epss', 'live_threatfox', 'live_health', 'live_gdelt', 'live_exposure', 'live_threatmap', 'live_outages', 'live_actors', 'live_cyberattacks', 'live_lanes', 'live_ofac',
     // Collector documents (threat-feeds /api/context); enrichment runs on demand only and is left out.
-    'live_fires', 'live_maritime', 'live_leaksites', 'live_lists', 'live_blogs', 'live_psirt', 'live_triage', 'live_news', 'live_links', 'live_unit42', 'live_genioc', 'live_lanesreg', 'live_ransompay', 'live_sec8k'];
+    'live_fires', 'live_maritime', 'live_leaksites', 'live_lists', 'live_blogs', 'live_psirt', 'live_triage', 'live_news', 'live_sources', 'live_links', 'live_unit42', 'live_genioc', 'live_lanesreg', 'live_ransompay', 'live_sec8k'];
   TI.LIVE = LIVE;
   const store = {
     get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },

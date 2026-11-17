@@ -1,0 +1,60 @@
+name: Source network registry
+
+# Weekly rebuild of the source network registry (data/feeds.json): merges the curated core (data/sources/core.json)
+# with the open feed lists, validates every feed, and keeps those that answer with an entry in the last 180 days. A
+# rebuild that keeps fewer than 90 percent of the current feeds is held for review (a runner network fault must not
+# shrink the network); otherwise it is merged and the Site workflow deploys it, and the collector reads the published
+# registry at /data/feeds.json on its next run.
+on:
+  schedule:
+    - cron: '17 3 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency: { group: feeds-registry, cancel-in-progress: false }
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Rebuild and validate
+        run: |
+          cp data/feeds.json /tmp/feeds.prev.json
+          python3 -I pipeline/feeds_build.py --self-test
+          python3 -I pipeline/feeds_build.py --workers 48 --out data/feeds.json
+      - name: Decide
+        id: decide
+        run: |
+          python3 -I - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          old = json.load(open('/tmp/feeds.prev.json')); new = json.load(open('data/feeds.json'))
+          a, b = len(old['feeds']), len(new['feeds'])
+          same = sorted(f['url'] for f in old['feeds']) == sorted(f['url'] for f in new['feeds'])
+          print(f"old={a}"); print(f"new={b}")
+          print("action=" + ("none" if same else "merge" if b >= 0.9 * a else "hold"))
+          PY
+      - name: Open and merge the pull request
+        if: steps.decide.outputs.action != 'none'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTION: ${{ steps.decide.outputs.action }}
+          OLD: ${{ steps.decide.outputs.old }}
+          NEW: ${{ steps.decide.outputs.new }}
+        run: |
+          br="feeds-registry-$(date -u +%Y%m%d)"
+          git config user.name "kti-bot"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$br"; git add data/feeds.json
+          git commit -m "Source network registry: $OLD to $NEW feeds (weekly rebuild)"
+          git push -u origin "$br"
+          n=$(gh api repos/${{ github.repository }}/pulls -f title="Source network registry: $OLD to $NEW feeds" -f head="$br" -f base=main \
+            -f body="Weekly rebuild by .github/workflows/feeds-registry.yml. Feeds: $OLD before, $NEW after. Action: $ACTION (held when fewer than 90 percent of the current feeds survive validation)." --jq .number)
+          if [ "$ACTION" = "merge" ]; then
+            gh api -X PUT repos/${{ github.repository }}/pulls/$n/merge -f merge_method=squash >/dev/null
+            gh workflow run site.yml --ref main
+          fi

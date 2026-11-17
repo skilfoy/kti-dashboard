@@ -555,6 +555,22 @@
   }
 
   TI.page('defense', (sec) => {
+    const tj = sec.querySelector('#tbl-judgment-detect');
+    if (tj && TI.tableState(tj, ['judgment_detection'])) {
+      const pc = (x) => (x == null ? 'n/a' : Math.round(x * 100) + '%');
+      TI.table(tj, TI.rows('judgment_detection'), [
+        { field: 'judgment_id', label: 'Judgment', cls: 'ti-nowrap', get: (r) => `${r.judgment_id} ${r.title}`, attr: {} },
+        { field: 'vector', label: 'Vector', hideSm: true },
+        { field: 'groups', label: 'Named ATT&CK groups', cls: 'ti-wrap', hideSm: true },
+        { field: 'techniques', label: 'Techniques', num: true },
+        { field: 'coverage', label: 'With a Sigma rule', num: true, get: (r) => (r.techniques ? `${r.with_sigma} (${pc(r.coverage)})` : '—'), attr: { 'data-status': (r) => (r.coverage == null ? '' : r.coverage >= 0.8 ? 'ok' : r.coverage >= 0.5 ? 'review' : 'fail') } },
+        { field: 'with_stable', label: 'Stable', num: true, hideSm: true },
+        { field: 'with_high', label: 'High severity', num: true, hideSm: true },
+        { field: 'sigma_rules', label: 'Sigma rules', num: true, fmt: 'int' },
+        { field: 'gaps', label: 'Techniques without a Sigma rule', cls: 'ti-wrap', get: (r) => r.scope_note || r.gaps || 'none' },
+        { field: 'top_rules', label: 'Example rules', cls: 'ti-wrap', hideSm: true },
+      ], { sort: 'exec_rank', dir: 'asc', empty: 'No judgments.' });
+    }
     const vn = vname();
     for (const el of sec.querySelectorAll('.def-vname')) el.textContent = vn;
     const need = ['defense_priority', 'defense_techniques'];

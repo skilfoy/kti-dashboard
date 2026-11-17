@@ -9,7 +9,11 @@ LEASE_S.cables = 180;
 // Advisory feeds every three hours at :19; machine triage hourly at :49 (after the blogs slice of the same run), with its
 // evaluation run on demand only (37f-triage.mjs).
 Object.assign(JOBS, { psirt: jobPsirt, triage: jobTriage, triageeval: jobTriageeval, news: jobNews });
-Object.assign(LEASE_S, { psirt: 240, triage: 420, triageeval: 600, news: 180 });
+Object.assign(LEASE_S, { psirt: 240, triage: 600, triageeval: 600, news: 180 });
+// Source network and agentic reports (3.0, 37h-sources.mjs and 37i-report.mjs). The sources job replaces the news job and
+// the blogs job's reading on the schedule; both stay callable by hand.
+Object.assign(JOBS, { sources: jobSources, reports: jobReports });
+Object.assign(LEASE_S, { sources: 240, reports: 720 });
 export async function runJob(job, opts = {}) {
   const fn = JOBS[job];
   if (!fn) return { job, ok: false, error: 'unknown job' };
@@ -45,8 +49,8 @@ export function plan(at) {
   const jobs = ['gdelt'];
   if (m < 15 || (m >= 30 && m < 45)) jobs.push('infra', 'snap');
   else jobs.push('health', 'ioda');
-  // Theater news hourly at :34, so the :49 triage run reads the hour's titles (37g-news.mjs).
-  if (m >= 30 && m < 45) jobs.push('news');
+  // The source network reads its due feeds in every slot; at :49 it runs before triage, so triage reads the hour's titles.
+  if (m < 45) jobs.push('sources');
   if (m >= 15 && m < 30) {
     jobs.push('lists', 'leaksites', 'links');
     if (h === 6) jobs.push('unit42');
@@ -60,7 +64,8 @@ export function plan(at) {
     // route answers within its own deadline and cannot hold a model request open, so the replay runs on the schedule.
     jobs.push('triageeval');
   }
-  if (m >= 45) jobs.push('retention', 'fires', 'maritime', 'blogs', 'triage');
+  if (m >= 45) jobs.push('retention', 'fires', 'maritime', 'sources', 'triage');
+  jobs.push('reports');
   return jobs;
 }
 export async function scheduled(at) {
@@ -196,8 +201,20 @@ export default {
         const at = body && body.data && body.data.scheduled_at ? new Date(body.data.scheduled_at) : new Date();
         return json(await scheduled(isNaN(at) ? new Date() : at));
       }
+      // The bucket's upload trigger for reports/queue/ (agentic reports): the trigger holds the request while the report is
+      // written. The header is one Neon strips from client requests.
+      if (req.method === 'POST' && path === '/report-run' && req.headers.get('x-neon-trigger-invocation-id')) {
+        const body = await req.json().catch(() => ({}));
+        const key = String((body && body.data && (body.data.key || body.data.object_key)) || (body && (body.key || body.object_key)) || JSON.stringify(body || {}));
+        const m = key.match(/R-\d{8}-[0-9a-f]{8}/);
+        return json(m ? await runReport(m[0]) : { skipped: 'no report id in the event', event: String(key).slice(0, 300) });
+      }
       const who = await authorize(req);
       if (!who) return json({ error: 'unauthorized' }, 401);
+      if (req.method === 'POST' && path === '/search') return json(await search(await req.json().catch(() => ({}))));
+      if (req.method === 'POST' && path === '/report') { const r = await startReport(await req.json().catch(() => ({}))); return json(r, r.status && r.error ? r.status : 200); }
+      if (req.method === 'GET' && path.startsWith('/report/')) { const r = await getReport(path.slice(8)); return r ? json(r) : json({ error: 'not found' }, 404); }
+      if (req.method === 'GET' && path === '/reports') return json({ reports: await listReports(url.searchParams.get('limit')) });
       if (req.method === 'GET' && path.startsWith('/doc/')) {
         const name = path.slice(5);
         if (!/^[a-z0-9-]{1,64}$/.test(name)) return json({ error: 'bad name' }, 400);

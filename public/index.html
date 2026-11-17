@@ -49,6 +49,10 @@
         <span data-source="rw_stats" data-field="financial_change" data-row="0" data-fill data-fmt="signedPct">—</span> period on period.
       </p>
     </div>
+    <form class="ti-hsearch" id="hdr-search" role="search" aria-label="Search the platform">
+      <input type="search" id="hdr-q" name="q" placeholder="Search intelligence, e.g. Optimizely, CVE-2026-1234, Volt Typhoon" aria-label="Search the platform" autocomplete="off" maxlength="200">
+      <button type="submit" class="ti-btn">Search</button>
+    </form>
     <div class="ti-asof" id="asof">
       <div>Run <span class="ti-mono" data-source="latest_run" data-field="run_id" data-row="0" data-fill>—</span> · <span data-source="latest_run" data-field="at" data-row="0" data-fill>—</span></div>
       <div><span data-source="latest_run" data-field="validator" data-row="0" data-fill>—</span></div>
@@ -69,6 +73,7 @@
     <button class="ti-tab" role="tab" id="tab-requirements" data-page="requirements" aria-selected="false"><span class="ti-step">10</span>Requirements</button>
     <button class="ti-tab" role="tab" id="tab-sources" data-page="sources" aria-selected="false"><span class="ti-step">11</span>Sources</button>
     <button class="ti-tab" role="tab" id="tab-method" data-page="method" aria-selected="false"><span class="ti-step">12</span>Method</button>
+    <button class="ti-tab" role="tab" id="tab-search" data-page="search" aria-selected="false"><span class="ti-step">13</span>Search &amp; reports</button>
   </nav>
 
   <!-- 1 BRIEF -->
@@ -815,7 +820,12 @@
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-def-src" data-source="defense_sources" data-row-key="source_id"></table></div>
       </div>
     </template>
-  </section>
+      <div class="ti-card ti-section" id="def-judgment-detect">
+      <h3 class="ti-h3">Detection coverage by judgment <span class="ti-pir">SigmaHQ</span></h3>
+      <p class="ti-card-note" data-source="judgment_detection">For each judgment, the ATT&amp;CK techniques in its scope (its intrusion vector's techniques, the techniques of the ATT&amp;CK groups its text names, and technique IDs it cites) and how many of them have a SigmaHQ detection rule, how many a stable or high-severity one, and which have none. Gaps marked "Elastic or Splunk only" have vendor content but no Sigma rule. Coverage counts rules that exist, not rules deployed in any environment.</p>
+      <div class="ti-tbox"><table class="ti-table" id="tbl-judgment-detect" data-source="judgment_detection" data-row-key="judgment_id"></table></div>
+    </div>
+</section>
 
   <!-- 10 REQUIREMENTS -->
   <section class="ti-page" id="requirements" role="tabpanel" aria-labelledby="tab-requirements" hidden>
@@ -880,23 +890,16 @@
         <p class="ti-card-note" id="volume-sum" data-source="live_health"></p>
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-volume" data-source="live_health" data-row-key="kind,feed"></table></div>
       </div>
-      <div class="ti-card ti-section" id="src-blogs">
-        <h3 class="ti-h3">CTI blog candidates, 7 days <span class="ti-pir">awesome_threat_intel_blogs</span> <span class="ti-count" id="blogs-asof"></span></h3>
-        <p class="ti-card-note" id="blogs-sum" data-source="live_blogs"></p>
-        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-blog-items" data-source="live_blogs" data-row-key="link"></table></div>
-        <h4 class="ti-h4">Blog feeds read</h4>
-        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-blog-feeds" data-source="live_blogs" data-row-key="url"></table></div>
+      <div class="ti-card ti-section" id="src-network">
+        <h3 class="ti-h3">Source network <span class="ti-pir">registry: data/feeds.json</span> <span class="ti-count" id="network-asof"></span></h3>
+        <p class="ti-card-note" id="network-sum" data-source="live_sources"></p>
+        <div class="ti-tbox"><table class="ti-table" id="tbl-network" data-source="live_sources theaters" data-row-key="id"></table></div>
       </div>
       <div class="ti-card ti-section" id="src-triage">
         <h3 class="ti-h3">Machine triage leads, 72 hours <span class="ti-pir">unreviewed</span> <span class="ti-count" id="triage-asof"></span></h3>
         <p class="ti-card-note" id="triage-sum" data-source="live_triage"></p>
         <p class="ti-card-note" id="triage-eval" data-source="live_triage"></p>
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-triage" data-source="live_triage" data-row-key="link"></table></div>
-      </div>
-      <div class="ti-card ti-section" id="src-news">
-        <h3 class="ti-h3">Theater news feeds <span class="ti-count" id="news-asof"></span></h3>
-        <p class="ti-card-note" id="news-sum" data-source="live_news"></p>
-        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-news-feeds" data-source="live_news theaters" data-row-key="id"></table></div>
       </div>
       <div class="ti-card ti-section" id="src-actors">
         <h3 class="ti-h3">Actors named in leads, 30 days <span class="ti-pir">unreviewed</span></h3>
@@ -928,6 +931,54 @@
   </section>
 
   <!-- 9 METHOD -->
+  <section class="ti-page" id="search" role="tabpanel" aria-labelledby="tab-search" hidden>
+    <div class="ti-card ti-section" id="search-card">
+      <h2 class="ti-h2">Search the platform</h2>
+      <p class="ti-card-note">One search across the platform's own analysis (key judgments, evidence items, theaters, actors, indicators) and everything the source network collected in the last 45 days, with each item's machine-triage label. Quoted phrases, OR and -exclusions work.</p>
+      <form class="ti-sform" id="search-form" role="search" aria-label="Search">
+        <input type="search" id="search-q" placeholder="Keyword, phrase, CVE, actor or company" aria-label="Search terms" autocomplete="off" maxlength="200">
+        <label>Window <select id="search-days"><option value="1">24 hours</option><option value="7">7 days</option><option value="30" selected>30 days</option><option value="45">45 days</option></select></label>
+        <label>Category <select id="search-cat"><option value="">All</option></select></label>
+        <label>Theater <select id="search-theater"><option value="">All</option></select></label>
+        <button type="submit" class="ti-btn">Search</button>
+      </form>
+      <p class="ti-card-note" id="search-sum" aria-live="polite"></p>
+      <div class="ti-sbars" id="search-timeline" aria-hidden="true"></div>
+    </div>
+    <div class="ti-card ti-section" id="search-report" hidden>
+      <h3 class="ti-h3">Generate a report on this search <span class="ti-pir">machine-written, cited</span></h3>
+      <p class="ti-card-note">An analyst agent (a free reasoning model) starts from the platform's collected reporting, corroborates it with live web and news search, reads the key sources in full, and writes the report with every claim cited to a numbered source. It takes one to five minutes; the report gets its own link.</p>
+      <div class="ti-rtypes" id="report-types" role="radiogroup" aria-label="Report type"></div>
+      <label class="ti-rprompt">Additional direction (optional)<textarea id="report-prompt" rows="3" maxlength="1500" placeholder="e.g. Focus on retail and payment-card exposure; include detection guidance for our SOC."></textarea></label>
+      <div class="ti-ractions"><button type="button" class="ti-btn ti-btn-primary" id="report-go">Generate report</button> <span class="ti-card-note" id="report-msg" aria-live="polite"></span></div>
+    </div>
+    <div class="ti-card ti-section" id="report-view" hidden>
+      <div class="ti-rhead"><h2 class="ti-h2" id="report-title"></h2><div class="ti-ractions"><button type="button" class="ti-btn" id="report-copy">Copy link</button> <button type="button" class="ti-btn" id="report-md">Download Markdown</button> <button type="button" class="ti-btn" id="report-close">Close</button></div></div>
+      <p class="ti-card-note" id="report-meta"></p>
+      <ol class="ti-rsteps" id="report-steps"></ol>
+      <article class="ti-rbody" id="report-body"></article>
+      <h3 class="ti-h3" id="report-sources-h" hidden>Sources</h3>
+      <ol class="ti-rsources" id="report-sources"></ol>
+    </div>
+    <div class="ti-card ti-section" id="search-intel" hidden>
+      <h3 class="ti-h3">Platform analysis <span class="ti-count" id="search-intel-n"></span></h3>
+      <div id="search-intel-list"></div>
+    </div>
+    <div class="ti-card ti-section" id="search-results" hidden>
+      <h3 class="ti-h3">Collected reporting <span class="ti-count" id="search-hits-n"></span></h3>
+      <ol class="ti-hits" id="search-hits"></ol>
+      <button type="button" class="ti-btn" id="search-more" hidden>More results</button>
+    </div>
+    <div class="ti-card ti-section" id="search-adv" hidden>
+      <h3 class="ti-h3">Vendor and CERT advisories</h3>
+      <ul class="ti-hits" id="search-adv-list"></ul>
+    </div>
+    <div class="ti-card ti-section" id="report-library">
+      <h3 class="ti-h3">Recent reports</h3>
+      <ul class="ti-rlist" id="report-list"><li class="ti-card-note">Loading…</li></ul>
+    </div>
+  </section>
+
   <section class="ti-page" id="method" role="tabpanel" aria-labelledby="tab-method" hidden>
     <template>
       <div class="ti-grid-wide ti-section">
@@ -1049,6 +1100,7 @@
 <script src="/js/reqs.js"></script>
 <script src="/js/sources.js"></script>
 <script src="/js/method.js"></script>
+<script src="/js/search.js"></script>
 <script src="/js/catalog.js"></script>
 <script src="/js/controls.js"></script>
 <script src="/js/boot.js"></script>
