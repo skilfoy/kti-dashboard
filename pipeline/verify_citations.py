@@ -15,6 +15,8 @@ States, one per item:
                    (figures, CVE ids, proper nouns) are on the page
   weak_match       30 to 60 percent of those tokens are on the page
   mismatch         the page answered with real text and carries under 30 percent of the tokens and no excerpt
+  derived          a "Feed data" item: its title states a figure computed from the cited dataset (a median, a count over a
+                   window, a price on a date), which no page text carries; the check is that the dataset page answers
   thin             the page answered with too little text to judge (script-rendered or a teaser)
   blocked          the site refused the request (401, 403, 429, 451, a challenge page): unverifiable from here
   gone             404 or 410
@@ -139,6 +141,8 @@ def judge(item, status, raw, final_url):
     share = found / len(toks) if toks else 0
     if item.get("excerpt") and excerpt_found(item["excerpt"], text):
         return {**base, "state": "excerpt_found"}
+    if item.get("category") == "Feed data":
+        return {**base, "state": "derived"}
     if len(text) < 600:
         return {**base, "state": "thin"}
     if len(toks) >= 3 and share >= 0.6:
@@ -288,7 +292,10 @@ def self_test():
     rows = public_rows(items, state)
     assert [r["item_id"] for r in rows] == ["I-1999", "I-2000", "I-2001"] and "excerpt" not in rows[0] and "text_sha256" not in rows[0]
     assert run(items[:1], state, 10, fetcher=fake) == 0 and "I-2001" not in state, "state for dropped items is pruned"
-    print("PASS 19 checks (citation verification)")
+    feed = {"item_id": "I-9", "title": "Edge-device CVEs reached KEV a median of 1 day after publication (60 CVEs)", "url": "https://github.com/cisagov/kev-data", "category": "Feed data"}
+    assert judge(feed, 200, "<html><body>" + "<p>Repository of the KEV catalog in JSON and CSV.</p>" * 80 + "</body></html>", feed["url"])["state"] == "derived", "Feed data: derived"
+    assert judge(feed, 404, None, feed["url"])["state"] == "gone", "Feed data whose page is gone: gone"
+    print("PASS 21 checks (citation verification)")
 
 
 if __name__ == "__main__":

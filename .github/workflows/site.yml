@@ -148,6 +148,23 @@ jobs:
           path: verification
           key: verification-${{ github.run_id }}
 
+      # The citation repair queue (pipeline/citation_queue.py) in the run summary, and the verification dataset as an
+      # artifact, so the daily run reads both through GitHub (runbook section 2, item 9).
+      - name: Citation repair queue
+        if: always() && hashFiles('feeds/verification.json') != ''
+        run: |
+          { echo '### Citation repair queue (first ten)'; echo '```'
+            python3 -I pipeline/citation_queue.py --verification feeds/verification.json --max 10 || true
+            echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the verification dataset
+        if: always() && hashFiles('feeds/verification.json') != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: verification
+          path: feeds/verification.json
+          retention-days: 7
+
       - name: Assemble the site data
         run: python3 -I pipeline/site_build.py --authored data/authored --feeds feeds --out public --commit "$GITHUB_SHA"
 

@@ -18,6 +18,7 @@ const steps = [
   ['lead watch', process.execPath, ['test/lead_watch_test.mjs', '.']],
   ['reassessment watch', py, ['-I', 'pipeline/reassessment_watch.py', '--self-test']],
   ['citation verification', py, ['-I', 'pipeline/verify_citations.py', '--self-test']],
+  ['citation repair queue', py, ['-I', 'pipeline/citation_queue.py', '--self-test']],
   ...(has('@electric-sql/pglite') ? [['submarine cables job and route (PGlite)', process.execPath, ['test/cables_test.mjs', '.']]] : []),
   ['data sources registry', process.execPath, ['test/data_sources_test.mjs', '.']],
   ['intel, lists and enrichment parts', process.execPath, ['test/intel_test.mjs', '.']],

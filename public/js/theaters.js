@@ -143,6 +143,25 @@
       { field: 'grade', label: 'Grade' },
       { field: 'veracity', label: 'Veracity', attr: { 'data-v': (r) => r.veracity }, cls: 'ti-ver' },
     ], { filter: (r) => r.theater_id === selected, sort: 'date', dir: 'desc' });
+    // Machine leads for the selected theater, shown only while the tier's theater labels clear their evaluation thresholds.
+    const tld = sec.querySelector('#tbl-theater-leads');
+    if (tld && TI.tableState(tld, ['live_triage'])) {
+      const all = TI.rows('live_triage') || [], meta = all.find((r) => r.kind === 'meta') || {}, ev = meta.eval || {};
+      const note = sec.querySelector('#theater-leads-note');
+      if (!ev.promoted) {
+        if (note) note.textContent = 'The triage tier labels headlines with a theater, but its labels stay off this page until its agreement with the analyst\'s own labels clears the published thresholds (Method, machine triage).';
+        TI.table(tld, [], [{ field: 'title', label: 'Lead' }], { empty: 'Theater labels are not yet shown.' });
+      } else {
+        TI.table(tld, all.filter((r) => r.kind === 'lead' && r.theater === selected && r.relevance >= 2), [
+          { field: 'relevance', label: 'Rel.', num: true, fmt: 'int' },
+          { field: 'published', label: 'Published', fmt: 'date', cls: 'ti-nowrap' },
+          { field: 'title', label: 'Headline', link: 'link', cls: 'ti-wrap' },
+          { field: 'source', label: 'Source', hideSm: true },
+          { field: 'also', label: 'Also carried by', get: (r) => (r.also ? `${r.also} more` : ''), hideSm: true },
+          { field: 'verify', label: 'Second model', get: (r) => (r.verify === 'confirmed' ? 'agrees' : r.verify === 'lowered' ? 'lowered from 3' : ''), hideSm: true },
+        ], { sort: 'relevance', dir: 'desc', limit: 30, empty: 'No relevance 2 or 3 leads labelled with this theater in 72 hours.' });
+      }
+    }
     const tl = sec.querySelector('#th-timeline');
     if (TI.chartState(tl, ['items', 'theaters'])) timeline(sec, items, tmap);
     TI.table(sec.querySelector('#tbl-theaters'), theaters, [

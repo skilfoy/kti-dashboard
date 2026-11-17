@@ -452,7 +452,7 @@ dash.calc('verification_summary', {
   inputs: ['verification'],
   fn: (v) => {
     const LABEL = { excerpt_found: 'Excerpt found on the page', claim_supported: 'Figures and names found on the page', weak_match: 'Partial match', mismatch: 'Page does not carry the claim',
-      thin: 'Too little page text to judge', blocked: 'Site refused the request', gone: 'Page gone (404 or 410)', error: 'Fetch failed', pending: 'Not fetched yet' };
+      derived: 'Computed from a dataset (the dataset page answers)', thin: 'Too little page text to judge', blocked: 'Site refused the request', gone: 'Page gone (404 or 410)', error: 'Fetch failed', pending: 'Not fetched yet' };
     const ORDER = Object.keys(LABEL);
     const n = v.length || 1;
     const count = (s) => v.filter((r) => r.state === s).length;

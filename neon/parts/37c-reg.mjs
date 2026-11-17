@@ -90,6 +90,33 @@ export function parseBlogsReadme(md) {
 // because a slow blog could spend 12 seconds on its feed and 10 on each of six discovery guesses while the pool waited).
 // Each source now has one deadline for all of its requests, one retry of a transient feed failure, and the pool is
 // capped; sources the run budget leaves unread go first next run (oldest check first).
+// Feeds for blogs whose home page hides its feed or refuses the collector, each confirmed on 17 November 2026 to answer
+// with dated entries. Tried before discovery; a blog's stored feed still comes first once one has parsed.
+export const BLOG_FEEDS = {
+  'https://medium.com/falconforce': 'https://medium.com/feed/falconforce',
+  'https://www.proofpoint.com/uk/blog': 'https://www.proofpoint.com/us/rss.xml',
+  'https://www.fortinet.com/blog': 'https://feeds.fortinet.com/fortinet/blog/threat-research',
+  'https://isc.sans.edu/diary': 'https://isc.sans.edu/rssfeed_full.xml',
+  'https://www.hackread.com/': 'https://www.hackread.com/feed/',
+  'https://cofense.com/blog/': 'https://cofense.com/feed/',
+  'https://www.bitdefender.com/blog/labs/': 'https://www.bitdefender.com/blog/api/rss/labs/',
+  'https://heimdalsecurity.com/blog/posts/': 'https://heimdalsecurity.com/blog/feed/',
+  'https://www.ncsc.gov.uk/information/rss-feeds': 'https://www.ncsc.gov.uk/api/1/services/v1/news-rss-feed.xml',
+  'https://cloud.google.com/blog/topics/threat-intelligence': 'https://cloudblog.withgoogle.com/topics/threat-intelligence/rss/',
+  'https://securityonline.info': 'https://securityonline.info/feed/',
+  'https://www.nextgov.com/cybersecurity/': 'https://www.nextgov.com/rss/cybersecurity/',
+  'https://securitylabs.datadoghq.com/articles/': 'https://securitylabs.datadoghq.com/rss/feed.xml',
+  'https://www.zscaler.com/blogs': 'https://www.zscaler.com/blogs/feeds/security-research',
+  'https://www.cisecurity.org/insights/blog': 'https://www.cisecurity.org/feed/blog',
+  'https://www.cyber.gc.ca/en': 'https://www.cyber.gc.ca/api/cccs/rss/v1/get?feed=alerts_advisories&lang=en',
+  'https://www.theregister.com/security/': 'https://www.theregister.com/security/headlines.atom',
+  'https://www.halcyon.ai/': 'https://www.halcyon.ai/blog/rss.xml',
+  'https://www.labs.greynoise.io/': 'https://www.greynoise.io/blog/rss.xml',
+  'https://www.welivesecurity.com/en/about-eset-research': 'https://feeds.feedburner.com/eset/blog',
+  'https://threats.wiz.io/': 'https://www.wiz.io/feed/rss.xml',
+  'https://www.infosecurity-magazine.com/news': 'https://www.infosecurity-magazine.com/rss/news/',
+  'https://www.volexity.com/blog/': 'https://www.volexity.com/feed/',
+};
 export const BLOG_LIMITS = { PER_SOURCE_MS: 15000, CONCURRENCY: 6, BUDGET_MS: 40000, RETRY_DELAY_MS: 1500, MAX_GUESSES: 4, OVERDUE_H: 7, MAX_PER_RUN: 60 };
 const transient = (r) => !r.ok && (r.status === 0 || r.status === 429 || r.status >= 500);
 // Whether a new blogs document is materially smaller than the last good one: fewer blogs with a working feed (more than
@@ -132,6 +159,11 @@ export async function jobBlogs(opts = {}) {
       if (transient(r) && left() > L.RETRY_DELAY_MS + 1000) { retried++; await new Promise((ok) => setTimeout(ok, L.RETRY_DELAY_MS)); r = await ask(feed); }
       parsed = r.ok ? parseFeedItems(r.text) : null;
       if (!parsed) { note = 'feed ' + (r.status || r.error); feed = null; }
+    }
+    if (!feed && BLOG_FEEDS[b.url] && left() > 1000) {
+      const r = await ask(BLOG_FEEDS[b.url]);
+      const p = r.ok ? parseFeedItems(r.text) : null;
+      if (p) { feed = BLOG_FEEDS[b.url]; parsed = p; }
     }
     if (!feed && left() > 1000) {
       const h = await ask(b.url, 'text/html');

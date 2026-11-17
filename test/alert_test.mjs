@@ -43,6 +43,7 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
 }
 {
   const h = clone();
+  h.collector.checked_at = minAgo(0);   // silence is judged at the record's time; here the record is written at NOW
   Object.assign(job(h, 'snap'), { ok: false, error: 'no snapshot succeeded: 503' });
   job(h, 'gdelt').last_run = minAgo(120);
   Object.assign(job(h, 'links'), { failed_24h: 3, runs_24h: 24 });
@@ -54,6 +55,20 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
   const by = Object.fromEntries(r.problems.map((p) => [p.title, p]));
   ok(/last run failed .*503/.test(by['Collector: snap failing'].lines[0]) && /silent for 120 minutes/.test(by['Collector: gdelt failing'].lines[0]) && /3 of 24 runs failed/.test(by['Collector: links failing'].lines[0])
     && /no run recorded/.test(by['Collector: sec8k failing'].lines[0]), 'job problem detail');
+  ok(/under the running collector version/.test(by['Collector: links failing'].lines[0]), 'failures are counted under the running version');
+}
+// 17 November 2026: a record written at 00:21 and read at 00:55 showed lists, leaksites and links last run at 23:23,
+// because the health job runs first in its invocation. Measured at the record's time they are 58 minutes quiet.
+{
+  const h = clone();
+  h.collector.checked_at = minAgo(34);
+  for (const j of ['lists', 'leaksites', 'links']) job(h, j).last_run = minAgo(92);
+  ok(!titles(A.evaluate(h, NOW)).some((x) => /lists|leaksites|links/.test(x)), 'silence is judged at the record time, not the read time');
+  for (const j of ['lists', 'leaksites', 'links']) job(h, j).last_run = minAgo(34 + 95);
+  ok(titles(A.evaluate(h, NOW)).filter((x) => /lists|leaksites|links/.test(x)).length === 3, 'a job quiet for 95 minutes at the record time is silent');
+  const v = clone(); v.collector.checked_at = minAgo(0);
+  Object.assign(job(v, 'leaksites'), { failed_24h: 0, failed_24h_all: 3, runs_24h: 14 });
+  ok(!titles(A.evaluate(v, NOW)).includes('Collector: leaksites failing'), 'failures under an earlier version do not count');
   ok(A.silentAfterMin('gdelt') === 90 && A.silentAfterMin('blogs') === 90 && A.silentAfterMin('unit42') === 1530 && A.silentAfterMin('sec8k') === 930 && A.silentAfterMin('ransompay') === 10170, 'silence judged against each cadence');
 }
 {
@@ -80,16 +95,11 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
   const r2 = A.evaluate(h, NOW);
   ok(!titles(r2).includes('Collector: ukmto answer changed') && titles(r2).includes('Collector: gdelt_doc_api answer changed'), 'state field wins when present');
 }
-// GreyNoise: an intermittent known gap. A 429, or a passing check while 24-hour uptime is under 95 percent, holds the
-// gap; a steady recovery or another failure is a changed answer; it never opens a failing issue.
+// GreyNoise: retired from the documented gaps on 17 November 2026. It is no map feed either, so neither a recovery nor a
+// failing streak opens an issue; the exposure monitor reports its own lookups.
 {
   const gn = (o) => { const h = clone(); Object.assign(feed(h, 'greynoise'), o); return titles(A.evaluate(h, NOW)); };
-  ok(feed(BASE, 'greynoise').status === 429 && gn({}).length === 0, 'greynoise 429 on the 2 November record: no problem');
-  ok(gn({ ok: true, status: 404, uptime_24h: 81.25, failing_streak: 0 }).length === 0, 'an occasional pass keeps the gap');
-  ok(JSON.stringify(gn({ ok: true, status: 200, uptime_24h: 98, failing_streak: 0 })) === '["Collector: greynoise answer changed"]', 'a steady recovery is reported once as a change');
-  ok(JSON.stringify(gn({ ok: false, status: 401, failing_streak: 9 })) === '["Collector: greynoise answer changed"]', 'another failure is a change');
-  ok(!gn({ ok: false, status: 429, failing_streak: 40 }).some((t) => /greynoise failing/.test(t)), 'never a failing issue');
-  ok(gn({ ok: false, status: 429, state: 'known_gap' }).length === 0, 'collector state known_gap holds');
+  ok(!A.KNOWN_GAPS.greynoise && gn({}).length === 0 && gn({ ok: true, status: 200, uptime_24h: 98 }).length === 0 && gn({ ok: false, status: 429, failing_streak: 40 }).length === 0, 'greynoise: no gap, no issue');
 }
 {
   const h = clone();
@@ -108,9 +118,6 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
   const g = (o) => { const h = clone(); Object.assign(feed(h, 'gdelt_doc_api'), o); return titles(A.evaluate(h, NOW)); };
   ok(g({ ok: false, status: 0, error: 'timeout', failing_streak: 24 }).length === 0 && g({ ok: false, status: 429 }).length === 0, 'gdelt_doc_api: timeout and 429 are one answer class');
   ok(JSON.stringify(g({ ok: true, status: 200, failing_streak: 0 })) === '["Collector: gdelt_doc_api answer changed"]', 'a 200 lifts the gap and is reported');
-  const gn = (o) => { const h = clone(); Object.assign(feed(h, 'greynoise'), o); return titles(A.evaluate(h, NOW)); };
-  ok(gn({ ok: false, status: 0, error: 'fetch failed' }).length === 0 && gn({ ok: true, status: 404, uptime_24h: 81 }).length === 0, 'greynoise: refused or intermittent keeps the gap');
-  ok(JSON.stringify(gn({ ok: true, status: 200, uptime_24h: 99 })) === '["Collector: greynoise answer changed"]', 'greynoise steady recovery reported');
 }
 // Weekly cables job: no problem before its first run; silent after a week plus 90 minutes; a held snapshot is a failure.
 {

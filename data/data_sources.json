@@ -892,12 +892,11 @@
    "cadence": "30-minute probe; on demand (/api/exposure)",
    "health_feed": "greynoise",
    "jobs": [],
-   "status": "known_gap",
-   "gap_note": "GreyNoise's free lookup rate-limits cloud egress (HTTP 429); needs a GreyNoise API key (tracked in the KTI work tracker). The key is optional: without it the keyless lookup is used.",
+   "status": "live",
+   "gap_note": "",
    "source_ids": [],
    "added": "2026-11-03",
-   "reviewed": "2026-11-03",
-   "gap_id": "greynoise"
+   "reviewed": "2026-11-17"
   },
   {
    "id": "hibp",
@@ -2298,6 +2297,1340 @@
    "source_ids": [],
    "added": "2026-11-16",
    "reviewed": "2026-11-16"
+  },
+  {
+   "id": "news-bbcworld",
+   "name": "BBC News (World)",
+   "owner": "BBC News (World)",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-aljazeera",
+   "name": "Al Jazeera",
+   "owner": "Al Jazeera",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.aljazeera.com/xml/rss/all.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-france24",
+   "name": "France 24",
+   "owner": "France 24",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.france24.com/en/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-dw",
+   "name": "Deutsche Welle",
+   "owner": "Deutsche Welle",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://rss.dw.com/rdf/rss-en-all",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-guardianworld",
+   "name": "The Guardian (World)",
+   "owner": "The Guardian (World)",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.theguardian.com/world/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-reliefweb",
+   "name": "ReliefWeb updates",
+   "owner": "ReliefWeb updates",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://reliefweb.int/updates/rss.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-defenseone",
+   "name": "Defense One",
+   "owner": "Defense One",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.defenseone.com/rss/all/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-breakingdefense",
+   "name": "Breaking Defense",
+   "owner": "Breaking Defense",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://breakingdefense.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-warontherocks",
+   "name": "War on the Rocks",
+   "owner": "War on the Rocks",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://warontherocks.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-therecord",
+   "name": "The Record",
+   "owner": "The Record",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://therecord.media/feed",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-gcaptain",
+   "name": "gCaptain",
+   "owner": "gCaptain",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://gcaptain.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-maritimeexec",
+   "name": "The Maritime Executive",
+   "owner": "The Maritime Executive",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://maritime-executive.com/articles.rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-splash247",
+   "name": "Splash247",
+   "owner": "Splash247",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://splash247.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-mee",
+   "name": "Middle East Eye",
+   "owner": "Middle East Eye",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.middleeasteye.net/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-jpost",
+   "name": "The Jerusalem Post",
+   "owner": "The Jerusalem Post",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.jpost.com/rss/rssfeedsfrontpage.aspx",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-iranintl",
+   "name": "Iran International",
+   "owner": "Iran International",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.iranintl.com/en/feed",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-arabnews",
+   "name": "Arab News",
+   "owner": "Arab News",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.arabnews.com/rss.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-meduza",
+   "name": "Meduza (English)",
+   "owner": "Meduza (English)",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://meduza.io/rss/en/all",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-ukrinform",
+   "name": "Ukrinform",
+   "owner": "Ukrinform",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.ukrinform.net/rss/block-lastnews",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-notesfrompoland",
+   "name": "Notes from Poland",
+   "owner": "Notes from Poland",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://notesfrompoland.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-lrt",
+   "name": "LRT (Lithuania)",
+   "owner": "LRT (Lithuania)",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.lrt.lt/en/news-in-english?rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-err",
+   "name": "ERR News (Estonia)",
+   "owner": "ERR News (Estonia)",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://news.err.ee/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-balkaninsight",
+   "name": "Balkan Insight",
+   "owner": "Balkan Insight",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://balkaninsight.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-radiotamazuj",
+   "name": "Radio Tamazuj",
+   "owner": "Radio Tamazuj",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.radiotamazuj.org/en/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-dabanga",
+   "name": "Dabanga",
+   "owner": "Dabanga",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.dabangasudan.org/en/feed",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-somaliguardian",
+   "name": "Somali Guardian",
+   "owner": "Somali Guardian",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.somaliguardian.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-shabelle",
+   "name": "Shabelle Media",
+   "owner": "Shabelle Media",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://shabellemedia.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-theeastafrican",
+   "name": "The EastAfrican",
+   "owner": "The EastAfrican",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.theeastafrican.co.ke/rss.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-africanews",
+   "name": "Africanews",
+   "owner": "Africanews",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.africanews.com/feed/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-amutv",
+   "name": "Amu TV",
+   "owner": "Amu TV",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://amu.tv/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-afintl",
+   "name": "Afghanistan International",
+   "owner": "Afghanistan International",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.afintl.com/en/feed",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-tribunepk",
+   "name": "The Express Tribune",
+   "owner": "The Express Tribune",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://tribune.com.pk/feed/home",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-dawn",
+   "name": "Dawn",
+   "owner": "Dawn",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.dawn.com/feeds/home",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-thehindu",
+   "name": "The Hindu (National)",
+   "owner": "The Hindu (National)",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.thehindu.com/news/national/feeder/default.rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-timesca",
+   "name": "The Times of Central Asia",
+   "owner": "The Times of Central Asia",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://timesca.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-kunuz",
+   "name": "Kun.uz",
+   "owner": "Kun.uz",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://kun.uz/en/news/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-24kg",
+   "name": "24.kg",
+   "owner": "24.kg",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://24.kg/english/rss/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-thediplomat",
+   "name": "The Diplomat",
+   "owner": "The Diplomat",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://thediplomat.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-yonhap",
+   "name": "Yonhap",
+   "owner": "Yonhap",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://en.yna.co.kr/RSS/news.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-nknews",
+   "name": "NK News",
+   "owner": "NK News",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.nknews.org/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-taipeitimes",
+   "name": "Taipei Times",
+   "owner": "Taipei Times",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.taipeitimes.com/xml/index.rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-inquirer",
+   "name": "Inquirer Global Nation",
+   "owner": "Inquirer Global Nation",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://globalnation.inquirer.net/feed",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-rappler",
+   "name": "Rappler",
+   "owner": "Rappler",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.rappler.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-mexiconewsdaily",
+   "name": "Mexico News Daily",
+   "owner": "Mexico News Daily",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://mexiconewsdaily.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-insightcrime",
+   "name": "InSight Crime",
+   "owner": "InSight Crime",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://insightcrime.org/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-mercopress",
+   "name": "MercoPress",
+   "owner": "MercoPress",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://en.mercopress.com/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
   },
   {
    "id": "openrouter-triage",

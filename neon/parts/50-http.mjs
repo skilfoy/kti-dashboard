@@ -8,8 +8,8 @@ JOBS.cables = jobCables;
 LEASE_S.cables = 180;
 // Advisory feeds every three hours at :19; machine triage hourly at :49 (after the blogs slice of the same run), with its
 // evaluation run on demand only (37f-triage.mjs).
-Object.assign(JOBS, { psirt: jobPsirt, triage: jobTriage, triageeval: jobTriageeval });
-Object.assign(LEASE_S, { psirt: 240, triage: 420, triageeval: 600 });
+Object.assign(JOBS, { psirt: jobPsirt, triage: jobTriage, triageeval: jobTriageeval, news: jobNews });
+Object.assign(LEASE_S, { psirt: 240, triage: 420, triageeval: 600, news: 180 });
 export async function runJob(job, opts = {}) {
   const fn = JOBS[job];
   if (!fn) return { job, ok: false, error: 'unknown job' };
@@ -29,7 +29,8 @@ export async function runJob(job, opts = {}) {
   try {
     await sqlTx([
       [`UPDATE ti.lease SET until = 'epoch' WHERE job = $1 AND holder = $2`, [job, holder]],
-      [`INSERT INTO ti.run (job, started_at, ms, ok, detail) VALUES ($1, $2, $3, $4, $5::jsonb)`, [job, started, ms, ok, result]],
+      // The collector version is kept with each run, so failures can be counted under the version that is running.
+      [`INSERT INTO ti.run (job, started_at, ms, ok, detail) VALUES ($1, $2, $3, $4, $5::jsonb)`, [job, started, ms, ok, { ...result, version: VERSION }]],
     ]);
   } catch (e) { result.log_error = String(e.message || e); }
   console.log(JSON.stringify({ job, ok, ms, ...(ok ? {} : { error: result.error }) }));
@@ -44,6 +45,8 @@ export function plan(at) {
   const jobs = ['gdelt'];
   if (m < 15 || (m >= 30 && m < 45)) jobs.push('infra', 'snap');
   else jobs.push('health', 'ioda');
+  // Theater news hourly at :34, so the :49 triage run reads the hour's titles (37g-news.mjs).
+  if (m >= 30 && m < 45) jobs.push('news');
   if (m >= 15 && m < 30) {
     jobs.push('lists', 'leaksites', 'links');
     if (h === 6) jobs.push('unit42');
