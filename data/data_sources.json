@@ -2444,9 +2444,9 @@
    "reviewed": "2026-11-17"
   },
   {
-   "id": "news-reliefweb",
-   "name": "ReliefWeb updates",
-   "owner": "ReliefWeb updates",
+   "id": "news-unnews",
+   "name": "UN News",
+   "owner": "United Nations",
    "category": "Geopolitics",
    "feeds": [
     "live_news",
@@ -2454,7 +2454,7 @@
     "page:sources",
     "page:theaters"
    ],
-   "url": "https://reliefweb.int/updates/rss.xml",
+   "url": "https://news.un.org/feed/subscribe/en/news/all/rss.xml",
    "access": "open",
    "secret": null,
    "licence": "Titles, links and dates only; each article belongs to its publisher",
@@ -3082,9 +3082,9 @@
    "reviewed": "2026-11-17"
   },
   {
-   "id": "news-theeastafrican",
-   "name": "The EastAfrican",
-   "owner": "The EastAfrican",
+   "id": "news-addisstandard",
+   "name": "Addis Standard",
+   "owner": "Addis Standard",
    "category": "Geopolitics",
    "feeds": [
     "live_news",
@@ -3092,7 +3092,7 @@
     "page:sources",
     "page:theaters"
    ],
-   "url": "https://www.theeastafrican.co.ke/rss.xml",
+   "url": "https://addisstandard.com/feed/",
    "access": "open",
    "secret": null,
    "licence": "Titles, links and dates only; each article belongs to its publisher",
@@ -3227,9 +3227,9 @@
    "reviewed": "2026-11-17"
   },
   {
-   "id": "news-dawn",
-   "name": "Dawn",
-   "owner": "Dawn",
+   "id": "news-pakistantoday",
+   "name": "Pakistan Today",
+   "owner": "Pakistan Today",
    "category": "Geopolitics",
    "feeds": [
     "live_news",
@@ -3237,7 +3237,7 @@
     "page:sources",
     "page:theaters"
    ],
-   "url": "https://www.dawn.com/feeds/home",
+   "url": "https://www.pakistantoday.com.pk/feed/",
    "access": "open",
    "secret": null,
    "licence": "Titles, links and dates only; each article belongs to its publisher",
