@@ -20,7 +20,7 @@ const has = (reg, re) => errs(reg).some((e) => re.test(e));
 ok(C.datasets.length >= 60 && C.datasets.includes('kev') && C.datasets.includes('live_sec8k'), 'site.json datasets read from pipeline/datasets.py: ' + C.datasets.length);
 ok(['cables', 'gdelt', 'retention', 'sec8k'].every((j) => C.jobs.includes(j)), 'lease jobs read from neon/schema.sql: ' + C.jobs.join(','));
 ok(!F.health.includes('overpass') && F.health.includes('wikidata') && F.health.includes('greynoise') && F.health.length >= 30, 'health feed ids from the collector: ' + F.health.length);
-ok(['gdelt_doc_api', 'greynoise', 'marad_msci', 'nga_asam', 'nga_msi', 'ukmto'].every((g) => F.gaps.includes(g)), 'known gaps from the collector: ' + F.gaps.join(','));
+ok(['gdelt_doc_api', 'marad_msci', 'nga_asam', 'nga_msi', 'ukmto'].every((g) => F.gaps.includes(g)) && !F.gaps.includes('greynoise'), 'known gaps from the collector: ' + F.gaps.join(','));
 ok(C.pages.includes('sources') && C.pages.includes('map'), 'page ids from public/index.html');
 
 // The real registry passes.

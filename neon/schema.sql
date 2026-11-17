@@ -86,3 +86,7 @@ ALTER TABLE ti.triage ADD COLUMN IF NOT EXISTS cluster text;
 ALTER TABLE ti.triage ADD COLUMN IF NOT EXISTS verify text;
 ALTER TABLE ti.triage ADD COLUMN IF NOT EXISTS verify_model text;
 CREATE TABLE IF NOT EXISTS ti.kevrank (cve text PRIMARY KEY, first_seen timestamptz NOT NULL DEFAULT now(), first_score real NOT NULL, first_rank int NOT NULL, of_n int NOT NULL, in_kev_at timestamptz);
+-- Added 2026-11-17 (collector 2026-11-17.1): titles from theater news feeds, read by the triage job (37g-news.mjs).
+CREATE TABLE IF NOT EXISTS ti.news (link text PRIMARY KEY, feed text NOT NULL, source text, title text, published timestamptz NOT NULL, seen_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS news_published ON ti.news (published);
+INSERT INTO ti.lease (job) VALUES ('news') ON CONFLICT DO NOTHING;

@@ -333,7 +333,7 @@ export async function triageDoc(extra = {}) {
       (array_agg(t.title ORDER BY COALESCE(t.published, t.at) DESC))[1] AS latest_title, (array_agg(t.link ORDER BY COALESCE(t.published, t.at) DESC))[1] AS latest_link
     FROM ti.triage t, jsonb_array_elements_text(t.actors) AS a(name) GROUP BY a.name ORDER BY stories DESC, last_seen DESC LIMIT 120`);
   const [n] = await sql(`SELECT count(*)::int AS all_rows, count(*) FILTER (WHERE at > now() - interval '24 hours')::int AS d1 FROM ti.triage`);
-  return { source: 'Machine triage of the titles collected from CTI blogs and vendor or CERT advisories, by a free hosted language model',
+  return { source: 'Machine triage of the titles collected from CTI blogs, vendor and CERT advisories and theater news feeds, by a free hosted language model',
     terms: 'Titles and links belong to their publishers. Labels are machine output and are unreviewed.',
     method: `Every hour new titles are grouped into stories (titles that share most of their words, or a CVE identifier) and up to ${TRIAGE.BATCH} stories are labelled in one request at temperature 0: relevance 0 to 3, one of eight intrusion vectors or none, one theater or none, and actors named in the title. A label is kept only when it names an id of the batch, a vector and theater from the closed lists and a reason without links; actors that do not occur in the title are dropped; CVE identifiers come from the advisory feed, never from the model. The tier sets no ThreatCon and writes no judgment or evidence item: the daily analyst run reads this list as leads and opens the sources itself. Requests are capped at ${TRIAGE.DAILY_REQUESTS} a day; labelling has first call on them, and the verifier and the evaluation spend what is left.`,
     marking: 'Machine triage, unreviewed', prompt_version: TRIAGE.PROMPT_V, eval: (await kvGet('triage:eval')) || null, budget: (await kvGet('triage:budget')) || null,
@@ -365,11 +365,15 @@ export function clusterTitles(items) {
 export async function jobTriage() {
   const t0 = Date.now(), E = ENV();
   if (!(E.OPENROUTER_API_KEY || E.TI_TRIAGE_KEY)) return { held: 'OPENROUTER_API_KEY is not set in the function environment; no request made', labelled: 0, published: null, ms: Date.now() - t0 };
-  const cand = await sql(`SELECT c.link, c.kind, c.source, c.title, c.published, c.cves FROM (
+  // Newest first within each kind (blog, advisory, news), the kinds taken in turn, so the news volume cannot starve the
+  // CTI blogs and advisories of labelling.
+  const cand = await sql(`SELECT link, kind, source, title, published, cves FROM (SELECT c.*, row_number() OVER (PARTITION BY c.kind ORDER BY c.published DESC) AS rn FROM (
       SELECT i.link, 'blog' AS kind, b.name AS source, i.title, i.published, '[]'::jsonb AS cves FROM ti.blog_item i JOIN ti.blog b ON b.url = i.blog_url WHERE i.published > now() - make_interval(hours => $1)
-      UNION ALL SELECT a.link, 'advisory', a.feed, a.title, COALESCE(a.published, a.seen_at), a.cves FROM ti.advisory a WHERE COALESCE(a.published, a.seen_at) > now() - make_interval(hours => $1)) c
-    WHERE NOT EXISTS (SELECT 1 FROM ti.triage t WHERE t.link = c.link) ORDER BY c.published DESC LIMIT $2`, [TRIAGE.WINDOW_H, TRIAGE.POOL]);
+      UNION ALL SELECT a.link, 'advisory', a.feed, a.title, COALESCE(a.published, a.seen_at), a.cves FROM ti.advisory a WHERE COALESCE(a.published, a.seen_at) > now() - make_interval(hours => $1)
+      UNION ALL SELECT n.link, 'news', n.source, n.title, n.published, '[]'::jsonb FROM ti.news n WHERE n.published > now() - make_interval(hours => $1)) c
+    WHERE NOT EXISTS (SELECT 1 FROM ti.triage t WHERE t.link = c.link)) x ORDER BY rn, published DESC LIMIT $2`, [TRIAGE.WINDOW_H, TRIAGE.POOL]);
   const [{ n: waiting }] = await sql(`SELECT (SELECT count(*) FROM ti.blog_item WHERE published > now() - make_interval(hours => $1)) + (SELECT count(*) FROM ti.advisory WHERE COALESCE(published, seen_at) > now() - make_interval(hours => $1))
+    + (SELECT count(*) FROM ti.news WHERE published > now() - make_interval(hours => $1))
     - (SELECT count(*) FROM ti.triage WHERE COALESCE(published, at) > now() - make_interval(hours => $1)) AS n`, [TRIAGE.WINDOW_H]);
   let res = { labels: new Map(), rejects: {}, missing: 0, calls: [] };
   // CVE identifiers come from the advisory feed and from the title itself, never from the model.

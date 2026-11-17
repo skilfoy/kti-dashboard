@@ -348,6 +348,19 @@
         { field: 'items', label: 'Entries', num: true, fmt: 'int' },
       ], { sort: 'vendor', empty: 'No feeds were read.' });
     }
+    const tn = sec.querySelector('#tbl-news-feeds');
+    if (tn && TI.tableState(tn, ['live_news'])) {
+      const m = metaOf('live_news') || {};
+      setCount(sec, 'news-asof', fresh(m));
+      note(sec, 'news-sum', `${int(m.feeds_ok)} of ${int(kindRows('live_news', 'feed').length)} feeds answered; ${int(m.titles_72h)} titles from the last 72 hours are with the triage tier. `, m.method || '', ' ', m.terms || '');
+      TI.table(tn, kindRows('live_news', 'feed'), [
+        { field: 'name', label: 'Outlet', link: 'url' },
+        { field: 'region', label: 'Chosen for' },
+        { field: 'ok', label: 'Feed', get: (r) => (r.ok ? 'ok' : r.error || 'failed'), attr: { 'data-status': (r) => (r.ok ? 'ok' : 'review') } },
+        { field: 'fresh', label: 'Titles, 72 hours', num: true, fmt: 'int' },
+        { field: 'newest', label: 'Newest', fmt: 'date', cls: 'ti-nowrap', hideSm: true },
+      ], { sort: 'region', empty: 'No news feeds were read.' });
+    }
     const ta = sec.querySelector('#tbl-actors');
     if (ta && TI.tableState(ta, ['live_triage', 'attack_groups', 'judgments'])) {
       const groups = TI.rows('attack_groups'), judgments = TI.rows('judgments');
@@ -387,6 +400,7 @@
         { field: 'published', label: 'Published', fmt: 'date', cls: 'ti-nowrap' },
         { field: 'title', label: 'Title', link: 'link', cls: 'ti-wrap' },
         { field: 'source', label: 'Source', hideSm: true },
+        { field: 'from', label: 'From', hideSm: true },
         { field: 'also', label: 'Also carried by', get: (r) => (r.also ? `${r.also} more` + ((r.also_sources || []).length ? ': ' + r.also_sources.slice(0, 3).join(', ') : '') : ''), hideSm: true },
         { field: 'cves', label: 'CVEs', get: (r) => (r.cves || []).slice(0, 3).join(', '), hideSm: true },
         { field: 'kev', label: 'In KEV', get: (r) => (r.kev || []).join(', '), attr: { 'data-status': (r) => ((r.kev || []).length ? 'review' : '') } },

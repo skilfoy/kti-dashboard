@@ -637,6 +637,51 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   EXTRA = null;
 }
 
+// Theater news feeds (37g-news.mjs): dated titles inside 72 hours are kept once per link, a failing feed is listed, and
+// the triage job takes the news titles into its pool beside the blog and advisory titles.
+{
+  const ago = (h) => new Date(Date.now() - h * 3600000).toUTCString();
+  const rss = (id) => `<?xml version="1.0"?><rss version="2.0"><channel><title>${id}</title>`
+    + [0, 1].map((i) => `<item><title>${id} report ${i} on shelling of the border town</title><link>https://${id}.example/${i}</link><pubDate>${ago(i + 1)}</pubDate></item>`).join('')
+    + `<item><title>${id} old story</title><link>https://${id}.example/old</link><pubDate>${ago(100)}</pubDate></item>`
+    + `<item><title>${id} undated story</title><link>https://${id}.example/undated</link></item>`
+    + `<item><title>Shared wire story on talks</title><link>https://wire.example/shared</link><pubDate>${ago(2)}</pubDate></item></channel></rss>`;
+  const prevExtra = EXTRA;
+  EXTRA = async (u, opts, h) => {
+    const f = M.NEWS_FEEDS.find((x) => x.url === u);
+    if (f) return f.id === 'dawn' ? resp(503, 'busy') : resp(200, rss(f.id));
+    if (u === M.TRIAGE.ENDPOINT) {
+      const body = JSON.parse(opts.body);
+      const ids = body.messages[1].content.split('\n').slice(1).map((l) => +l.split('\t')[0]);
+      return resp(200, { model: 'test/free-model', choices: [{ message: { content: JSON.stringify({ labels: ids.map((id) => ({ id, relevance: 2, vector: null, theater: 'T-UKR', actors: [], why: 'Shelling near the border.' })) }) } }] });
+    }
+    if (u === 'https://openrouter.ai/api/v1/key') return resp(200, { data: { is_free_tier: true } });
+    return prevExtra ? prevExtra(u, opts, h) : null;
+  };
+  const n1 = await M.runJob('news');
+  const F = M.NEWS_FEEDS.length - 1;
+  ok(n1.ok && n1.feeds === M.NEWS_FEEDS.length && n1.feeds_ok === F && n1.failed.length === 1 && n1.failed[0].feed === 'dawn' && n1.read === F * 2 + 1,
+    'news: dated titles inside 72 hours, one row per link, the failing feed listed ' + JSON.stringify({ read: n1.read, failed: n1.failed }));
+  const ndoc = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/news.json.gz')).toString());
+  ok(ndoc.rows.length === M.NEWS_FEEDS.length && ndoc.titles_72h === F * 2 + 1 && ndoc.rows.find((r) => r.id === 'dawn').ok === false && ndoc.rows.find((r) => r.id === 'bbcworld').fresh === 3
+    && ndoc.rows.every((r) => r.kind === 'feed' && r.region), 'news document lists every feed with its region and count');
+  const n2 = await M.runJob('news');
+  ok(n2.ok && (await db.query(`SELECT count(*)::int AS n FROM ti.news`)).rows[0].n === F * 2 + 1, 'a second read adds no duplicate');
+  ok(new Set(M.NEWS_FEEDS.map((f) => f.id)).size === M.NEWS_FEEDS.length && M.NEWS_FEEDS.every((f) => /^https:\/\//.test(f.url))
+    && Object.keys(M.TRIAGE_THEATERS).filter((k) => k !== 'T-GLB').every((k) => M.NEWS_FEEDS.some((f) => f.region === k)), 'every theater has at least one news feed');
+  ok(Object.entries(M.BLOG_FEEDS).every(([k, v]) => /^https:\/\//.test(k) && /^https:\/\//.test(v)) && Object.keys(M.BLOG_FEEDS).length >= 20, 'explicit blog feeds are https');
+  await db.query(`DELETE FROM ti.triage`); await db.query(`DELETE FROM ti.blog_item`); await db.query(`DELETE FROM ti.advisory`);
+  await db.query(`DELETE FROM ti.kv WHERE k IN ('triage:budget', 'triage:tier')`);
+  process.env.OPENROUTER_API_KEY = 'sk-or-test'; process.env.TI_TRIAGE_VERIFY = 'never';
+  const tr = await M.runJob('triage');
+  const tdoc = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/triage.json.gz')).toString());
+  const leads = tdoc.rows.filter((r) => r.kind === 'lead');
+  ok(tr.ok && tr.pool === F * 2 + 1 && leads.length > 0 && leads.every((r) => r.from === 'news' && r.theater === 'T-UKR') && /theater news/.test(tdoc.source),
+    'triage takes the news titles into its pool ' + JSON.stringify({ pool: tr.pool, labelled: tr.labelled, leads: leads.length }));
+  delete process.env.OPENROUTER_API_KEY; delete process.env.TI_TRIAGE_VERIFY;
+  EXTRA = prevExtra;
+}
+
 // Volume baseline by UTC hour: FIRMS-like counts follow satellite passes (0 at night, thousands by day). A night-time
 // zero is normal against its own hour; a daytime collapse is silence; a feed without five same-hour samples falls back
 // to the all-hours median.
@@ -696,9 +741,8 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(r2.ok && !r2.collapsed, 'without seven days of baseline nothing is called collapsed');
 }
 
-// GreyNoise: a known gap while it answers 429; a passing check reads up; another failure is down.
-ok(M.feedState({ feed: 'greynoise', ok: false, status: 429 }) === 'known_gap' && M.feedState({ feed: 'greynoise', ok: true, status: 404 }) === 'up'
-  && M.feedState({ feed: 'greynoise', ok: false, status: 401 }) === 'down' && /API key/.test(M.KNOWN_GAPS.greynoise.note), 'greynoise known gap');
+// GreyNoise: retired from the documented gaps on 17 November 2026 after a week of steady answers.
+ok(!M.KNOWN_GAPS.greynoise && M.feedState({ feed: 'greynoise', ok: true, status: 404 }) === 'up' && M.feedState({ feed: 'greynoise', ok: false, status: 429 }) === 'down', 'greynoise is no longer a gap');
 
 // Leases: a held lease skips.
 {
@@ -738,6 +782,7 @@ ok(M.feedState({ feed: 'greynoise', ok: false, status: 429 }) === 'known_gap' &&
   ok(t.status === 200 && tj.jobs.map((j) => j.job).join() === 'gdelt,health,ioda,lists,leaksites,links,triageeval', 'trigger plan at :15 ' + tj.jobs.map((j) => j.job));
   const st = await (await call('/status', bearer(mint()))).json();
   ok(st.gdelt_files.files >= 288 && st.version === M.VERSION && st.runs.length > 0, 'status ' + JSON.stringify(st.gdelt_files));
+  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:34:00Z'))) === '["gdelt","infra","snap","news"]', 'news at :34');
   ok(JSON.stringify(M.plan(new Date('2026-10-17T18:00:00Z'))) === '["gdelt","infra","snap"]' && JSON.stringify(M.plan(new Date('2026-10-17T18:45:00Z'))) === '["gdelt","health","ioda","retention","fires","maritime","blogs","triage"]'
     && M.plan(new Date('2026-10-17T07:19:00Z')).includes('psirt') && !M.plan(new Date('2026-10-17T08:19:00Z')).includes('psirt') && M.plan(new Date('2026-10-17T08:19:00Z')).includes('triageeval') && !M.plan(new Date('2026-10-17T08:49:00Z')).includes('triageeval'), 'plan');
 }

@@ -44,7 +44,7 @@ jobs:
           export const LABEL = 'collector-alert';
           // Minutes between scheduled runs of each job (neon/parts/50-http.mjs plan()). A job is silent when its last run is
           // older than 90 minutes, or for a job slower than hourly, older than its own interval plus 90 minutes.
-          export const CADENCE_MIN = { gdelt: 15, infra: 30, snap: 30, health: 30, ioda: 30, lists: 60, leaksites: 60, links: 60, retention: 60, fires: 60, maritime: 60, blogs: 60, triage: 60, psirt: 180,
+          export const CADENCE_MIN = { gdelt: 15, infra: 30, snap: 30, health: 30, ioda: 30, lists: 60, leaksites: 60, links: 60, retention: 60, fires: 60, maritime: 60, blogs: 60, triage: 60, news: 60, psirt: 180,
             unit42: 1440, genioc: 1440, lanesreg: 1440, sec8k: 840, ransompay: 10080 };
           export const silentAfterMin = (job) => { const c = CADENCE_MIN[job] || 15; return c <= 60 ? 90 : c + 90; };
           // Feeds the map or the store-first endpoints depend on (runbook 6c); a failing streak of 4 checks (2 hours) is a problem.
@@ -54,14 +54,14 @@ jobs:
           // from 2026-11-02.1; before that the expected HTTP answer decides. Volume rows of the maritime gaps hold at zero.
           // GreyNoise (intermittent): its free lookup rate-limits cloud egress (HTTP 429) and sometimes answers, so a passing
           // check holds the gap until the feed passes steadily (24-hour uptime of 95 percent or more); it needs an API key.
-          export const KNOWN_GAPS = { marad_msci: { expect: [403] }, ukmto: { expect: [403] }, nga_msi: { expect: [200, 206, 503], stale: true }, gdelt_doc_api: { expect: [429] },
-            greynoise: { expect: [429], intermittent: true } };
+          // GreyNoise left the gaps on 17 November 2026 (steady answers since 10 November).
+          export const KNOWN_GAPS = { marad_msci: { expect: [403] }, ukmto: { expect: [403] }, nga_msi: { expect: [200, 206, 503], stale: true }, gdelt_doc_api: { expect: [429] } };
           export const STEADY_UPTIME = 95;
           export const GAP_VOLUME = ['marad', 'asam', 'navwarn_security'];
           // Answer classes (3 November 2026): for the GDELT DOC API and GreyNoise, HTTP 429, a timeout and a failed fetch
           // (status 0) are one answer, refused at cloud egress; another answer (an HTTP 200 among them) lifts the gap.
           // GreyNoise is intermittent: a passing check keeps the gap until 24-hour uptime holds at 95 percent or more.
-          for (const f of ['gdelt_doc_api', 'greynoise']) KNOWN_GAPS[f] = { intermittent: f === 'greynoise', ...KNOWN_GAPS[f], expect: [429, 0] };
+          for (const f of ['gdelt_doc_api']) KNOWN_GAPS[f] = { ...KNOWN_GAPS[f], expect: [429, 0] };
           const holdsWhileIntermittent = (f) => !!KNOWN_GAPS[f.feed].intermittent && f.ok === true && (f.uptime_24h ?? 0) < 95;
           // Submarine cables (weekly, Sundays 05:19 UTC): silent after a week plus 90 minutes.
           CADENCE_MIN.cables = 10080;
@@ -72,7 +72,7 @@ jobs:
           export const GAP_JOBS = { maritime: /no source answered/ };
           const restatesGap = (job, j) => !!GAP_JOBS[job] && j.ok === false && GAP_JOBS[job].test(String(j.error || ''));
           // Jobs added after the alert workflow: no "no run recorded" problem until their first run is in the record.
-          export const NEW_JOBS = ['cables', 'psirt', 'triage'];
+          export const NEW_JOBS = ['cables', 'psirt', 'triage', 'news'];
           const STREAK = 4, FAILS_24H = 3, STALE_RECORD_MIN = 90;
 
           const mins = (now, t) => Math.round((now - Date.parse(t)) / 60000);
@@ -103,18 +103,22 @@ jobs:
               add('Collector: health failing', 'job', [`The health record was last written ${age} minutes ago (checked_at ${c.checked_at}); the health job runs every 30 minutes, so the other checks cannot be judged.`], 'job:health:stale');
               return { problems, complete: false, closable };
             }
-            // Jobs: last run failed, silent against its cadence, or 3 or more failures in 24 hours.
+            // Jobs: last run failed, silent against its cadence, or 3 or more failures in 24 hours under the running collector
+            // version. Silence is judged at the time the record was written: the health job runs first in its invocation, so
+            // its record shows the jobs of that invocation one run behind, and on 17 November a record read 34 minutes after
+            // it was written made three on-time jobs look 92 minutes silent.
+            const recordAt = Date.parse(c.checked_at || c.generated) || now;
             const jobs = new Map((c.jobs || []).map((j) => [j.job, j]));
             for (const job of Object.keys(CADENCE_MIN)) {
               const j = jobs.get(job), why = [], fp = [];
               if (!j && NEW_JOBS.includes(job)) continue;
             if (!j) { why.push('no run recorded in the last 30 days'); fp.push('none'); }
               else {
-                const quiet = mins(now, j.last_run);
+                const quiet = mins(recordAt, j.last_run);
                 const gap = restatesGap(job, j);
                 if (j.ok === false && !gap) { why.push(`last run failed (${j.last_run}): ${j.error || 'no error text'}`); fp.push('failed:' + String(j.error || '').replace(/\d+/g, '#').slice(0, 120)); }
                 if (quiet > silentAfterMin(job)) { why.push(`silent for ${quiet} minutes (last run ${j.last_run}; expected every ${CADENCE_MIN[job]} minutes, alert after ${silentAfterMin(job)})`); fp.push('silent'); }
-                if ((j.failed_24h || 0) >= FAILS_24H && !gap) { why.push(`${j.failed_24h} of ${j.runs_24h} runs failed in 24 hours`); fp.push('fails24'); }
+                if ((j.failed_24h || 0) >= FAILS_24H && !gap) { why.push(`${j.failed_24h} of ${j.runs_24h} runs failed in 24 hours under the running collector version${j.failed_24h_all > j.failed_24h ? ` (${j.failed_24h_all} in all)` : ''}`); fp.push('fails24'); }
               }
               if (why.length) add(`Collector: ${job} failing`, 'job', why, 'job:' + job + ':' + fp.join('|'));
             }

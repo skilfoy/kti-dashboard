@@ -43,7 +43,6 @@ export const KNOWN_GAPS = {
   // alert workflow reports a change only once the feed passes steadily (24-hour uptime of 95 percent or more). To lift
   // it: set GREYNOISE_API_KEY as a Neon function variable, send it from the probe and the exposure lookups, then remove
   // this entry and the matching one in .github/workflows/collector-alert.yml (runbook section 6).
-  greynoise: { expect: [429], intermittent: true, note: "GreyNoise's free lookup rate-limits cloud egress (HTTP 429); needs a GreyNoise API key (tracked in the KTI work tracker)" },
 };
 export const KNOWN_GAP_VOLUME = { marad: 'marad_msci', asam: 'nga_asam', navwarn_security: 'nga_msi' };
 // Answer classes (3 November 2026). Some sources refuse cloud egress in more than one way: the GDELT DOC API alternates
@@ -52,8 +51,8 @@ export const KNOWN_GAP_VOLUME = { marad: 'marad_msci', asam: 'nga_asam', navwarn
 // HTTP 200 among them, lifts it. An entry already defined above keeps its own note and fields.
 export const EGRESS_REFUSED = [429, 0];
 KNOWN_GAPS.gdelt_doc_api = { ...KNOWN_GAPS.gdelt_doc_api, expect: EGRESS_REFUSED, answer_class: 'refused at cloud egress (429, timeout or failed fetch)' };
-KNOWN_GAPS.greynoise = { note: "GreyNoise's free lookup rate-limits cloud egress (HTTP 429); needs a GreyNoise API key (tracked in the KTI work tracker)", intermittent: true,
-  ...KNOWN_GAPS.greynoise, expect: EGRESS_REFUSED, answer_class: 'refused at cloud egress (429, timeout or failed fetch)' };
+// GreyNoise left the documented gaps on 17 November 2026: its keyless lookup has answered cloud egress steadily since
+// 10 November. A key (GREYNOISE_API_KEY) is still sent when it is set.
 // Open-data sources of the cables job (37e-cables.mjs): Overpass's status page and a one-line Wikidata SPARQL ASK, sent
 // with the same identifying User-Agent and an Accept header (overpass-api.de answers a bare request with HTTP 406).
 const OPEN_DATA_HEADERS = (accept) => () => ({ accept, 'user-agent': cableUserAgent(ENV().SEC_USER_AGENT || 'contact not set') });
@@ -144,7 +143,10 @@ export async function buildHealth({ checks, at, infocon }) {
       FROM ti.feed_check WHERE at > now() - interval '7 days' GROUP BY feed`],
     [`SELECT feed, ok FROM ti.feed_check WHERE at > now() - interval '12 hours' ORDER BY feed, at DESC`],
     [`SELECT DISTINCT ON (job) job, started_at, ms, ok, detail->>'error' AS error FROM ti.run ORDER BY job, started_at DESC`],
-    [`SELECT job, count(*) FILTER (WHERE NOT ok)::int AS failed_24h, count(*)::int AS runs_24h FROM ti.run WHERE started_at > now() - interval '24 hours' GROUP BY job`],
+    // Failures under the running collector version: a fault a deploy has fixed stops counting at the deploy (16 November
+    // 2026: the duplicate-link fault kept a psirt alert open for a day after the fix). failed_24h_all keeps every failure.
+    [`SELECT job, count(*) FILTER (WHERE NOT ok AND detail->>'version' = $1)::int AS failed_24h, count(*) FILTER (WHERE NOT ok)::int AS failed_24h_all, count(*)::int AS runs_24h
+      FROM ti.run WHERE started_at > now() - interval '24 hours' GROUP BY job`, [VERSION]],
     // Volume baseline (B5): latest snapshot size per feed against its 30-day median, by UTC hour once that hour has history.
     [VOLUME_BASELINE_SQL, [null, null]],
   ]);
@@ -155,7 +157,7 @@ export async function buildHealth({ checks, at, infocon }) {
   const rows = up.map((u) => ({ kind: 'feed', feed: u.feed, ok: cur.has(u.feed) ? cur.get(u.feed).ok : null, status: cur.has(u.feed) ? cur.get(u.feed).status : null,
     ms: cur.has(u.feed) ? cur.get(u.feed).ms : null, uptime_24h: u.n24 ? r2((100 * u.ok24) / u.n24) : null, uptime_7d: u.n7 ? r2((100 * u.ok7) / u.n7) : null,
     checks_24h: u.n24, p50_ms: u.p50_ms, last_ok: u.last_ok, last_fail: u.last_fail, failing_streak: (streak.get(u.feed) || { n: 0 }).n }))
-    .concat(runs.map((r) => ({ kind: 'job', job: r.job, last_run: r.started_at, ms: r.ms, ok: r.ok, error: r.error, runs_24h: (fmap.get(r.job) || {}).runs_24h || 0, failed_24h: (fmap.get(r.job) || {}).failed_24h || 0 })))
+    .concat(runs.map((r) => ({ kind: 'job', job: r.job, last_run: r.started_at, ms: r.ms, ok: r.ok, error: r.error, runs_24h: (fmap.get(r.job) || {}).runs_24h || 0, failed_24h: (fmap.get(r.job) || {}).failed_24h || 0, failed_24h_all: (fmap.get(r.job) || {}).failed_24h_all || 0, version: VERSION })))
     .concat((vol || []).map((v) => ({ kind: 'volume', ...volumeFlag(v) })));
   // Additive fields: "state" on feed rows (up, down, known_gap) and on volume rows of gap sources, a "gap" note, and the
   // down and known_gaps lists. "ok" keeps its meaning (the raw check), so readers of the earlier shape are unaffected.
