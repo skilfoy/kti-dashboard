@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.0.1 (17 November 2026)
+
+- First production runs of 3.0: the sources job read 520 feeds in 150 seconds with none failing (19 healed: 17 through Google News, 2 through discovery) and stored 15,190 entries; the store held 21,835 entries from 1,891 publishers. A search for Optimizely returns 77 entries from 72 publishers. The first agentic report (an intelligence brief on the Optimizely script hijacking) took about three minutes on nvidia/nemotron-3-ultra-550b-a55b:free.
+- Reports start the moment they are queued; the upload trigger and the scheduled job remain as fallbacks (the first report waited 11 minutes for them).
+- The report agent resolves Google News links to the publisher's page before reading them, and names the publisher of every web result.
+- TAXII 2.1 paths answer with the trailing slash the specification uses.
+- Collector 2026-11-17.7.
+
 ## 3.0.0 (17 November 2026)
 
 - Source network. 863 validated feeds replace the 44 news feeds and the 6-hourly blog reading: 417 research and CTI blogs, 60 security news outlets, 25 CERTs and agencies, 12 vulnerability sources, 198 regional and world news feeds, 14 think tanks, maritime, defense and community feeds, and 116 Google News query feeds (cyber topics in English and 28 other language and country editions, two queries a theater). The registry (`data/feeds.json`) merges a curated core with four open lists; `pipeline/feeds_build.py` validated all 2,048 candidates and kept those with an entry in the last 180 days. Feeds are read every 20 minutes, hourly or every four hours by volume, with conditional requests. A failing feed heals itself through its stored alternate, a feed found on the publisher's pages, or a Google News site: feed; 27 core outlets that refuse cloud requests (among them Dawn, Pakistan Today, The News International, the Associated Press of Pakistan, Addis Standard, The Reporter, Borkena, The EastAfrican, ReliefWeb, Cybernews, ISW and SC Media) are read that way, which restores Pakistani and Ethiopian press. A weekly workflow rebuilds, validates and ships the registry.

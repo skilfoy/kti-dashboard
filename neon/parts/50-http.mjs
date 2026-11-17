@@ -207,12 +207,19 @@ export default {
         const body = await req.json().catch(() => ({}));
         const key = String((body && body.data && (body.data.key || body.data.object_key)) || (body && (body.key || body.object_key)) || JSON.stringify(body || {}));
         const m = key.match(/R-\d{8}-[0-9a-f]{8}/);
-        return json(m ? await runReport(m[0]) : { skipped: 'no report id in the event', event: String(key).slice(0, 300) });
+        console.log(JSON.stringify({ trigger: 'report-run', key: String(key).slice(0, 120) }));
+        return json(m ? await runReport(m[0]) : await jobReports());
       }
       const who = await authorize(req);
       if (!who) return json({ error: 'unauthorized' }, 401);
       if (req.method === 'POST' && path === '/search') return json(await search(await req.json().catch(() => ({}))));
-      if (req.method === 'POST' && path === '/report') { const r = await startReport(await req.json().catch(() => ({}))); return json(r, r.status && r.error ? r.status : 200); }
+      if (req.method === 'POST' && path === '/report') {
+        const r = await startReport(await req.json().catch(() => ({})));
+        // The report starts at once in this instance (the long-running function keeps working after it answers); the
+        // bucket's upload trigger and the scheduled reports job pick it up if this instance goes away first.
+        if (r.id && !r.reused) runReport(r.id).catch((e) => console.log(JSON.stringify({ report: r.id, error: String((e && e.message) || e) })));
+        return json(r, r.status && r.error ? r.status : 200);
+      }
       if (req.method === 'GET' && path.startsWith('/report/')) { const r = await getReport(path.slice(8)); return r ? json(r) : json({ error: 'not found' }, 404); }
       if (req.method === 'GET' && path === '/reports') return json({ reports: await listReports(url.searchParams.get('limit')) });
       if (req.method === 'GET' && path.startsWith('/doc/')) {

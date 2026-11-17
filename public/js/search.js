@@ -176,7 +176,7 @@
     $('report-body').innerHTML = r.body ? md(r.body) : '';
     const src = TI.list(r.sources) || [];
     $('report-sources-h').hidden = !src.length;
-    $('report-sources').innerHTML = src.map((s) => `<li id="rsrc-${s.n}" value="${s.n}"><a href="${esc(safeUrl(s.url))}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a> <span class="ti-dim">${esc(s.publisher || '')}${s.published ? ' · ' + esc(day(s.published)) : ''} · ${esc(s.via || '')}</span></li>`).join('');
+    $('report-sources').innerHTML = src.map((s) => `<li id="rsrc-${s.n}" value="${s.n}"><a href="${esc(safeUrl(s.url_resolved || s.url))}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a> <span class="ti-dim">${esc(s.publisher || '')}${s.published ? ' · ' + esc(day(s.published)) : ''} · ${esc(s.via || '')}</span></li>`).join('');
     state.report = r;
   };
   const openReport = async (id) => {
@@ -226,7 +226,7 @@
     $('report-copy').addEventListener('click', () => { const u = location.origin + '/#search?report=' + (state.report && state.report.id); (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => { $('report-copy').textContent = 'Link copied'; setTimeout(() => ($('report-copy').textContent = 'Copy link'), 2000); }).catch(() => prompt('Report link', u)); });
     $('report-md').addEventListener('click', () => {
       const r = state.report; if (!r) return;
-      const src = (TI.list(r.sources) || []).map((s) => `${s.n}. [${s.title}](${s.url}) ${s.publisher || ''} ${day(s.published)}`).join('\n');
+      const src = (TI.list(r.sources) || []).map((s) => `${s.n}. [${s.title}](${s.url_resolved || s.url}) ${s.publisher || ''} ${day(s.published)}`).join('\n');
       const blob = new Blob([`# ${typeName(r.type)}: ${r.q}\n\n${r.body || ''}\n\n## Sources\n\n${src}\n\n_KTI report ${r.id}, machine-written by ${r.model}; unreviewed._\n`], { type: 'text/markdown' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = r.id + '.md'; document.body.append(a); a.click(); a.remove();
     });
