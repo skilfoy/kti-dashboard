@@ -771,7 +771,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const trig = await M.default.fetch(new Request('https://ti.example/report-run', { method: 'POST', headers: { 'x-neon-trigger-invocation-id': 'inv-1', 'content-type': 'application/json' }, body: JSON.stringify({ data: { key: `reports/queue/${st.id}.json` } }) }));
   const tr = await trig.json(), rep = await M.getReport(st.id);
   const src = rep.sources || [];
-  ok(trig.status === 200 && tr.ok && rep.status === 'done' && rep.model === 'test/big:free' && calls.length === 2 && calls[0].tools.length === 3 && !calls[1].tools === false
+  ok(trig.status === 200 && tr.ok && rep.status === 'done' && rep.model === 'test/big:free' && calls.length === 3 && calls[0].tools.length === 3 && !calls[2].tools && /Revise the report/.test(calls[2].messages.slice(-1)[0].content)
     && !/\[99\]/.test(rep.body) && src.length === 2 && src.some((x) => x.url === 'https://analysis.example/optimizely') && src.some((x) => x.via === 'corpus'),
     'the upload trigger runs the report: a free model with tools, web search through Bing News with the publisher link unwrapped, an invented citation dropped ' + JSON.stringify({ tr, status: rep.status, err: rep.error, src, calls: calls.length }));
   ok((await M.getReport('nope')) === null && (await M.listReports()).some((r) => r.id === st.id), 'reports are listed and ids are checked');

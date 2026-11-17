@@ -237,6 +237,16 @@ Starting sources:\n${sources.length ? sources.map(fmtSrc).join('\n') : '(none: t
       }
     }
     if (!final) throw new Error('no model produced a report: ' + fails.slice(-3).join('; '));
+    // Corroboration depth: a draft that cites fewer than eight distinct sources (or every source, when fewer were seen)
+    // goes back once for revision against the listed sources, and the revision is kept if it cites more.
+    const citedIn = (t) => new Set([...String(t).matchAll(/\[(\d{1,3})\]/g)].map((m) => +m[1]).filter((n) => n >= 1 && n <= sources.length));
+    const want = Math.min(8, sources.length);
+    if (citedIn(final).size < want && Date.now() - t0 < REPORT.BUDGET_MS - REPORT.CALL_MS && model && (await reportBudget())) {
+      await step(id, `Draft cites ${citedIn(final).size} sources; asking for corroboration from more of the ${sources.length} sources seen`);
+      messages.push({ role: 'assistant', content: final }, { role: 'user', content: `Revise the report. It cites ${citedIn(final).size} distinct sources; corroborate each key fact with every listed source that carries it, citing at least ${want} distinct sources from as many independent publishers as the list allows. Keep the structure, change no fact the sources do not support, and return the full revised report only.` });
+      const v = await orChat(model, messages, null);
+      if (v.ok && v.msg.content && citedIn(v.msg.content).size > citedIn(final).size) final = String(v.msg.content).trim();
+    }
     // Citations to numbers that were never given are dropped; the source list holds the cited sources in order.
     const cited = new Set([...final.matchAll(/\[(\d{1,3})\]/g)].map((m) => +m[1]).filter((n) => n >= 1 && n <= sources.length));
     const body = final.replace(/\[(\d{1,3})\]/g, (m, n) => (cited.has(+n) ? m : ''));
