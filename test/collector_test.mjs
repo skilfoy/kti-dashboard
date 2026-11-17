@@ -559,7 +559,8 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   await db.query(`DELETE FROM ti.triage WHERE link LIKE '%fortinet%'`);
   llm = [];
   const t4 = await M.runJob('triage');
-  ok(t4.ok && t4.labelled === 0 && /budget/.test(t4.stop) && llm.length === 0, 'daily budget stops the run before a request');
+  // A deleted title that is the same story as a stored one rejoins it without a request; nothing goes to the model.
+  ok(t4.ok && t4.labelled === t4.joined && /budget/.test(t4.stop) && llm.length === 0, 'daily budget stops the run before a request ' + JSON.stringify({ l: t4.labelled, j: t4.joined, s: t4.stop, c: t4.candidates }));
   await db.query(`UPDATE ti.kv SET v = jsonb_set(v, '{used}', '3') WHERE k = 'triage:budget'`);
   llmMode = 'limited';
   const t5 = await M.runJob('triage');
@@ -649,7 +650,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const prevExtra = EXTRA;
   EXTRA = async (u, opts, h) => {
     const f = M.NEWS_FEEDS.find((x) => x.url === u);
-    if (f) return f.id === 'pakistantoday' ? resp(503, 'busy') : resp(200, rss(f.id));
+    if (f) return f.id === 'thenewspk' ? resp(503, 'busy') : resp(200, rss(f.id));
     if (u === M.TRIAGE.ENDPOINT) {
       const body = JSON.parse(opts.body);
       const ids = body.messages[1].content.split('\n').slice(1).map((l) => +l.split('\t')[0]);
@@ -660,10 +661,10 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   };
   const n1 = await M.runJob('news');
   const F = M.NEWS_FEEDS.length - 1;
-  ok(n1.ok && n1.feeds === M.NEWS_FEEDS.length && n1.feeds_ok === F && n1.failed.length === 1 && n1.failed[0].feed === 'pakistantoday' && n1.read === F * 2 + 1,
+  ok(n1.ok && n1.feeds === M.NEWS_FEEDS.length && n1.feeds_ok === F && n1.failed.length === 1 && n1.failed[0].feed === 'thenewspk' && n1.read === F * 2 + 1,
     'news: dated titles inside 72 hours, one row per link, the failing feed listed ' + JSON.stringify({ read: n1.read, failed: n1.failed }));
   const ndoc = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/news.json.gz')).toString());
-  ok(ndoc.rows.length === M.NEWS_FEEDS.length && ndoc.titles_72h === F * 2 + 1 && ndoc.rows.find((r) => r.id === 'pakistantoday').ok === false && ndoc.rows.find((r) => r.id === 'bbcworld').fresh === 3
+  ok(ndoc.rows.length === M.NEWS_FEEDS.length && ndoc.titles_72h === F * 2 + 1 && ndoc.rows.find((r) => r.id === 'thenewspk').ok === false && ndoc.rows.find((r) => r.id === 'bbcworld').fresh === 3
     && ndoc.rows.every((r) => r.kind === 'feed' && r.region), 'news document lists every feed with its region and count');
   const n2 = await M.runJob('news');
   ok(n2.ok && (await db.query(`SELECT count(*)::int AS n FROM ti.news`)).rows[0].n === F * 2 + 1, 'a second read adds no duplicate');
@@ -678,6 +679,22 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const leads = tdoc.rows.filter((r) => r.kind === 'lead');
   ok(tr.ok && tr.pool === F * 2 + 1 && leads.length > 0 && leads.every((r) => r.from === 'news' && r.theater === 'T-UKR') && /theater news/.test(tdoc.source),
     'triage takes the news titles into its pool ' + JSON.stringify({ pool: tr.pool, labelled: tr.labelled, leads: leads.length }));
+  // A later title of a story already labelled joins it with no request; stories labelled in different runs merge in the
+  // document when they carry the same theater and their titles pass the loose test.
+  const rep0 = leads[0], calls0 = tr.calls.length;
+  await db.query(`INSERT INTO ti.news (link, feed, source, title, published) VALUES ('https://late.example/1', 'late', 'Late Wire', $1, now())`, ['Update: ' + rep0.title]);
+  const tr2 = await M.runJob('triage');
+  const j = (await db.query(`SELECT cluster, theater, relevance FROM ti.triage WHERE link = 'https://late.example/1'`)).rows[0];
+  ok(tr2.ok && tr2.joined === 1 && tr2.calls.length === 0 && j && j.cluster === rep0.link && j.theater === rep0.theater && j.relevance === rep0.relevance,
+    'a later title joins its labelled story without a request ' + JSON.stringify({ joined: tr2.joined, calls: tr2.calls.length, calls0, j }));
+  await db.query(`INSERT INTO ti.triage (link, kind, source, title, published, cves, relevance, vector, theater, actors, why, model, prompt_v) VALUES
+    ('https://m.example/1', 'news', 'Deutsche Welle', 'Ukraine: Russian strikes hit bridges in Kyiv, mayor says', now(), '[]', 3, 'none', 'T-RSY', '[]', 'w', 'm', 'triage-1'),
+    ('https://m.example/2', 'news', 'France 24', 'Russian strikes hit two key bridges in Kyiv, disrupting water and power supplies', now() - interval '2 hours', '[]', 3, 'none', 'T-RSY', '[]', 'w', 'm', 'triage-1'),
+    ('https://m.example/3', 'news', 'Arab News', 'Russian strikes hit two key bridges in Kyiv, disrupting water and power supplies', now(), '[]', 3, 'none', 'T-GLB', '[]', 'w', 'm', 'triage-1')`);
+  const md = await M.triageDoc();
+  const m1 = md.rows.find((r) => r.link === 'https://m.example/1');
+  ok(m1 && m1.also === 1 && m1.also_sources[0] === 'France 24' && !md.rows.some((r) => r.link === 'https://m.example/2') && md.rows.some((r) => r.link === 'https://m.example/3'),
+    'same-story leads from different runs merge under one theater, not across theaters');
   delete process.env.OPENROUTER_API_KEY; delete process.env.TI_TRIAGE_VERIFY;
   EXTRA = prevExtra;
 }

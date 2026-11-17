@@ -3082,9 +3082,9 @@
    "reviewed": "2026-11-17"
   },
   {
-   "id": "news-addisstandard",
-   "name": "Addis Standard",
-   "owner": "Addis Standard",
+   "id": "news-borkena",
+   "name": "Borkena",
+   "owner": "Borkena",
    "category": "Geopolitics",
    "feeds": [
     "live_news",
@@ -3092,7 +3092,36 @@
     "page:sources",
     "page:theaters"
    ],
-   "url": "https://addisstandard.com/feed/",
+   "url": "https://borkena.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-reporterethiopia",
+   "name": "The Reporter (Ethiopia)",
+   "owner": "The Reporter (Ethiopia)",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.thereporterethiopia.com/feed/",
    "access": "open",
    "secret": null,
    "licence": "Titles, links and dates only; each article belongs to its publisher",
@@ -3227,9 +3256,9 @@
    "reviewed": "2026-11-17"
   },
   {
-   "id": "news-pakistantoday",
-   "name": "Pakistan Today",
-   "owner": "Pakistan Today",
+   "id": "news-thenewspk",
+   "name": "The News International",
+   "owner": "The News International",
    "category": "Geopolitics",
    "feeds": [
     "live_news",
@@ -3237,7 +3266,36 @@
     "page:sources",
     "page:theaters"
    ],
-   "url": "https://www.pakistantoday.com.pk/feed/",
+   "url": "https://www.thenews.com.pk/rss/1/1",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-app",
+   "name": "Associated Press of Pakistan",
+   "owner": "Associated Press of Pakistan",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.app.com.pk/feed/",
    "access": "open",
    "secret": null,
    "licence": "Titles, links and dates only; each article belongs to its publisher",
