@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.8.0 (17 November 2026)
+
+- One lead per story across hours. A title that is the same story as one already labelled in the 72-hour window takes that story's label and joins it, with no model request; hourly feeds carry a story for hours after its first title. Stories labelled in different runs merge in the triage document when they carry the same theater label and the titles share at least four words and 70 percent of the shorter title's words (the three Kyiv bridge strikes headlines of 17 November, from Deutsche Welle and France 24, now read as one lead with its other carriers).
+- Ethiopian and Pakistani press: Addis Standard and Pakistan Today refused the collector (HTTP 403). Two candidates each now take their place, Borkena and The Reporter for Ethiopia, The News International and the Associated Press of Pakistan; the first run shows which answer, and those that refuse leave the list.
+- Collector 2026-11-17.4.
+
 ## 2.7.2 (17 November 2026)
 
 - Infra job: four runs between 08:40 and 10:12 UTC on 17 November failed with "ON CONFLICT DO UPDATE command cannot affect row a second time" when a feed listed one address in two spellings (IPv6 in upper and lower case reads as one inet). Both upserts now keep one row per key. Collector 2026-11-17.3.

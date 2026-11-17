@@ -322,7 +322,16 @@ export async function triageDoc(extra = {}) {
   const others = new Map();
   for (const r of all) if (r.cluster && r.cluster !== r.link) (others.get(r.cluster) || others.set(r.cluster, []).get(r.cluster)).push(r);
   const lone = new Set(all.map((r) => r.link));
-  const rows = all.filter((r) => !r.cluster || r.cluster === r.link || !lone.has(r.cluster)).slice(0, TRIAGE.MAX_ROWS).map(({ cluster, ...r }) => {
+  // Stories labelled in different runs: a representative that is the same story as a stronger one already kept (same
+  // theater label, titles that pass the loose test) folds into it with its own members.
+  const kept = [];
+  for (const r of all.filter((x) => !x.cluster || x.cluster === x.link || !lone.has(x.cluster))) {
+    const w = titleWords(r.title), cv = new Set(r.cves || []);
+    const home = r.theater && r.theater !== 'none' ? kept.find((k) => k.r.theater === r.theater && sameStory(w, cv, k.w, k.cv, true)) : null;
+    if (home) { const o = others.get(home.r.link) || others.set(home.r.link, []).get(home.r.link); o.push(r, ...(others.get(r.link) || [])); }
+    else kept.push({ r, w, cv });
+  }
+  const rows = kept.map((k) => k.r).slice(0, TRIAGE.MAX_ROWS).map(({ cluster, ...r }) => {
     const also = others.get(r.link) || [];
     const cves = [...new Set([...(r.cves || []), ...also.flatMap((a) => a.cves || [])])];
     return { ...r, cves, kev: cves.filter((c) => kev.has(c)), actors: [...new Set([...(r.actors || []), ...also.flatMap((a) => a.actors || [])])], also: also.length, also_sources: [...new Set(also.map((a) => a.source).filter(Boolean))].slice(0, 6) };
@@ -346,18 +355,22 @@ export async function triageDoc(extra = {}) {
 // the newest title; its label is stored for every member, so a duplicate is never sent later.
 const STOP = new Set('the and for with from that this are was were has have had into over after amid about your you its their his her new how why what when who says said report reports reported via more than not but can will may out all one two'.split(' '));
 export const titleWords = (t) => new Set(String(t || '').toLowerCase().replace(/cve-\d{4}-\d{4,7}/g, ' ').split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !STOP.has(w)));
+// loose: the test for two stored stories that already carry the same theater label, where the label is a second piece
+// of evidence ("Ukraine: Russian strikes hit bridges in Kyiv, mayor says" and "Russian strikes hit two key bridges in
+// Kyiv, disrupting water and power supplies" share 5 of the shorter title's 7 words but only 0.42 of the union).
+export function sameStory(w1, c1, w2, c2, loose = false) {
+  let inter = 0;
+  for (const x of w1) if (w2.has(x)) inter++;
+  const union = w1.size + w2.size - inter, jac = union ? inter / union : 0, overlap = Math.min(w1.size, w2.size) ? inter / Math.min(w1.size, w2.size) : 0;
+  const sharedCve = [...c1].some((x) => c2.has(x));
+  return (jac >= 0.5 && overlap >= 0.6 && inter >= 3) || (sharedCve && jac >= 0.25) || (loose && overlap >= 0.7 && inter >= 4);
+}
 export function clusterTitles(items) {
   const clusters = [];
   for (const it of items) {
     const w = titleWords(it.title), cv = new Set(it.cves || []);
     let home = null;
-    for (const c of clusters) {
-      let inter = 0;
-      for (const x of w) if (c.words.has(x)) inter++;
-      const union = w.size + c.words.size - inter, jac = union ? inter / union : 0, overlap = Math.min(w.size, c.words.size) ? inter / Math.min(w.size, c.words.size) : 0;
-      const sharedCve = [...cv].some((x) => c.cves.has(x));
-      if ((jac >= 0.5 && overlap >= 0.6 && inter >= 3) || (sharedCve && jac >= 0.25)) { home = c; break; }
-    }
+    for (const c of clusters) if (sameStory(w, cv, c.words, c.cves)) { home = c; break; }
     if (home) home.members.push(it); else clusters.push({ rep: it, words: w, cves: cv, members: [it] });
   }
   return clusters;
@@ -378,10 +391,23 @@ export async function jobTriage() {
   let res = { labels: new Map(), rejects: {}, missing: 0, calls: [] };
   // CVE identifiers come from the advisory feed and from the title itself, never from the model.
   const pool_ = cand.map((c) => ({ ...c, cves: [...new Set([...(Array.isArray(c.cves) ? c.cves : []), ...cvesIn(c.title)])] }));
-  const clusters = clusterTitles(pool_), tier = await triageCap();
+  const tier = await triageCap();
+  // A title that is the same story as one already labelled in the window takes that story's label and joins it, with no
+  // request: hourly feeds carry a story for hours after its first title was labelled.
+  const stored = (await sql(`SELECT link, title, cves, relevance, vector, theater, actors, why, model FROM ti.triage
+    WHERE COALESCE(published, at) > now() - make_interval(hours => $1) AND (cluster IS NULL OR cluster = link)`, [TRIAGE.WINDOW_H]))
+    .map((r) => ({ ...r, words: titleWords(r.title), cvs: new Set(Array.isArray(r.cves) ? r.cves : []) }));
+  const joined = [], fresh = [];
+  for (const c of clusterTitles(pool_)) {
+    const s0 = stored.find((x) => sameStory(c.words, c.cves, x.words, x.cvs));
+    if (s0) for (const m of c.members) joined.push({ link: m.link, kind: m.kind, source: m.source, title: m.title, published: m.published, cves: m.cves, relevance: s0.relevance, vector: s0.vector,
+      theater: s0.theater, actors: (Array.isArray(s0.actors) ? s0.actors : []).filter((a) => String(m.title).toLowerCase().includes(String(a).toLowerCase())), why: s0.why, cluster: s0.link, model: s0.model, prompt_v: TRIAGE.PROMPT_V });
+    else fresh.push(c);
+  }
+  const clusters = fresh;
   // One request a run on the free tier; a credited account works the backlog down with up to LABEL_BATCHES_CREDITED
   // requests while the run is inside LABEL_BUDGET_MS.
-  const maxB = tier.tier === 'credited' ? TRIAGE.LABEL_BATCHES_CREDITED : 1, items = [], rows = [];
+  const maxB = tier.tier === 'credited' ? TRIAGE.LABEL_BATCHES_CREDITED : 1, items = [], rows = [...joined];
   for (let b = 0; b < maxB && b * TRIAGE.BATCH < clusters.length && !res.stop && (b === 0 || Date.now() - t0 < TRIAGE.LABEL_BUDGET_MS); b++) {
     const batch = clusters.slice(b * TRIAGE.BATCH, (b + 1) * TRIAGE.BATCH).map((c, i) => ({ id: i + 1, ...c.rep, members: c.members }));
     const r = await triageBatch(batch, tier.cap);
@@ -410,14 +436,14 @@ export async function jobTriage() {
   const lastV = Date.parse(((await kvGet('triage:verify_at')) || {}).at || 0) || 0, due = Date.now() - lastV >= TRIAGE.VERIFY_EVERY_MS;
   let verify = { checked: 0, skipped: vmode === 'never' ? 'off' : late ? 'labelling ran long' : 'not due' };
   if (vmode !== 'never' && !late && (vmode === 'always' || due)) { verify = await triageVerify(); if (verify.calls) await kvPut('triage:verify_at', { at: new Date().toISOString() }); }
-  const last = { at: new Date().toISOString(), pool: pool_.length, candidates: items.length, labelled: rows.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls };
+  const last = { at: new Date().toISOString(), pool: pool_.length, candidates: items.length, labelled: rows.length, joined: joined.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls };
   await kvPut('triage:last', last);
   await recordVolume([['triage_labelled', rows.length]]);
-  const out = { pool: pool_.length, candidates: items.length, waiting: Math.max(0, Number(waiting) - rows.length), labelled: rows.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls, verify,
+  const out = { pool: pool_.length, candidates: items.length, waiting: Math.max(0, Number(waiting) - rows.length), labelled: rows.length, joined: joined.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls, verify,
     published: await putDoc('triage', await triageDoc({ last_run: last })), ms: Date.now() - t0 };
   // A run whose requests all failed is a failed run, so the health record and the alert workflow see it.
   out.tier = tier.tier; out.cap = tier.cap;
-  if (items.length && !rows.length && !res.stop) out.run_failed = 'no usable answer from the triage endpoint: ' + res.calls.map((c) => c.error || 'unparsed').join('; ');
+  if (items.length && rows.length === joined.length && !res.stop) out.run_failed = 'no usable answer from the triage endpoint: ' + res.calls.map((c) => c.error || 'unparsed').join('; ');
   return out;
 }
 // Verifier (G73). A second free-model request re-labels the stories the tier marked relevance 3 and knows nothing of the
