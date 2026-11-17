@@ -650,7 +650,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const prevExtra = EXTRA;
   EXTRA = async (u, opts, h) => {
     const f = M.NEWS_FEEDS.find((x) => x.url === u);
-    if (f) return f.id === 'thenewspk' ? resp(503, 'busy') : resp(200, rss(f.id));
+    if (f) return f.id === 'tribunepk' ? resp(503, 'busy') : resp(200, rss(f.id));
     if (u === M.TRIAGE.ENDPOINT) {
       const body = JSON.parse(opts.body);
       const ids = body.messages[1].content.split('\n').slice(1).map((l) => +l.split('\t')[0]);
@@ -661,10 +661,10 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   };
   const n1 = await M.runJob('news');
   const F = M.NEWS_FEEDS.length - 1;
-  ok(n1.ok && n1.feeds === M.NEWS_FEEDS.length && n1.feeds_ok === F && n1.failed.length === 1 && n1.failed[0].feed === 'thenewspk' && n1.read === F * 2 + 1,
+  ok(n1.ok && n1.feeds === M.NEWS_FEEDS.length && n1.feeds_ok === F && n1.failed.length === 1 && n1.failed[0].feed === 'tribunepk' && n1.read === F * 2 + 1,
     'news: dated titles inside 72 hours, one row per link, the failing feed listed ' + JSON.stringify({ read: n1.read, failed: n1.failed }));
   const ndoc = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/news.json.gz')).toString());
-  ok(ndoc.rows.length === M.NEWS_FEEDS.length && ndoc.titles_72h === F * 2 + 1 && ndoc.rows.find((r) => r.id === 'thenewspk').ok === false && ndoc.rows.find((r) => r.id === 'bbcworld').fresh === 3
+  ok(ndoc.rows.length === M.NEWS_FEEDS.length && ndoc.titles_72h === F * 2 + 1 && ndoc.rows.find((r) => r.id === 'tribunepk').ok === false && ndoc.rows.find((r) => r.id === 'bbcworld').fresh === 3
     && ndoc.rows.every((r) => r.kind === 'feed' && r.region), 'news document lists every feed with its region and count');
   const n2 = await M.runJob('news');
   ok(n2.ok && (await db.query(`SELECT count(*)::int AS n FROM ti.news`)).rows[0].n === F * 2 + 1, 'a second read adds no duplicate');
