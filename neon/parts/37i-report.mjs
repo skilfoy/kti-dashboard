@@ -138,14 +138,24 @@ export function pageText(html) {
   s = s.replace(/<(script|style|noscript|svg|nav|footer|header|form|aside)\b[\s\S]*?<\/\1>/gi, ' ').replace(/<br\s*\/?>|<\/(p|div|li|h\d|tr)>/gi, '\n');
   return unent(s.replace(/<[^>]+>/g, ' ')).replace(/[ \t\f\v]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim();
 }
-export async function fetchPage(url) {
+// A Google News article link redirects through a script; the publisher's own address is found by searching Bing News for
+// the exact title and taking the result whose title matches.
+export async function resolveNewsLink(url, title) {
+  if (!/news\.google\.com$/.test(hostOf(url)) || !title) return url;
+  const r = await get('https://www.bing.com/news/search?' + new URLSearchParams({ q: '"' + String(title).slice(0, 150) + '"', format: 'rss' }), { timeout: 12000, headers: { accept: 'application/rss+xml' } });
+  const norm = (t) => String(t || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  const want = norm(title), hit = r.ok ? rssItems(r.text).find((x) => { const n = norm(x.title); return n && (n === want || n.startsWith(want.slice(0, 60)) || want.startsWith(n.slice(0, 60))); }) : null;
+  return hit ? bingTarget(hit.url) : url;
+}
+export async function fetchPage(url, title) {
   if (!/^https?:\/\//.test(String(url || ''))) return { ok: false, error: 'not a web address' };
+  url = await resolveNewsLink(url, title);
   const h = hostOf(url);
   if (/^(localhost|127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(h) || /\.(internal|local)$/.test(h) || /neon\.tech$|vercel\.app$/.test(h)) return { ok: false, error: 'address not allowed' };
   const r = await get(url, { timeout: 20000, headers: { accept: 'text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5' } });
   if (r.ok) {
     const t = pageText(r.text);
-    if (t.length > 400) return { ok: true, text: t.slice(0, REPORT.PAGE_CHARS), title: stripTags((String(r.text).match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || '') };
+    if (t.length > 400) return { ok: true, text: t.slice(0, REPORT.PAGE_CHARS), title: stripTags((String(r.text).match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || ''), url };
   }
   if (ENV().JINA_API_KEY) {
     const j = await get('https://r.jina.ai/' + url, { timeout: 30000, headers: { authorization: 'Bearer ' + ENV().JINA_API_KEY, accept: 'text/plain' } });
@@ -171,7 +181,7 @@ export async function runReport(id) {
   const [r] = await sql(`UPDATE ti.report SET status = 'running', started_at = now() WHERE id = $1 AND (status = 'queued' OR (status = 'running' AND started_at < now() - interval '15 minutes')) RETURNING id, q, type, prompt`, [id]);
   if (!r) return { id, skipped: 'not queued' };
   const sources = [], byUrl = new Map();
-  const addSrc = (x, via) => { const u = String(x.url || ''); if (!u) return null; if (byUrl.has(u)) return byUrl.get(u); const s = { n: sources.length + 1, title: String(x.title || u).slice(0, 220), url: u, publisher: x.publisher || x.source || '', published: x.published || null, snippet: x.snippet || x.summary || '', via }; sources.push(s); byUrl.set(u, s); return s; };
+  const addSrc = (x, via) => { const u = String(x.url || ''); if (!u) return null; if (byUrl.has(u)) return byUrl.get(u); const s = { n: sources.length + 1, title: String(x.title || u).slice(0, 220), url: u, publisher: x.publisher || x.source || (/news\.google\.com$/.test(hostOf(u)) ? '' : hostOf(u)), published: x.published || null, snippet: x.snippet || x.summary || '', via }; sources.push(s); byUrl.set(u, s); return s; };
   try {
     await step(id, 'Searching the platform\'s collected reporting');
     const c = await search({ q: r.q, days: 45, limit: REPORT.CORPUS_HITS });
@@ -217,7 +227,8 @@ Starting sources:\n${sources.length ? sources.map(fmtSrc).join('\n') : '(none: t
           out = got.length ? got.map(fmtSrc).join('\n') : 'No results.';
         } else if (name === 'fetch_page') {
           const k = String(args.source || '').trim(), s0 = /^\d+$/.test(k) ? sources[+k - 1] : null, u = s0 ? s0.url : k;
-          const p = await fetchPage(u);
+          const p = await fetchPage(u, s0 ? s0.title : '');
+          if (p.ok && s0 && p.url && p.url !== s0.url) { s0.url_resolved = p.url; if (!s0.publisher) s0.publisher = hostOf(p.url); }
           const s = s0 || (p.ok ? addSrc({ title: p.title || u, url: u }, 'page') : null);
           await step(id, `Read ${hostOf(u)}: ${p.ok ? p.text.length + ' characters' : p.error}`);
           out = p.ok ? `Source [${s.n}] ${s.title}\n${p.text}` : `Could not read the page: ${p.error}`;
