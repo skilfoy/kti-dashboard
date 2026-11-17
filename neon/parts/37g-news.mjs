@@ -4,6 +4,9 @@
 // the labelling to the triage job, which reads these titles beside the blog and advisory titles. Each theater has at least
 // one feed, and where a theater has two parties with their own press both are read (Dawn and The Hindu; Middle East Eye
 // and The Jerusalem Post). Titles and links only; every article belongs to its publisher.
+// Tried and refused the collector from cloud egress on 17 November 2026 (not retried): ReliefWeb (406), The EastAfrican
+// (404), Dawn, Addis Standard, Pakistan Today, The News International and the Associated Press of Pakistan (403),
+// Borkena (a challenge page) and The Reporter Ethiopia (304). Pakistani press comes from The Express Tribune.
 export const NEWS_FEEDS = [
   // Wire services and global desks
   { id: 'bbcworld', name: 'BBC News (World)', region: 'Global', url: 'https://feeds.bbci.co.uk/news/world/rss.xml' },
@@ -36,14 +39,10 @@ export const NEWS_FEEDS = [
   { id: 'dabanga', name: 'Dabanga', region: 'T-SDN', url: 'https://www.dabangasudan.org/en/feed' },
   { id: 'somaliguardian', name: 'Somali Guardian', region: 'T-HOA', url: 'https://www.somaliguardian.com/feed/' },
   { id: 'shabelle', name: 'Shabelle Media', region: 'T-HOA', url: 'https://shabellemedia.com/feed/' },
-  { id: 'borkena', name: 'Borkena', region: 'T-HOA', url: 'https://borkena.com/feed/' },
-  { id: 'reporterethiopia', name: 'The Reporter (Ethiopia)', region: 'T-HOA', url: 'https://www.thereporterethiopia.com/feed/' },
   { id: 'africanews', name: 'Africanews', region: 'T-SAH', url: 'https://www.africanews.com/feed/rss' },
   { id: 'amutv', name: 'Amu TV', region: 'T-AFP', url: 'https://amu.tv/feed/' },
   { id: 'afintl', name: 'Afghanistan International', region: 'T-AFP', url: 'https://www.afintl.com/en/feed' },
   { id: 'tribunepk', name: 'The Express Tribune', region: 'T-AFP', url: 'https://tribune.com.pk/feed/home' },
-  { id: 'thenewspk', name: 'The News International', region: 'T-SAS', url: 'https://www.thenews.com.pk/rss/1/1' },
-  { id: 'app', name: 'Associated Press of Pakistan', region: 'T-SAS', url: 'https://www.app.com.pk/feed/' },
   { id: 'thehindu', name: 'The Hindu (National)', region: 'T-SAS', url: 'https://www.thehindu.com/news/national/feeder/default.rss' },
   { id: 'timesca', name: 'The Times of Central Asia', region: 'T-CAS', url: 'https://timesca.com/feed/' },
   { id: 'kunuz', name: 'Kun.uz', region: 'T-CAS', url: 'https://kun.uz/en/news/rss' },
