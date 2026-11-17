@@ -323,12 +323,12 @@
             <p class="ti-card-note">Every item links to its source. Veracity runs claimed, reported, corroborated, confirmed.</p>
             <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-theater-items" data-source="items" data-row-key="item_id"></table></div>
           </div>
-          <div class="ti-card" id="theater-leads">
-            <h3 class="ti-h3">Machine leads, 72 hours <span class="ti-pir">unreviewed</span></h3>
-            <p class="ti-card-note" id="theater-leads-note">Headlines from the news, blog and advisory feeds that the triage tier labelled with this theater at relevance 2 or 3. They are leads for the analyst run, which opens each page before anything enters the evidence base.</p>
-            <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-theater-leads" data-source="live_triage" data-row-key="link"></table></div>
-          </div>
         </div>
+      </div>
+      <div class="ti-card ti-section" id="theater-leads">
+        <h3 class="ti-h3">Machine leads, 72 hours <span class="ti-pir">unreviewed</span></h3>
+        <p class="ti-card-note" id="theater-leads-note">Headlines from the news, blog and advisory feeds that the triage tier labelled with this theater at relevance 2 or 3. They are leads for the analyst run, which opens each page before anything enters the evidence base.</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-theater-leads" data-source="live_triage" data-row-key="link"></table></div>
       </div>
       <div id="theater-context">
         <div class="ti-card ti-section" id="warn-card">
@@ -896,7 +896,7 @@
       <div class="ti-card ti-section" id="src-news">
         <h3 class="ti-h3">Theater news feeds <span class="ti-count" id="news-asof"></span></h3>
         <p class="ti-card-note" id="news-sum" data-source="live_news"></p>
-        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-news-feeds" data-source="live_news" data-row-key="id"></table></div>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-news-feeds" data-source="live_news theaters" data-row-key="id"></table></div>
       </div>
       <div class="ti-card ti-section" id="src-actors">
         <h3 class="ti-h3">Actors named in leads, 30 days <span class="ti-pir">unreviewed</span></h3>

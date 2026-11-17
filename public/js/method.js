@@ -108,8 +108,9 @@
       return seen.get(cve).id;
     };
     for (const a of rows) {
-      const kev = new Set(a.kev || []);
-      const refs = (a.cves || []).map((c) => vuln(c, kev.has(c)));
+      // List cells arrive as JSON text from the runtime (app.js TI.list).
+      const kev = new Set(TI.list(a.kev));
+      const refs = TI.list(a.cves).map((c) => vuln(c, kev.has(c)));
       if (!refs.length) continue;
       const when = a.published || a.first_seen || at;
       objects.push({ type: 'report', spec_version: '2.1', id: `report--${uuid(a.link)}`, created_by_ref: ident, created: when, modified: when, published: when, name: a.title, report_types: ['vulnerability'],

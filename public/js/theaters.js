@@ -146,7 +146,7 @@
     // Machine leads for the selected theater, shown only while the tier's theater labels clear their evaluation thresholds.
     const tld = sec.querySelector('#tbl-theater-leads');
     if (tld && TI.tableState(tld, ['live_triage'])) {
-      const all = TI.rows('live_triage') || [], meta = all.find((r) => r.kind === 'meta') || {}, ev = meta.eval || {};
+      const all = TI.rows('live_triage') || [], meta = all.find((r) => r.kind === 'meta') || {}, ev = TI.obj(meta.eval);
       const note = sec.querySelector('#theater-leads-note');
       if (!ev.promoted) {
         if (note) note.textContent = 'The triage tier labels headlines with a theater, but its labels stay off this page until its agreement with the analyst\'s own labels clears the published thresholds (Method, machine triage).';

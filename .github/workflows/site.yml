@@ -176,6 +176,14 @@ jobs:
           npx playwright install --with-deps chromium
           node test/e2e.mjs --live-optional
 
+      # The same check on the production service's current answers, so page code that throws on real data shapes (a
+      # list or record cell arriving as JSON text) fails here before it reaches the public site. A dataset the service
+      # cannot answer shows as a failed panel, which this check allows; a script error fails it.
+      - name: Browser check on live answers
+        run: |
+          node test/save_live.mjs --base https://intel.kilfoycyber.com --out live-answers
+          node test/e2e.mjs --live live-answers --live-optional
+
       # Idempotent: attaches the public domain to the Vercel project once, then reports its verification state.
       - name: Attach the public domain
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
