@@ -5,6 +5,7 @@
 // licence and attribution on every answer, and the GeoJSON open file.
 // node test/cables_test.mjs <repository root>   (after python3 pipeline/collector_build.py .)
 import { PGlite } from '@electric-sql/pglite';
+import { pg_trgm } from '@electric-sql/pglite/contrib/pg_trgm';
 import zlib from 'node:zlib';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,7 +19,7 @@ const ok = (c, m) => { assert.ok(c, m); pass++; };
 const OVERPASS = JSON.parse(fs.readFileSync(path.join(ROOT, 'test', 'fixtures', 'overpass_cables.json'), 'utf8'));
 const WIKIDATA = JSON.parse(fs.readFileSync(path.join(ROOT, 'test', 'fixtures', 'wikidata_cables.json'), 'utf8'));
 
-const db = await PGlite.create();
+const db = await PGlite.create({ extensions: { pg_trgm } });
 await db.exec(fs.readFileSync(path.join(ROOT, 'neon', 'schema.sql'), 'utf8'));
 const RAW = Object.fromEntries(Array.from({ length: 6000 }, (_, i) => [i, (v) => v]));
 const runSql = async (q, params) => { const r = await db.query(q, params, { rowMode: 'array', parsers: RAW }); return { fields: r.fields, rows: r.rows }; };

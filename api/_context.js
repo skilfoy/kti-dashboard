@@ -21,7 +21,7 @@ const TYPES = { lanes: { snap: 'snap-lanes', freshMin: 180 }, ofac: { snap: 'sna
   fires: { snap: 'fires', freshMin: 150, store: true }, maritime: { snap: 'maritime', freshMin: 150, store: true }, leaksites: { snap: 'leaksites', freshMin: 150, store: true },
   lists: { snap: 'lists', freshMin: 150, store: true }, blogs: { snap: 'blogs', freshMin: 480, store: true }, links: { snap: 'links', freshMin: 1560, store: true },
   unit42: { snap: 'unit42', freshMin: 1560, store: true }, genioc: { snap: 'genioc', freshMin: 1560, store: true }, lanesreg: { snap: 'lanes-registry', freshMin: 1560, store: true },
-  ransompay: { snap: 'ransompay', freshMin: 10200, store: true }, sec8k: { snap: 'sec-8k', freshMin: 900, store: true } };
+  ransompay: { snap: 'ransompay', freshMin: 10200, store: true }, sec8k: { snap: 'sec-8k', freshMin: 900, store: true }, sources: { snap: 'sources', freshMin: 90, store: true } };
 // cables (added 2026-11-03): submarine cables and landing stations from OpenStreetMap (ODbL 1.0) with Wikidata metadata
 // (CC0), collected weekly; partial coverage. Every answer carries the licence and attribution fields; &format=geojson
 // (also served as /open-data/cables.geojson) returns the derived open dataset as a GeoJSON FeatureCollection.

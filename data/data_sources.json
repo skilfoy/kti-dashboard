@@ -1653,6 +1653,7 @@
    "category": "Reports and blogs",
    "feeds": [
     "live_blogs",
+    "live_sources",
     "page:sources"
    ],
    "url": "https://github.com/muchdogesec/awesome_threat_intel_blogs",
@@ -1661,10 +1662,11 @@
    "licence": "List CC BY 4.0; items: titles and links only, each to its publisher",
    "attribution": "",
    "commercial_use": "",
-   "cadence": "hourly, each blog every six hours",
+   "cadence": "read by the sources job on its tier (3.0); the blogs job runs by hand",
    "health_feed": null,
    "jobs": [
-    "blogs"
+    "blogs",
+    "sources"
    ],
    "status": "live",
    "gap_note": "",
@@ -1672,7 +1674,7 @@
     "S-BLOGS"
    ],
    "added": "2026-11-03",
-   "reviewed": "2026-11-03"
+   "reviewed": "2026-11-17"
   },
   {
    "id": "psirt-fortinet",
@@ -4514,6 +4516,165 @@
    "source_ids": [],
    "added": "2026-11-03",
    "reviewed": "2026-11-03"
+  },
+  {
+   "id": "source-network",
+   "name": "KTI source network (863 feeds)",
+   "owner": "Each publisher; registry by KTI",
+   "category": "Reports and blogs",
+   "feeds": [
+    "live_sources",
+    "live_triage",
+    "page:sources",
+    "page:search"
+   ],
+   "url": "https://github.com/skilfoy/kti-dashboard/blob/main/data/feeds.json",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, summaries and links belong to their publishers; the registry is the project's own",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "tier 1 every 20 minutes, tier 2 hourly, tier 3 every four hours",
+   "health_feed": null,
+   "jobs": [
+    "sources",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "list-cybersecurityrss",
+   "name": "CyberSecurityRSS feed list",
+   "owner": "zer0yu",
+   "category": "Reports and blogs",
+   "feeds": [
+    "live_sources"
+   ],
+   "url": "https://github.com/zer0yu/CyberSecurityRSS",
+   "access": "open",
+   "secret": null,
+   "licence": "List: see repository; items belong to their publishers",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "registry rebuilt by pipeline/feeds_build.py",
+   "health_feed": null,
+   "jobs": [
+    "sources"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "list-awesome-threat-intel-rss",
+   "name": "awesome-threat-intel-rss feed list",
+   "owner": "thehappydinoa",
+   "category": "Reports and blogs",
+   "feeds": [
+    "live_sources"
+   ],
+   "url": "https://github.com/thehappydinoa/awesome-threat-intel-rss",
+   "access": "open",
+   "secret": null,
+   "licence": "List CC0 1.0; items belong to their publishers",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "registry rebuilt by pipeline/feeds_build.py",
+   "health_feed": null,
+   "jobs": [
+    "sources"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "list-awesome-rss-feeds",
+   "name": "awesome-rss-feeds (national news by country)",
+   "owner": "plenaryapp",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_sources"
+   ],
+   "url": "https://github.com/plenaryapp/awesome-rss-feeds",
+   "access": "open",
+   "secret": null,
+   "licence": "List Apache 2.0; items belong to their publishers",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "registry rebuilt by pipeline/feeds_build.py",
+   "health_feed": null,
+   "jobs": [
+    "sources"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "google-news-rss",
+   "name": "Google News RSS (query and site: feeds)",
+   "owner": "Google",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_sources",
+    "page:search"
+   ],
+   "url": "https://news.google.com/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles and links as Google syndicates them; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "tier 1, every 20 minutes",
+   "health_feed": null,
+   "jobs": [
+    "sources",
+    "reports"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "agentic-reports",
+   "name": "Agentic reports (OpenRouter free reasoning models; Bing News, Google News and DuckDuckGo search)",
+   "owner": "OpenRouter and the model providers; search by Microsoft, Google and DuckDuckGo",
+   "category": "Platform",
+   "feeds": [
+    "page:search"
+   ],
+   "url": "https://openrouter.ai/models?max_price=0",
+   "access": "key",
+   "secret": {
+    "name": "OPENROUTER_API_KEY",
+    "where": "neon_function_variable"
+   },
+   "licence": "Machine-written; each report cites its sources, which belong to their publishers",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "on request",
+   "health_feed": null,
+   "jobs": [
+    "reports"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-17"
   }
  ]
 }

@@ -594,3 +594,51 @@ dash.calc('residual_summary', {
   },
 });
 
+
+// ---- Detection coverage by judgment (3.0) ----
+// Each judgment's technique scope: the ATT&CK techniques of its intrusion vector (the mapping below, from the vector's
+// definition on the Vectors page), the techniques of every ATT&CK group its text names, and any technique ID it cites,
+// each looked up in the SigmaHQ rule index of the Defense page (defense_techniques, built from the SigmaHQ repository by
+// pipeline/build_defense.py), with Elastic and Splunk rules and Atomic Red Team tests beside it.
+const VECTOR_TECHNIQUES = {
+  'Exploitation & edge devices': ['T1190', 'T1133', 'T1210', 'T1068', 'T1203', 'T1211', 'T1505.003'],
+  Fraud: ['T1566.002', 'T1656', 'T1534', 'T1585', 'T1586', 'T1657'],
+  'Identity & valid accounts': ['T1078', 'T1078.004', 'T1110', 'T1110.003', 'T1555', 'T1621', 'T1556', 'T1539', 'T1550.004'],
+  'Phishing & social engineering': ['T1566', 'T1566.001', 'T1566.002', 'T1566.004', 'T1204.001', 'T1204.002', 'T1598', 'T1656'],
+  'Ransomware & malware': ['T1486', 'T1490', 'T1489', 'T1562.001', 'T1059.001', 'T1047', 'T1021.001', 'T1567.002'],
+  'Supply chain & third parties': ['T1195', 'T1195.001', 'T1195.002', 'T1199', 'T1072', 'T1554'],
+  DDoS: ['T1498', 'T1499', 'T1498.001', 'T1499.002'],
+  Insider: ['T1078', 'T1052', 'T1567', 'T1530', 'T1213', 'T1074'],
+};
+dash.calc('judgment_detection', {
+  title: 'Detection coverage by judgment',
+  description: 'For each judgment, the ATT&CK techniques in its scope (its intrusion vector\'s techniques, the techniques of the ATT&CK groups its text names, and technique IDs it cites) and how many of them SigmaHQ rules detect, with stable and high-severity rule counts, the techniques without a Sigma rule, and the Elastic, Splunk and Atomic Red Team content beside them.',
+  inputs: ['judgments', 'defense_techniques', 'attack_groups', 'attack_group_techniques', 'defense_content'],
+  fn: (judgments, techs, groups, gt, content) => {
+    const T = new Map(techs.map((t) => [t.technique_id, t]));
+    const byGroup = new Map();
+    for (const r of gt) (byGroup.get(r.group_id) || byGroup.set(r.group_id, []).get(r.group_id)).push(r.technique_id);
+    const names = groups.flatMap((g) => [g.name, ...String(g.aliases || '').split(/,\s*/)].filter((n) => n && n.length >= 5).map((n) => [n.toLowerCase(), g]));
+    const rules = new Map();
+    for (const c of content) if (c.source === 'Sigma') (rules.get(c.technique_id) || rules.set(c.technique_id, []).get(c.technique_id)).push(c);
+    return judgments.filter((j) => j.status !== 'Retired').map((j) => {
+      const text = [j.title, j.situation, j.assessment, j.attribution_judgment, j.alternatives].join(' ');
+      const low = text.toLowerCase();
+      const named = [...new Map(names.filter(([n]) => new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(low)).map(([, g]) => [g.group_id, g])).values()];
+      // A named group contributes its techniques that the threat model weights most (choke), so one prolific group
+      // does not swamp the vector's scope.
+      const fromGroups = named.flatMap((g) => (byGroup.get(g.group_id) || []).filter((id) => T.has(id)).sort((a, b) => (T.get(b).choke || 0) - (T.get(a).choke || 0)).slice(0, 12));
+      const cited = [...new Set((text.match(/\bT\d{4}(?:\.\d{3})?\b/g) || []))];
+      const scope = [...new Set([...(VECTOR_TECHNIQUES[j.vector] || []), ...fromGroups, ...cited])].filter((id) => T.has(id));
+      const rows = scope.map((id) => T.get(id));
+      const covered = rows.filter((t) => (t.sigma || 0) > 0), stable = rows.filter((t) => (t.sigma_stable || 0) > 0), high = rows.filter((t) => (t.sigma_high || 0) > 0);
+      const gaps = rows.filter((t) => !(t.sigma > 0)).map((t) => `${t.technique_id} ${t.name}${(t.elastic || 0) + (t.splunk || 0) ? ' (Elastic or Splunk only)' : ''}`);
+      const top = rows.flatMap((t) => (rules.get(t.technique_id) || []).slice(0, 1).map((r) => `${t.technique_id}: ${r.title}`)).slice(0, 6);
+      return { judgment_id: j.judgment_id, exec_rank: j.exec_rank || 0, title: j.title, vector: j.vector || '', groups: named.map((g) => g.name).join(', '),
+        techniques: scope.length, with_sigma: covered.length, with_stable: stable.length, with_high: high.length,
+        coverage: scope.length ? Math.round((covered.length / scope.length) * 1000) / 1000 : null,
+        sigma_rules: rows.reduce((a, t) => a + (t.sigma || 0), 0), other_rules: rows.reduce((a, t) => a + (t.elastic || 0) + (t.splunk || 0), 0), atomic: rows.reduce((a, t) => a + (t.atomic || 0), 0),
+        gaps: gaps.join('; '), top_rules: top.join('; '), scope_note: scope.length ? '' : 'No cyber technique scope: the judgment names no intrusion vector, ATT&CK group or technique.' };
+    }).sort((a, b) => (a.exec_rank || 99) - (b.exec_rank || 99));
+  },
+});

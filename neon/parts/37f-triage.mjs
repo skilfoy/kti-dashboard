@@ -181,13 +181,13 @@ export async function jobPsirt(opts = {}) {
 // vector and theater from the closed lists, actors that occur in the title, and a short reason without links; anything
 // else is rejected and counted. A daily request budget in ti.kv keeps the job inside the free tier. Without
 // OPENROUTER_API_KEY in the function environment the job records "held" and makes no request.
-export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, POOL: 200, MAX_TOKENS: 12000, DAILY_REQUESTS: 45, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 70000, VERIFY_AFTER_MS: 80000, VERIFY_EVERY_MS: 100 * 60000, EVAL_TRIES: 3, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
+export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, POOL: 400, MAX_TOKENS: 12000, DAILY_REQUESTS: 45, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 70000, VERIFY_AFTER_MS: 80000, VERIFY_EVERY_MS: 100 * 60000, EVAL_TRIES: 3, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
   ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions',
   // Tried in order by OpenRouter (its `models` fallback list, three at most). The first two answered every request they
   // were routed in the first day of production, in 20 to 35 seconds; the bare free router picked a slow or reasoning-heavy
   // model about half the time and those requests met the deadline or came back empty. The router stays as the last resort
   // for the day a pinned preview model is withdrawn. TI_TRIAGE_MODEL (comma-separated) overrides the list.
-  MODELS: ['particle-ai/particle-1:free', 'baidu/ernie-5.5-flash-preview:free', 'openrouter/free'], EVAL_BATCHES: 1, EVAL_BATCHES_CREDITED: 8, EVAL_BUDGET_MS: 420000, LABEL_BATCHES_CREDITED: 3, LABEL_BUDGET_MS: 90000 };
+  MODELS: ['particle-ai/particle-1:free', 'baidu/ernie-5.5-flash-preview:free', 'openrouter/free'], EVAL_BATCHES: 1, EVAL_BATCHES_CREDITED: 8, EVAL_BUDGET_MS: 420000, LABEL_BATCHES_CREDITED: 8, LABEL_BUDGET_MS: 200000 };
 export const TRIAGE_VECTORS = ['Exploitation & edge devices', 'Fraud', 'Identity & valid accounts', 'Phishing & social engineering', 'Ransomware & malware', 'Supply chain & third parties', 'DDoS', 'Insider'];
 export const TRIAGE_THEATERS = { 'T-RSY': 'Red Sea, Yemen and Saudi Arabia', 'T-HRM': 'Strait of Hormuz and the Gulf (Iran)', 'T-AFP': 'Afghanistan and Pakistan border', 'T-HOA': 'Horn of Africa',
   'T-LEV': 'Israel, Lebanon and Syria', 'T-UKR': 'Russia and Ukraine', 'T-SAH': 'Sahel and West Africa', 'T-SDN': 'Sudan', 'T-EUH': 'Europe: hybrid threats and sabotage',
@@ -381,12 +381,10 @@ export async function jobTriage() {
   // Newest first within each kind (blog, advisory, news), the kinds taken in turn, so the news volume cannot starve the
   // CTI blogs and advisories of labelling.
   const cand = await sql(`SELECT link, kind, source, title, published, cves FROM (SELECT c.*, row_number() OVER (PARTITION BY c.kind ORDER BY c.published DESC) AS rn FROM (
-      SELECT i.link, 'blog' AS kind, b.name AS source, i.title, i.published, '[]'::jsonb AS cves FROM ti.blog_item i JOIN ti.blog b ON b.url = i.blog_url WHERE i.published > now() - make_interval(hours => $1)
-      UNION ALL SELECT a.link, 'advisory', a.feed, a.title, COALESCE(a.published, a.seen_at), a.cves FROM ti.advisory a WHERE COALESCE(a.published, a.seen_at) > now() - make_interval(hours => $1)
-      UNION ALL SELECT n.link, 'news', n.source, n.title, n.published, '[]'::jsonb FROM ti.news n WHERE n.published > now() - make_interval(hours => $1)) c
+      SELECT i.link, i.category AS kind, coalesce(nullif(i.source, ''), i.host) AS source, i.title, i.published, '[]'::jsonb AS cves FROM ti.item i WHERE i.published > now() - make_interval(hours => $1)
+      UNION ALL SELECT a.link, 'advisory', a.feed, a.title, COALESCE(a.published, a.seen_at), a.cves FROM ti.advisory a WHERE COALESCE(a.published, a.seen_at) > now() - make_interval(hours => $1)) c
     WHERE NOT EXISTS (SELECT 1 FROM ti.triage t WHERE t.link = c.link)) x ORDER BY rn, published DESC LIMIT $2`, [TRIAGE.WINDOW_H, TRIAGE.POOL]);
-  const [{ n: waiting }] = await sql(`SELECT (SELECT count(*) FROM ti.blog_item WHERE published > now() - make_interval(hours => $1)) + (SELECT count(*) FROM ti.advisory WHERE COALESCE(published, seen_at) > now() - make_interval(hours => $1))
-    + (SELECT count(*) FROM ti.news WHERE published > now() - make_interval(hours => $1))
+  const [{ n: waiting }] = await sql(`SELECT (SELECT count(*) FROM ti.item WHERE published > now() - make_interval(hours => $1)) + (SELECT count(*) FROM ti.advisory WHERE COALESCE(published, seen_at) > now() - make_interval(hours => $1))
     - (SELECT count(*) FROM ti.triage WHERE COALESCE(published, at) > now() - make_interval(hours => $1)) AS n`, [TRIAGE.WINDOW_H]);
   let res = { labels: new Map(), rejects: {}, missing: 0, calls: [] };
   // CVE identifiers come from the advisory feed and from the title itself, never from the model.
@@ -430,7 +428,7 @@ export async function jobTriage() {
   // The first verifier run (16 November 2026, 02:01 UTC) followed a slow labelling request and its retry; the invocation
   // was cut off near five minutes and the run left no record. The verifier now runs only when labelling finished inside
   // VERIFY_AFTER_MS, which bounds the job at about two and a half minutes.
-  const late = Date.now() - t0 > TRIAGE.VERIFY_AFTER_MS * (tier.tier === 'credited' ? 2 : 1);
+  const late = Date.now() - t0 > (tier.tier === 'credited' ? TRIAGE.LABEL_BUDGET_MS + 40000 : TRIAGE.VERIFY_AFTER_MS);
   // Every other run, by the time of the last verifier request (the schedule arrives up to 12 minutes late, so the clock
   // hour is no guide: both odd-hour slots of 16 November landed in an even hour and were skipped).
   const lastV = Date.parse(((await kvGet('triage:verify_at')) || {}).at || 0) || 0, due = Date.now() - lastV >= TRIAGE.VERIFY_EVERY_MS;

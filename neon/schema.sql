@@ -90,3 +90,21 @@ CREATE TABLE IF NOT EXISTS ti.kevrank (cve text PRIMARY KEY, first_seen timestam
 CREATE TABLE IF NOT EXISTS ti.news (link text PRIMARY KEY, feed text NOT NULL, source text, title text, published timestamptz NOT NULL, seen_at timestamptz NOT NULL DEFAULT now());
 CREATE INDEX IF NOT EXISTS news_published ON ti.news (published);
 INSERT INTO ti.lease (job) VALUES ('news') ON CONFLICT DO NOTHING;
+
+-- Source network and search (3.0): feed state, collected entries with a full-text index, agentic reports.
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE TABLE IF NOT EXISTS ti.feed (id text PRIMARY KEY, url text NOT NULL, active boolean NOT NULL DEFAULT true, via text, alt text, url_used text, etag text, last_modified text,
+  status text, fails int NOT NULL DEFAULT 0, entries int, checked_at timestamptz, ok_at timestamptz, primary_at timestamptz, next_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS feed_next ON ti.feed (next_at) WHERE active;
+CREATE TABLE IF NOT EXISTS ti.item (link text PRIMARY KEY, fp text NOT NULL, feed text NOT NULL, source text, host text, title text NOT NULL, summary text,
+  published timestamptz NOT NULL, category text, region text, lang text, seen_at timestamptz NOT NULL DEFAULT now(),
+  tsv tsvector GENERATED ALWAYS AS (to_tsvector('simple', coalesce(title, '') || ' ' || coalesce(summary, ''))) STORED);
+CREATE UNIQUE INDEX IF NOT EXISTS item_fp ON ti.item (fp);
+CREATE INDEX IF NOT EXISTS item_published ON ti.item (published);
+CREATE INDEX IF NOT EXISTS item_feed ON ti.item (feed, published);
+CREATE INDEX IF NOT EXISTS item_tsv ON ti.item USING gin (tsv);
+CREATE INDEX IF NOT EXISTS item_title_trgm ON ti.item USING gin (title gin_trgm_ops);
+CREATE TABLE IF NOT EXISTS ti.report (id text PRIMARY KEY, q text NOT NULL, type text NOT NULL, prompt text, status text NOT NULL, who text, steps jsonb NOT NULL DEFAULT '[]'::jsonb,
+  body text, sources jsonb, model text, corpus jsonb, error text, created_at timestamptz NOT NULL DEFAULT now(), started_at timestamptz, done_at timestamptz);
+CREATE INDEX IF NOT EXISTS report_created ON ti.report (created_at);
+INSERT INTO ti.lease (job) VALUES ('sources'), ('reports') ON CONFLICT DO NOTHING;

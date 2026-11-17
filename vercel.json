@@ -13,6 +13,10 @@
     { "source": "/api/cisa-kev", "destination": "/api/index?route=cisa-kev" },
     { "source": "/api/context", "destination": "/api/index?route=context" },
     { "source": "/api/enrich", "destination": "/api/index?route=enrich" },
+    { "source": "/api/search", "destination": "/api/index?route=search" },
+    { "source": "/api/report", "destination": "/api/index?route=report" },
+    { "source": "/taxii2", "destination": "/api/index?route=taxii&path=" },
+    { "source": "/taxii2/:path*", "destination": "/api/index?route=taxii&path=:path*" },
     { "source": "/open-data/cables.geojson", "destination": "/api/index?route=context&type=cables&format=geojson" },
     { "source": "/data-sources", "destination": "/data-sources.html" }
   ],

@@ -192,6 +192,10 @@ export async function jobBlogs(opts = {}) {
         fails = CASE WHEN EXCLUDED.feed IS NULL THEN ti.blog.fails + 1 ELSE 0 END`, [upd]],
     [`INSERT INTO ti.blog_item (link, blog_url, title, published, seen_at) SELECT link, blog_url, title, published, now() FROM jsonb_to_recordset($1::jsonb) AS x(link text, blog_url text, title text, published timestamptz)
       ON CONFLICT (link) DO NOTHING`, [items]],
+    // The source network's searchable store (37h-sources.mjs) takes the same entries.
+    [`INSERT INTO ti.item (link, fp, feed, source, host, title, published, category, region, lang) SELECT DISTINCT ON (fp) link, fp, feed, source, host, title, published, 'research', 'Global', 'en'
+      FROM jsonb_to_recordset($1::jsonb) AS x(link text, fp text, feed text, source text, host text, title text, published timestamptz) WHERE published IS NOT NULL ORDER BY fp ON CONFLICT DO NOTHING`,
+      [items.map((i) => { const b = upd.find((u) => u.url === i.blog_url) || {}; const h = hostOf(i.link) || hostOf(i.blog_url); return { link: i.link, fp: fp(i.title, h), feed: 'blog:' + hostOf(i.blog_url), source: b.name || '', host: h, title: i.title, published: i.published }; })]],
   ]);
   const [bl, it] = await sqlTx([
     [`SELECT url, name, type, feed, status, items, newest, checked_at FROM ti.blog ORDER BY name`],

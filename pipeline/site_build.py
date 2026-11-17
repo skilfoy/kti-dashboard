@@ -133,3 +133,11 @@ if os.path.exists(reg_src):
     reg = json.load(open(reg_src, encoding="utf-8"))
     json.dump(reg, open(os.path.join(a.out, "data-sources.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     print(f"data-sources.json: {len(reg.get('rows', []))} sources")
+# The source network registry (data/feeds.json, built by pipeline/feeds_build.py) is published at /data/feeds.json, where
+# the collector's sources job reads it, so a registry change reaches the collector with the site deploy.
+feeds_src = os.path.join(os.path.dirname(os.path.abspath(a.authored)), "feeds.json")
+if os.path.exists(feeds_src):
+    fr = json.load(open(feeds_src, encoding="utf-8"))
+    os.makedirs(os.path.join(a.out, "data"), exist_ok=True)
+    json.dump(fr, open(os.path.join(a.out, "data", "feeds.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    print(f"feeds.json: {len(fr.get('feeds', []))} feeds")

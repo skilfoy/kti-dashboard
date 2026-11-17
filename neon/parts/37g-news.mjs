@@ -77,6 +77,10 @@ export async function jobNews(opts = {}) {
   if (rows.length) {
     await sql(`INSERT INTO ti.news (link, feed, source, title, published) SELECT link, feed, source, title, published
       FROM jsonb_to_recordset($1::jsonb) AS x(link text, feed text, source text, title text, published timestamptz) ON CONFLICT (link) DO NOTHING`, [rows]);
+    // The source network's searchable store (37h-sources.mjs) takes the same entries.
+    await sql(`INSERT INTO ti.item (link, fp, feed, source, host, title, published, category, region, lang) SELECT DISTINCT ON (fp) link, fp, feed, source, host, title, published, 'geopolitics', region, 'en'
+      FROM jsonb_to_recordset($1::jsonb) AS x(link text, fp text, feed text, source text, host text, title text, published timestamptz, region text) ORDER BY fp ON CONFLICT DO NOTHING`,
+      [rows.map((r) => { const h = hostOf(r.link); const f = NEWS_FEEDS.find((x) => x.id === r.feed) || {}; return { ...r, host: h, fp: fp(r.title, h), region: f.region || 'Global' }; })]);
   }
   await sql(`DELETE FROM ti.news WHERE published < now() - make_interval(days => $1)`, [L.KEEP_DAYS]);
   const [{ n: held }] = await sql(`SELECT count(*)::int AS n FROM ti.news WHERE published > now() - make_interval(hours => $1)`, [L.FRESH_H]);

@@ -185,6 +185,7 @@
   docLoader('live_psirt', 'Vendor PSIRT and national CERT advisory feeds read from each publisher: title, link, date and CVE identifiers, with CVEs listed in CISA KEV marked, via threat-feeds /api/context.');
   docLoader('live_triage', 'Machine triage of collected titles by a free hosted language model under deterministic checks: relevance, vector, theater and actors per title, unreviewed, with the tier\'s evaluation against analyst labels, via threat-feeds /api/context.');
   docLoader('live_news', 'Theater news feeds read every hour from each outlet: title, link and date only, labelled by the triage tier, via threat-feeds /api/context.');
+  docLoader('live_sources', 'The KTI source network: every feed the collector reads (data/feeds.json), its state and healed route, via threat-feeds /api/context.');
   docLoader('live_links', 'Daily link checks of the source registry, the OSINT toolkit and the pivot patterns: status, reason and last good check per link, via threat-feeds /api/context.');
   docLoader('live_unit42', 'Palo Alto Networks Unit 42 Timely Threat Intel notes (GitHub, GPL-3.0): date, title, link and indicator counts by type, indicators left out, via threat-feeds /api/context.');
   docLoader('live_genioc', 'Gen Threat Labs indicator folders (github.com/gendigitalinc/ioc, DRL 1.1): per family the files, YARA rules and counts of hashes and network indicators, via threat-feeds /api/context.');

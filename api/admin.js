@@ -7,7 +7,7 @@ const crypto = require('crypto');
 // deployment's OIDC token. Responses are never cached.
 // Vercel Authentication (Standard Protection) must stay on for this project: it is what keeps these hosts private.
 //   op=sha                          SHA-256 and size of each collector asset in this deployment
-//   op=push&asset=code|atlas|num2iso|links|gold&u=<presigned upload URL for that object in the ti-docs bucket>
+//   op=push&asset=code|atlas|num2iso|links|gold|feeds&u=<presigned upload URL for that object in the ti-docs bucket>
 //   op=run&job=gdelt|infra|health|snap|ioda|retention|lists|fires|maritime|leaksites|ransompay|unit42|genioc|lanesreg|blogs|links|sec8k[&backfill=1][&rebuild=1][&reprocess=1][&history=<days>][&budget=<ms>]
 //        run collector jobs now; reprocess re-reads the 72-hour GDELT window, history fills country counts back <days>
 //   op=status | op=probe&target=<name>[&find=<text>|&from=<offset>] | op=doc&name=<document> | op=whoami
@@ -17,6 +17,8 @@ const ASSETS = {
   num2iso: { key: 'ref/num2iso.json', type: 'application/json', bytes: () => Buffer.from(JSON.stringify(require('../lib/num2iso.json'))) },
   links: { key: 'ref/links.json', type: 'application/json', bytes: () => Buffer.from(JSON.stringify(require('../lib/links.json'))) },
   gold: { key: 'ref/triage-gold.json', type: 'application/json', bytes: () => Buffer.from(JSON.stringify(require('../lib/triage-gold.json'))) },
+  // The source network registry (pipeline/feeds_build.py); the sources job reads it from the bucket.
+  feeds: { key: 'ref/feeds.json', type: 'application/json', bytes: () => Buffer.from(JSON.stringify(require('../data/feeds.json'))) },
 };
 const STORAGE_HOST = /^br-[a-z0-9-]+\.storage\.c-\d+\.[a-z0-9-]+\.aws\.neon\.tech$/;
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');

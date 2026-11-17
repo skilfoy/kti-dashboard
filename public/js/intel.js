@@ -289,28 +289,6 @@
         { field: 'ok_at', label: 'Last good', fmt: 'date', hideSm: true },
       ], { empty: 'No links were checked.' });
     }
-    const tb = sec.querySelector('#tbl-blog-items');
-    if (tb && TI.tableState(tb, ['live_blogs'])) {
-      const m = metaOf('live_blogs') || {};
-      setCount(sec, 'blogs-asof', fresh(m));
-      note(sec, 'blogs-sum', `${int(m.blogs_ok)} of ${int(m.blogs)} blog feeds read this cycle (of ${int(m.listed)} blogs listed). Items are candidates: the daily run fetches and confirms any item before it cites one. `, m.method || '', ' ', m.terms || '');
-      TI.table(tb, kindRows('live_blogs', 'item'), [
-        { field: 'published', label: 'Published', fmt: 'date', cls: 'ti-nowrap' },
-        { field: 'title', label: 'Item', link: 'link', cls: 'ti-wrap' },
-        { field: 'blog', label: 'Blog' },
-        { field: 'type', label: 'Type', hideSm: true },
-      ], { sort: 'published', dir: 'desc', limit: 120, empty: 'No blog items in 7 days.' });
-    }
-    const tbf = sec.querySelector('#tbl-blog-feeds');
-    if (tbf && TI.tableState(tbf, ['live_blogs'])) {
-      TI.table(tbf, kindRows('live_blogs', 'blog'), [
-        { field: 'name', label: 'Blog', link: 'url', cls: 'ti-wrap' },
-        { field: 'type', label: 'Type' },
-        { field: 'status', label: 'Feed', attr: { 'data-status': (r) => r.status } },
-        { field: 'items', label: 'Items, 7d', num: true, fmt: 'int' },
-        { field: 'newest', label: 'Newest', fmt: 'date', hideSm: true },
-      ], { sort: 'items', dir: 'desc', limit: 80, empty: 'No blogs were read.' });
-    }
     const tp = sec.querySelector('#tbl-psirt');
     if (tp && TI.tableState(tp, ['live_psirt'])) {
       const m = metaOf('live_psirt') || {};
@@ -348,19 +326,24 @@
         { field: 'items', label: 'Entries', num: true, fmt: 'int' },
       ], { sort: 'vendor', empty: 'No feeds were read.' });
     }
-    const tn = sec.querySelector('#tbl-news-feeds');
-    if (tn && TI.tableState(tn, ['live_news'])) {
-      const m = metaOf('live_news') || {};
-      setCount(sec, 'news-asof', fresh(m));
-      note(sec, 'news-sum', `${int(m.feeds_ok)} of ${int(kindRows('live_news', 'feed').length)} feeds answered; ${int(m.titles_72h)} titles from the last 72 hours are with the triage tier. `, m.method || '', ' ', m.terms || '');
-      TI.table(tn, kindRows('live_news', 'feed'), [
-        { field: 'name', label: 'Outlet', link: 'url' },
-        // Theater ids read as the theater's short name where the theaters dataset is loaded ("Russia-Ukraine (T-UKR)").
-        { field: 'region', label: 'Chosen for', get: (r) => { const t = TI.ready('theaters') && /^T-/.test(r.region || '') ? (TI.rows('theaters') || []).find((x) => x.theater_id === r.region) : null; return t ? `${t.short} (${r.region})` : r.region; } },
-        { field: 'ok', label: 'Feed', get: (r) => (r.ok ? 'ok' : r.error || 'failed'), attr: { 'data-status': (r) => (r.ok ? 'ok' : 'review') } },
-        { field: 'fresh', label: 'Titles, 72 hours', num: true, fmt: 'int' },
+    // Source network (3.0): every feed the collector reads, its state, and how a failing feed was healed.
+    const tn = sec.querySelector('#tbl-network');
+    if (tn && TI.tableState(tn, ['live_sources'])) {
+      const m = metaOf('live_sources') || {}, cats = TI.obj(m.by_category), via = TI.obj(m.by_via);
+      const th = TI.ready('theaters') ? TI.index(TI.rows('theaters'), 'theater_id') : new Map();
+      setCount(sec, 'network-asof', fresh(m));
+      note(sec, 'network-sum', `${int(m.feeds)} feeds (${Object.entries(cats).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${int(v)} ${k}`).join(', ')}); ${int(m.feeds_ok)} answered at their last read, `,
+        `${int(m.healed)} through a healed route (${Object.entries(via).filter(([k]) => k && k !== 'null' && k !== 'primary').map(([k, v]) => `${k} ${int(v)}`).join(', ') || 'none'}). `,
+        `${int(m.items_24h)} entries in 24 hours and ${int(m.items_45d)} in 45 days, from ${int(m.publishers)} publishers, all searchable on the Search page. `, m.method || '', ' ', m.terms || '');
+      TI.table(tn, kindRows('live_sources', 'feed'), [
+        { field: 'name', label: 'Feed', link: 'url', cls: 'ti-wrap' },
+        { field: 'category', label: 'Category' },
+        { field: 'region', label: 'Theater', get: (r) => { const t = th.get(r.region); return t ? `${t.short} (${r.region})` : r.region; }, hideSm: true },
+        { field: 'tier', label: 'Tier', num: true, hideSm: true },
+        { field: 'status', label: 'Last read', get: (r) => (r.ok ? (r.via && r.via !== 'primary' ? 'ok via ' + r.via : 'ok') : r.status), attr: { 'data-status': (r) => (r.ok ? (r.via && r.via !== 'primary' ? 'review' : 'ok') : 'fail') } },
+        { field: 'items_7d', label: 'Entries, 7 days', num: true, fmt: 'int' },
         { field: 'newest', label: 'Newest', fmt: 'date', cls: 'ti-nowrap', hideSm: true },
-      ], { sort: 'region', empty: 'No news feeds were read.' });
+      ], { sort: 'items_7d', dir: 'desc', limit: 1200, empty: 'No feeds were read.' });
     }
     const ta = sec.querySelector('#tbl-actors');
     if (ta && TI.tableState(ta, ['live_triage', 'attack_groups', 'judgments'])) {
