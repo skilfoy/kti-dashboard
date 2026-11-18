@@ -1,13 +1,16 @@
 const { handle, sendJson, q, isOperator } = require('./_lib');
 const store = require('../lib/store');
 const crypto = require('crypto');
+const zlib = require('zlib');
 
 // Operator endpoint for the collector. It answers only on the project's *.vercel.app hosts, which Vercel
 // Authentication protects; on the public domain it does not exist (404). It reaches the Neon Function with this
 // deployment's OIDC token. Responses are never cached.
 // Vercel Authentication (Standard Protection) must stay on for this project: it is what keeps these hosts private.
 //   op=sha                          SHA-256 and size of each collector asset in this deployment
-//   op=push&asset=code|atlas|num2iso|links&u=<presigned upload URL for that object in the ti-docs bucket>
+//   op=push&asset=code|atlas|num2iso|links|gold|feeds[&gz=1]&u=<presigned upload URL for that object in the ti-docs bucket>
+//        gz=1 uploads the gzipped copy to <key>.gz (the loader and the collector read it first: bucket reads count
+//        against the Neon plan's transfer); the presigned URL must then name <key>.gz
 //   op=run&job=gdelt|infra|health|snap|ioda|retention|lists|fires|maritime|leaksites|ransompay|unit42|genioc|lanesreg|blogs|links|sec8k[&backfill=1][&rebuild=1][&reprocess=1][&history=<days>][&budget=<ms>]
 //        run collector jobs now; reprocess re-reads the 72-hour GDELT window, history fills country counts back <days>
 //   op=status | op=probe&target=<name>[&find=<text>|&from=<offset>] | op=doc&name=<document> | op=whoami
@@ -16,6 +19,9 @@ const ASSETS = {
   atlas: { key: 'ref/countries-50m.json', type: 'application/json', bytes: () => Buffer.from(JSON.stringify(require('world-atlas/countries-50m.json'))) },
   num2iso: { key: 'ref/num2iso.json', type: 'application/json', bytes: () => Buffer.from(JSON.stringify(require('../lib/num2iso.json'))) },
   links: { key: 'ref/links.json', type: 'application/json', bytes: () => Buffer.from(JSON.stringify(require('../lib/links.json'))) },
+  gold: { key: 'ref/triage-gold.json', type: 'application/json', bytes: () => Buffer.from(JSON.stringify(require('../lib/triage-gold.json'))) },
+  // The source network registry (pipeline/feeds_build.py); the sources job reads it from the bucket.
+  feeds: { key: 'ref/feeds.json', type: 'application/json', bytes: () => Buffer.from(JSON.stringify(require('../data/feeds.json'))) },
 };
 const STORAGE_HOST = /^br-[a-z0-9-]+\.storage\.c-\d+\.[a-z0-9-]+\.aws\.neon\.tech$/;
 const sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
@@ -46,14 +52,17 @@ module.exports = handle(async (req, res) => {
     const name = q(req, 'asset', '');
     const a = ASSETS[name];
     if (!a) return sendJson(res, 400, { error: 'asset must be one of ' + Object.keys(ASSETS).join(', ') }, 0);
+    const gz = q(req, 'gz', '') === '1', key = a.key + (gz ? '.gz' : '');
     let u;
     try { u = new URL(q(req, 'u', '')); } catch { return sendJson(res, 400, { error: 'u must be a URL' }, 0); }
-    if (u.protocol !== 'https:' || !STORAGE_HOST.test(u.hostname) || u.pathname !== '/ti-docs/' + a.key) {
-      return sendJson(res, 400, { error: 'u must be a presigned upload URL for ti-docs/' + a.key }, 0);
+    if (u.protocol !== 'https:' || !STORAGE_HOST.test(u.hostname) || u.pathname !== '/ti-docs/' + key) {
+      return sendJson(res, 400, { error: 'u must be a presigned upload URL for ti-docs/' + key }, 0);
     }
-    const body = a.bytes();
-    const r = await fetch(u, { method: 'PUT', body, headers: { 'content-type': a.type } });
-    return sendJson(res, r.ok ? 200 : 502, { asset: name, key: a.key, status: r.status, bytes: body.length, sha256: sha(body), detail: r.ok ? undefined : (await r.text()).slice(0, 400) }, 0);
+    const raw = a.bytes();
+    const body = gz ? zlib.gzipSync(raw, { level: 9 }) : raw;
+    const r = await fetch(u, { method: 'PUT', body, headers: { 'content-type': gz ? 'application/gzip' : a.type } });
+    // sha256 is always the plain asset's hash (the one pinned in TI_CODE_SHA256 for the code bundle).
+    return sendJson(res, r.ok ? 200 : 502, { asset: name, key, status: r.status, bytes: body.length, raw_bytes: raw.length, sha256: sha(raw), detail: r.ok ? undefined : (await r.text()).slice(0, 400) }, 0);
   }
   if (op === 'run') {
     const job = q(req, 'job', '');

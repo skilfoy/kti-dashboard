@@ -4,6 +4,7 @@
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { gzipSync, gunzipSync } from 'node:zlib';
 
 const ROOT = path.resolve(process.argv[2] || '.');
 const L = await import(path.join(ROOT, 'neon', 'loader.mjs'));
@@ -20,17 +21,24 @@ export default { async fetch(req) {
 } };`;
 const OLD = bundle('old'), NEW = bundle('new');
 
-function rig({ cur, prev, env = {} }) {
-  const bucket = new Map(), puts = [], quiet = { error: () => {} };
+// Objects are kept as the bytes written: strings for plain keys, Buffers for .gz keys. reads lists every GET and HEAD.
+function rig({ cur, prev, env = {}, curGz = null, prevGz = null }) {
+  const bucket = new Map(), puts = [], reads = [], quiet = { error: () => {} };
   if (cur != null) bucket.set('code/collector.mjs', cur);
+  if (curGz != null) bucket.set('code/collector.mjs.gz', gzipSync(Buffer.from(curGz)));
   if (prev != null) bucket.set('code/by-sha/' + sha(prev) + '.mjs', prev);
+  if (prevGz != null) bucket.set('code/by-sha/' + sha(prevGz) + '.mjs.gz', gzipSync(Buffer.from(prevGz)));
   const s3 = async (method, key, body) => {
-    if (method === 'PUT') { puts.push(key); bucket.set(key, Buffer.from(body).toString()); return new Response('', { status: 200 }); }
-    return bucket.has(key) ? new Response(bucket.get(key), { status: 200 }) : new Response('NoSuchKey', { status: 404 });
+    if (method === 'PUT') { puts.push(key); bucket.set(key, key.endsWith('.gz') ? Buffer.from(body) : Buffer.from(body).toString()); return new Response('', { status: 200 }); }
+    reads.push(method + ' ' + key);
+    if (!bucket.has(key)) return new Response(method === 'HEAD' ? null : 'NoSuchKey', { status: 404 });
+    return new Response(method === 'HEAD' ? null : bucket.get(key), { status: 200 });
   };
-  const E = { TI_CODE_SHA256: cur != null ? sha(cur) : 'f'.repeat(64), ...(prev != null ? { TI_CODE_SHA256_PREV: sha(prev) } : {}), ...env };
-  return { loader: L.makeLoader({ env: E, s3, log: quiet }), bucket, puts, E };
+  const E = { TI_CODE_SHA256: cur != null ? sha(cur) : curGz != null ? sha(curGz) : 'f'.repeat(64),
+    ...(prev != null ? { TI_CODE_SHA256_PREV: sha(prev) } : prevGz != null ? { TI_CODE_SHA256_PREV: sha(prevGz) } : {}), ...env };
+  return { loader: L.makeLoader({ env: E, s3, log: quiet }), bucket, puts, reads, E };
 }
+const unz = (b) => gunzipSync(b).toString('utf8');
 const trigger = () => new Request('https://fn.example/', { method: 'POST', headers: { 'x-neon-trigger-invocation-id': 't', 'content-type': 'application/json' }, body: '{}' });
 const get = (p = '/status') => new Request('https://fn.example' + p);
 const body = async (r) => JSON.parse(await r.text());
@@ -43,7 +51,7 @@ const body = async (r) => JSON.parse(await r.text());
   ok(!loader.state.verified && !puts.length, 'a read does not end probation');
   r = await loader.fetch(trigger());
   ok((await body(r)).bundle === 'new' && loader.state.verified, 'first good scheduled run ends probation');
-  ok(bucket.get('code/by-sha/' + sha(NEW) + '.mjs') === NEW && puts.length === 1, 'bundle kept under its hash after its first good run');
+  ok(unz(bucket.get('code/by-sha/' + sha(NEW) + '.mjs.gz')) === NEW && puts.length === 1, 'bundle kept gzipped under its hash after its first good run');
   await loader.fetch(trigger());
   ok(puts.length === 1, 'kept once');
 }
@@ -110,6 +118,30 @@ const body = async (r) => JSON.parse(await r.text());
   ok(r2.status === 503 && /does not match the pinned/.test((await body(r2)).error), 'an altered previous copy is refused');
   const u = rig({ cur: null, prev: null, env: { TI_CODE_SHA256: '' } });
   ok((await u.loader.fetch(get())).status === 503, 'no hash set: 503');
+}
+
+// 7b. Transfer (3.2.0): the gzipped bundle is read when it holds the pinned source, a stale one falls through to the
+//     plain object, a kept copy already there is found with HEAD, and the previous bundle is read from its gzipped copy.
+{
+  const a = rig({ cur: NEW, curGz: NEW, prev: OLD });
+  let r = await a.loader.fetch(trigger());
+  ok((await body(r)).bundle === 'new' && a.loader.state.cur.via === 'code/collector.mjs.gz', 'gzipped bundle served');
+  ok(!a.reads.includes('GET code/collector.mjs') && a.reads.includes('HEAD code/by-sha/' + sha(NEW) + '.mjs.gz') && a.puts.length === 1, 'one gzipped GET, a HEAD, one PUT: ' + a.reads.join(', '));
+  const b = rig({ cur: NEW, curGz: OLD, prev: OLD });
+  r = await b.loader.fetch(get());
+  ok((await body(r)).bundle === 'new' && b.loader.state.cur.via === 'code/collector.mjs' && b.loader.state.using === 'cur', 'a stale gzipped copy falls through to the plain bundle');
+  ok(b.loader.state.events.some((e) => /does not hold the pinned bundle/.test(e.msg)), 'the stale copy is noted');
+  const c = rig({ cur: NEW, curGz: NEW, prev: OLD });
+  c.bucket.set('code/by-sha/' + sha(NEW) + '.mjs.gz', gzipSync(Buffer.from(NEW)));
+  await c.loader.fetch(trigger());
+  ok(!c.puts.length && !c.reads.some((x) => x.startsWith('GET code/by-sha/')), 'a kept copy already there costs one HEAD and no read');
+  const d = rig({ curGz: NEW, prevGz: OLD, env: { TI_CODE_SHA256: 'd'.repeat(64) } });
+  r = await d.loader.fetch(get());
+  ok((await body(r)).bundle === 'old' && d.loader.state.prev.via === 'code/by-sha/' + sha(OLD) + '.mjs.gz', 'previous bundle read from its gzipped copy');
+  const e = rig({ cur: NEW, prev: OLD });
+  e.bucket.set('code/collector.mjs.gz', Buffer.from('not gzip'));
+  r = await e.loader.fetch(get());
+  ok((await body(r)).bundle === 'new' && e.loader.state.events.some((x) => /unreadable/.test(x.msg)), 'an unreadable gzipped copy falls through');
 }
 
 // 8. failedRun on its own.

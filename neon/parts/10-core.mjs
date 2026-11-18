@@ -23,10 +23,11 @@
 //              public collection added 22 October 2026 (37-intel, 37b-sea, 37c-reg, 37d-sec); on-demand enrichment behind GET /enrich
 //              (39-enrich.mjs). FIRMS_MAP_KEY, CLOQ_API_KEY, SEC_USER_AGENT and ABUSECH_AUTH_KEY (when set) live only in
 //              this function's environment.
-import { createHash, createHmac, createPublicKey, timingSafeEqual, verify } from 'node:crypto';
+import { createHash, createHmac, createPrivateKey, createPublicKey, generateKeyPairSync, sign, timingSafeEqual, verify } from 'node:crypto';
+import { request as httpsRequest } from 'node:https';
 import { gzipSync, gunzipSync, inflateRawSync } from 'node:zlib';
 
-export const VERSION = '2026-11-02.1';
+export const VERSION = '2026-11-18.5';
 const UA = 'threat-feeds-collector/1.0 (+https://github.com/skilfoy; OSINT dashboard collector)';
 const ENV = () => process.env;
 const BUCKET = () => ENV().TI_BUCKET || 'ti-docs';
@@ -86,17 +87,27 @@ async function pool(items, n, fn) {
 // ---------------------------------------------------------------- Postgres over HTTP (Neon SQL endpoint)
 // Same wire protocol as @neondatabase/serverless: POST https://api.<region host>/sql with the connection string in a
 // header; rows come back as raw text in array mode and are parsed here by type OID.
+// TI_SQL_URL and TI_SQL_TOKEN (3.1.0) point the collector at the KTI SQL gateway on the Oracle server, which answers the
+// same contract with a bearer token; without them the collector uses Neon's endpoint for DATABASE_URL.
 let sqlConf = null;
 function sqlTarget() {
-  if (sqlConf && sqlConf.cs === ENV().DATABASE_URL) return sqlConf;
-  const cs = ENV().DATABASE_URL;
+  const E = ENV(), key = (E.TI_SQL_URL || '') + '|' + (E.DATABASE_URL || '');
+  if (sqlConf && sqlConf.key === key) return sqlConf;
+  if (E.TI_SQL_URL) {
+    if (!E.TI_SQL_TOKEN) throw new Error('TI_SQL_TOKEN is not set');
+    sqlConf = { key, url: E.TI_SQL_URL, headers: { authorization: 'Bearer ' + E.TI_SQL_TOKEN }, via: 'gateway' };
+    return sqlConf;
+  }
+  const cs = E.DATABASE_URL;
   if (!cs) throw new Error('DATABASE_URL is not set');
   const u = new URL(cs);
-  sqlConf = { cs, url: 'https://' + u.hostname.replace(/^[^.]+\./, 'api.') + '/sql' };
+  sqlConf = { key, url: 'https://' + u.hostname.replace(/^[^.]+\./, 'api.') + '/sql', headers: { 'Neon-Connection-String': cs }, via: 'neon' };
   return sqlConf;
 }
 const isoTs = (v) => { const d = new Date(String(v).replace(' ', 'T').replace(/([+-]\d\d)$/, '$1:00')); return isNaN(d) ? v : d.toISOString(); };
 const PARSE = { 16: (v) => v === 't' || v === 'true', 20: Number, 21: Number, 23: Number, 26: Number, 700: Number, 701: Number, 1700: Number, 114: JSON.parse, 3802: JSON.parse, 1184: isoTs, 1114: isoTs };
+// Bytes of query results read this instance (response text), for the transfer budget; runJob records a job's share.
+export const DB_IO = { calls: 0, bytes: 0, sent: 0 };
 function rowsOf(res) {
   const names = res.fields.map((f) => f.name);
   const ps = res.fields.map((f) => PARSE[f.dataTypeID] || ((v) => v));
@@ -104,10 +115,13 @@ function rowsOf(res) {
 }
 const prep = (p) => (p == null ? null : p instanceof Date ? p.toISOString() : typeof p === 'object' ? JSON.stringify(p) : String(p));
 async function sqlPost(body) {
-  const { cs, url } = sqlTarget();
-  const r = await fetchT(url, { method: 'POST', timeout: 40000, body: JSON.stringify(body),
-    headers: { 'Neon-Connection-String': cs, 'Neon-Raw-Text-Output': 'true', 'Neon-Array-Mode': 'true', 'content-type': 'application/json' } });
+  const { url, headers } = sqlTarget();
+  const payload = JSON.stringify(body);
+  DB_IO.sent += payload.length;
+  const r = await fetchT(url, { method: 'POST', timeout: 40000, body: payload,
+    headers: { ...headers, 'Neon-Raw-Text-Output': 'true', 'Neon-Array-Mode': 'true', 'content-type': 'application/json' } });
   const text = await r.text();
+  DB_IO.calls++; DB_IO.bytes += text.length;
   let j = null;
   try { j = JSON.parse(text); } catch { /* handled below */ }
   if (!r.ok || !j) throw new Error(`sql ${r.status}: ${(j && j.message) || text.slice(0, 300)}${j && j.code ? ' [' + j.code + ']' : ''}`);
@@ -163,6 +177,13 @@ export async function s3Put(key, buf, contentType) {
   const r = await s3('PUT', key, { body: buf, contentType });
   if (!r.ok) throw new Error(`storage PUT ${key}: HTTP ${r.status} ${(await r.text()).slice(0, 200)}`);
 }
+// Reference files (ref/*): the gzipped copy <key>.gz (pushed with op=push&gz=1) first, the plain object when it is missing.
+// Bucket reads count against the Neon plan's monthly transfer; the world atlas alone was a third of it (756 KB a read).
+export async function refGet(key) {
+  const z = await s3Get(key + '.gz');
+  if (z) return { ...z, buf: gunzipSync(z.buf), gz: true };
+  return s3Get(key);
+}
 // Documents: gzipped JSON at docs/<name>.json.gz.
 export async function putDoc(name, obj) {
   const raw = Buffer.from(JSON.stringify(obj));
@@ -210,7 +231,7 @@ export function buildGeo(topo, num2iso) {
 }
 async function geo() {
   if (GEO) return GEO;
-  const [a, n] = await Promise.all([s3Get('ref/countries-50m.json'), s3Get('ref/num2iso.json')]);
+  const [a, n] = await Promise.all([refGet('ref/countries-50m.json'), refGet('ref/num2iso.json')]);
   if (!a || !n) throw new Error('reference geography missing from the bucket (ref/countries-50m.json, ref/num2iso.json)');
   GEO = buildGeo(JSON.parse(a.buf.toString('utf8')), JSON.parse(n.buf.toString('utf8')));
   return GEO;

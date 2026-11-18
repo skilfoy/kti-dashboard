@@ -22,7 +22,8 @@
       v('span', 'judgments', 'probability', w, j.probability, 'ti-cap ti-muted'),
       h('span', { class: 'ti-badge ti-conf-' + (conf ? conf.confidence : 'LOW') },
         'Confidence ', v('span', 'confidence', 'confidence', w, conf ? conf.confidence : '—')),
-      h('span', { class: 'ti-badge ti-sev-' + j.severity }, 'Severity ', v('span', 'judgments', 'severity', w, j.severity)));
+      h('span', { class: 'ti-badge ti-sev-' + j.severity }, 'Severity ', v('span', 'judgments', 'severity', w, j.severity)),
+      j.horizon ? h('span', { class: 'ti-cap ti-muted', title: 'The date by which this judgment is scored in the forecast record' }, 'Scored by ', v('span', 'judgments', 'horizon', w, j.horizon)) : null);
     card.append(h('div', { class: 'ti-kj-top' }, v('h3', 'judgments', 'title', w, j.title, 'ti-kj-title'), meta));
     card.append(h('p', {}, h('span', { class: 'ti-kj-label', text: 'Situation' }), v('span', 'judgments', 'situation', w, j.situation)));
     card.append(h('p', {}, h('span', { class: 'ti-kj-label', text: 'Assessment' }), v('span', 'judgments', 'assessment', w, j.assessment)));
@@ -155,6 +156,8 @@
     drawLive(sec);
     // SEC Item 1.05 disclosures and the ThreatFox gate (intel.js).
     if (TI.intel) TI.intel.briefCards(sec);
+    // What the latest run changed (changes.js).
+    if (TI.changes) TI.changes.brief(sec);
     TI.fillMarks(sec);
     drawJudgments();
     drawTables();

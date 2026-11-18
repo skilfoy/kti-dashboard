@@ -11,7 +11,7 @@ Never paste a value into an issue, a commit or a chat.
 | Secret | Where to create it | Minimum permission | What the workflow does with it |
 | --- | --- | --- | --- |
 | `NEON_API_KEY` | Neon Console, **Organization settings > API keys > Create new API key**, project-scoped to `square-breeze-55687399`. Creating a project-scoped key needs an organization admin; if the account has no organization admin role, fall back to a personal API key (Account settings > API keys), which carries the account's full access | A project-scoped key (access to that one project only); a personal key only as the fallback | Reads function `ti` (deployment status and variable names, never values); environment-only deploys of `TI_CODE_SHA256` and `TI_CODE_SHA256_PREV`; a code deploy of `neon/loader.mjs` only when the loader changed, and its restore |
-| `NEON_STORAGE_KEY_ID` and `NEON_STORAGE_SECRET` | Neon Console, project **Settings > Credentials > Create credential**, branch `br-summer-scene-b8t048y2` (main), scopes `storage:read` and `storage:write` | `storage:read` and `storage:write` on that branch (write is needed for the upload URL and the rollback) | Reads `ti-docs/code/collector.mjs` and `code/by-sha/<sha>.mjs` (OLD and the probation check), signs the presigned upload URL the service uses for `op=push`, and puts the OLD bundle back on a rollback |
+| `NEON_STORAGE_KEY_ID` and `NEON_STORAGE_SECRET` | Neon Console, project **Settings > Credentials > Create credential**, branch `br-summer-scene-b8t048y2` (main), scopes `storage:read` and `storage:write` | `storage:read` and `storage:write` on that branch (write is needed for the upload URL and the rollback) | Reads `ti-docs/code/collector.mjs` and the loader's kept copies `code/by-sha/<sha>.mjs.gz` (OLD and the probation check), signs the presigned upload URL the service uses for `op=push`, and puts the OLD bundle back on a rollback |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | Vercel, project **threat-feeds > Settings > Deployment Protection > Protection Bypass for Automation > Generate** (available on the Hobby plan) | The bypass reaches protected deployments of this project only; Vercel Authentication stays on | Sent as `x-vercel-protection-bypass` to the deployment's own `*.vercel.app` URL for `/api/admin` (`op=sha`, `op=push`, `op=run&job=gdelt`, `op=status`). Treat it as the operator credential |
 | `VERCEL_TOKEN` | Already a repository secret (the Site workflow uses it); a job in an environment still reads repository secrets, so it stays where it is | Unchanged | Read only here: finds the production deployment URL for the commit (`GET /v6/deployments?sha=`), so the push never goes through an alias that still points at the previous deployment |
 
@@ -30,13 +30,14 @@ deploy failed" and comments on the merged pull request.
 ## What it does, in order
 
 1. Build `neon/collector.mjs` and run `node test/run_all.mjs`; a failure stops here.
-2. OLD: the SHA-256 of `ti-docs/code/collector.mjs`, accepted only when the loader's copy `code/by-sha/OLD.mjs` exists with
-   that hash (the loader writes it after a good run of the pinned bundle; the Neon API does not return variable values).
+2. OLD: the SHA-256 of `ti-docs/code/collector.mjs`, accepted only when the loader's copy `code/by-sha/OLD.mjs.gz`
+   (gzipped since 3.2.0; `code/by-sha/OLD.mjs` for a copy kept earlier) holds that hash (the loader writes it after a good run of the pinned bundle; the Neon API does not return variable values).
 3. The service deployment for the commit must report the built hash at `op=sha`.
 4. Loader (only when `neon/loader.mjs` changed): code deploy, then the next scheduled run must be good.
-5. Wait until 2 to 9 minutes after a trigger minute (:04, :19, :34, :49), then push the bundle through the service, read
-   it back, and deploy the environment `{TI_CODE_SHA256: NEW, TI_CODE_SHA256_PREV: OLD}`; the other variables carry
+5. Wait until 7 to 12 minutes after a trigger minute (:04, :19, :34, :49) with no lease held in `op=status` (scheduled
+   runs arrive up to six minutes late, now and then twelve), then push the bundle and its gzipped copy
+   `code/collector.mjs.gz` (which the loader reads first) through the service, read both back, and deploy the environment `{TI_CODE_SHA256: NEW, TI_CODE_SHA256_PREV: OLD}`; the other variables carry
    over. The upload waits for the window too, so the bucket and the pin disagree for seconds, not minutes.
-6. `op=run&job=gdelt` and `op=status` must report the new version, and `code/by-sha/NEW.mjs` must exist (probation passed
-   without fallback). Otherwise the bucket object and the pin go back to OLD (and the loader to its previous code), and
+6. `op=run&job=gdelt` and `op=status` must report the new version, and `code/by-sha/NEW.mjs.gz` must exist (probation
+   passed without fallback). Otherwise both bucket copies and the pin go back to OLD (and the loader to its previous code), and
    an issue opens with the evidence.

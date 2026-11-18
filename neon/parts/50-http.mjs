@@ -1,14 +1,25 @@
 // ---------------------------------------------------------------- runner
 const JOBS = { gdelt: jobGdelt, infra: jobInfra, health: jobHealth, snap: jobSnap, ioda: jobIoda, retention: jobRetention, lists: jobLists, fires: jobFires,
-  maritime: jobMaritime, leaksites: jobLeaksites, ransompay: jobRansompay, unit42: jobUnit42, genioc: jobGenioc, lanesreg: jobLanesreg, blogs: jobBlogs, links: jobLinks, sec8k: jobSec8k };
+  maritime: jobMaritime, leaksites: jobLeaksites, ransompay: jobRansompay, unit42: jobUnit42, genioc: jobGenioc, lanesreg: jobLanesreg, blogs: jobBlogs, links: jobLinks, sec8k: jobSec8k, ocia1: jobOciA1 };
 const LEASE_S = { gdelt: 240, infra: 240, health: 120, snap: 120, ioda: 120, retention: 120, lists: 180, fires: 180, maritime: 120, leaksites: 120, ransompay: 240,
-  unit42: 180, genioc: 240, lanesreg: 120, blogs: 240, links: 180, sec8k: 120 };
+  unit42: 180, genioc: 240, lanesreg: 120, blogs: 240, links: 180, sec8k: 120, ocia1: 120 };
+// Submarine cables (37e-cables.mjs) on the lease row reserved for them since G26: weekly, Sundays at 05:19 UTC.
+JOBS.cables = jobCables;
+LEASE_S.cables = 180;
+// Advisory feeds every three hours at :19; machine triage hourly at :49 (after the blogs slice of the same run), with its
+// evaluation run on demand only (37f-triage.mjs).
+Object.assign(JOBS, { psirt: jobPsirt, triage: jobTriage, triageeval: jobTriageeval, news: jobNews });
+Object.assign(LEASE_S, { psirt: 240, triage: 600, triageeval: 600, news: 180 });
+// Source network and agentic reports (3.0, 37h-sources.mjs and 37i-report.mjs). The sources job replaces the news job and
+// the blogs job's reading on the schedule; both stay callable by hand.
+Object.assign(JOBS, { sources: jobSources, reports: jobReports });
+Object.assign(LEASE_S, { sources: 240, reports: 900 });
 export async function runJob(job, opts = {}) {
   const fn = JOBS[job];
   if (!fn) return { job, ok: false, error: 'unknown job' };
   if (!opts.keepCache) RUN_CACHE.clear();
   const holder = (opts.holder || 'run') + ':' + Math.random().toString(36).slice(2, 10);
-  const started = new Date();
+  const started = new Date(), io0 = { calls: DB_IO.calls, bytes: DB_IO.bytes, sent: DB_IO.sent };
   let lease;
   try {
     lease = await sql(`UPDATE ti.lease SET holder = $1, until = now() + make_interval(secs => $2) WHERE job = $3 AND (until < now() OR holder = $1) RETURNING job`, [holder, LEASE_S[job], job]);
@@ -19,10 +30,13 @@ export async function runJob(job, opts = {}) {
   // A job can finish its work yet fail the run (the blogs job holding a shrunken document): it keeps its detail.
   if (ok && result && result.run_failed) { ok = false; result.error = String(result.run_failed); delete result.run_failed; }
   const ms = Date.now() - started.getTime();
+  // Query results the job read (requests in flight on the same instance may add to it), for the transfer budget.
+  if (result && typeof result === 'object') result.db = { calls: DB_IO.calls - io0.calls, kb: Math.round((DB_IO.bytes - io0.bytes) / 1024), sent_kb: Math.round((DB_IO.sent - io0.sent) / 1024) };
   try {
     await sqlTx([
       [`UPDATE ti.lease SET until = 'epoch' WHERE job = $1 AND holder = $2`, [job, holder]],
-      [`INSERT INTO ti.run (job, started_at, ms, ok, detail) VALUES ($1, $2, $3, $4, $5::jsonb)`, [job, started, ms, ok, result]],
+      // The collector version is kept with each run, so failures can be counted under the version that is running.
+      [`INSERT INTO ti.run (job, started_at, ms, ok, detail) VALUES ($1, $2, $3, $4, $5::jsonb)`, [job, started, ms, ok, { ...result, version: VERSION }]],
     ]);
   } catch (e) { result.log_error = String(e.message || e); }
   console.log(JSON.stringify({ job, ok, ms, ...(ok ? {} : { error: result.error }) }));
@@ -37,6 +51,8 @@ export function plan(at) {
   const jobs = ['gdelt'];
   if (m < 15 || (m >= 30 && m < 45)) jobs.push('infra', 'snap');
   else jobs.push('health', 'ioda');
+  // The source network reads its due feeds in every slot; at :49 it runs before triage, so triage reads the hour's titles.
+  if (m < 45) jobs.push('sources');
   if (m >= 15 && m < 30) {
     jobs.push('lists', 'leaksites', 'links');
     if (h === 6) jobs.push('unit42');
@@ -44,8 +60,16 @@ export function plan(at) {
     if (h === 9) jobs.push('lanesreg');
     if (h === 8 && at.getUTCDay() === 1) jobs.push('ransompay');
     if (h === 12 || h === 22) jobs.push('sec8k');
+    if (h === 5 && at.getUTCDay() === 0) jobs.push('cables');
+    if (h % 3 === 1) jobs.push('psirt');
+    // One evaluation batch an hour until the gold set is scored; a complete evaluation makes no request. The operator
+    // route answers within its own deadline and cannot hold a model request open, so the replay runs on the schedule.
+    jobs.push('triageeval');
   }
-  if (m >= 45) jobs.push('retention', 'fires', 'maritime', 'blogs');
+  if (m >= 45) jobs.push('retention', 'fires', 'maritime', 'sources', 'triage');
+  // Until the Oracle A1 server is launched (37j-oci.mjs), every slot asks for one; afterwards the job returns at once.
+  jobs.push('ocia1');
+  jobs.push('reports');
   return jobs;
 }
 export async function scheduled(at) {
@@ -119,6 +143,8 @@ const PROBE_TARGETS = (t) => ({
   ioda_events: `https://api.ioda.inetintel.cc.gatech.edu/v2/outages/events?from=${t - 2 * 86400}&until=${t}&entityType=country&includeAlerts=false&format=codf&limit=5`,
   ioda_summary: `https://api.ioda.inetintel.cc.gatech.edu/v2/outages/summary?from=${t - 86400}&until=${t}&entityType=country&limit=5`,
   ioda_alerts: `https://api.ioda.inetintel.cc.gatech.edu/v2/outages/alerts?from=${t - 86400}&until=${t}&entityType=country&limit=5`,
+  // Diagnostic probes only, never a data source: the submarine cable job (lease 'cables', 37e-cables.mjs) uses open data
+  // only, since TeleGeography's geocoded data is an annual paid licence. See docs/cables-open-data.md.
   cables: 'https://www.submarinecablemap.com/api/v3/cable/cable-geo.json',
   landing: 'https://www.submarinecablemap.com/api/v3/landing-point/landing-point-geo.json',
   gdelt_last: 'http://data.gdeltproject.org/gdeltv2/lastupdate.txt',
@@ -179,8 +205,27 @@ export default {
         const at = body && body.data && body.data.scheduled_at ? new Date(body.data.scheduled_at) : new Date();
         return json(await scheduled(isNaN(at) ? new Date() : at));
       }
+      // The bucket's upload trigger for reports/queue/ (agentic reports): the trigger holds the request while the report is
+      // written. The header is one Neon strips from client requests.
+      if (req.method === 'POST' && path === '/report-run' && req.headers.get('x-neon-trigger-invocation-id')) {
+        const body = await req.json().catch(() => ({}));
+        const key = String((body && body.data && (body.data.key || body.data.object_key)) || (body && (body.key || body.object_key)) || JSON.stringify(body || {}));
+        const m = key.match(/R-\d{8}-[0-9a-f]{8}/);
+        console.log(JSON.stringify({ trigger: 'report-run', key: String(key).slice(0, 120) }));
+        return json(m ? await runReport(m[0]) : await jobReports());
+      }
       const who = await authorize(req);
       if (!who) return json({ error: 'unauthorized' }, 401);
+      if (req.method === 'POST' && path === '/search') return json(await search(await req.json().catch(() => ({}))));
+      if (req.method === 'POST' && path === '/report') {
+        const r = await startReport(await req.json().catch(() => ({})));
+        // The report starts at once in this instance (the long-running function keeps working after it answers); the
+        // bucket's upload trigger and the scheduled reports job pick it up if this instance goes away first.
+        if (r.id && !r.reused) runReport(r.id).catch((e) => console.log(JSON.stringify({ report: r.id, error: String((e && e.message) || e) })));
+        return json(r, r.status && r.error ? r.status : 200);
+      }
+      if (req.method === 'GET' && path.startsWith('/report/')) { const r = await getReport(path.slice(8)); return r ? json(r) : json({ error: 'not found' }, 404); }
+      if (req.method === 'GET' && path === '/reports') return json({ reports: await listReports(url.searchParams.get('limit')) });
       if (req.method === 'GET' && path.startsWith('/doc/')) {
         const name = path.slice(5);
         if (!/^[a-z0-9-]{1,64}$/.test(name)) return json({ error: 'bad name' }, 400);

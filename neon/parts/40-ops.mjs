@@ -22,7 +22,7 @@ const PROBES = [
   ['sec_edgar', 'sec:'],
   ['github_api', 'https://api.github.com/rate_limit'],
   ['spamhaus_drop', 'https://www.spamhaus.org/drop/drop_v4.json'],
-  ['blocklist_de', 'https://lists.blocklist.de/lists/all.txt'],
+  ['blocklist_de', 'https://lists.blocklist.de/lists/all.txt', [200, 206, 416], { range: 'bytes=0-1023' }],
   ['cins_army', 'https://cinsscore.com/list/ci-badguys.txt'],
   ['circl_bgpranking', 'https://bgpranking-ng.circl.lu/ipasn_history/?ip=8.8.8.8'],
   ['tranco', 'https://tranco-list.eu/api/ranks/domain/example.com'],
@@ -37,10 +37,33 @@ const PROBES = [
 export const KNOWN_GAPS = {
   marad_msci: { expect: [403], note: "MARAD's Akamai edge refuses cloud addresses with HTTP 403 (since 22 Oct 2026); never worked around" },
   ukmto: { expect: [403], note: "UKMTO's Cloudflare rule refuses cloud addresses with HTTP 403 (since 22 Oct 2026); never worked around" },
-  nga_msi: { expect: [200, 206], stale: true, note: 'NGA broadcast warnings answer HTTP 200, but the newest warning listed in force was issued 2024-05-10; the maritime job counts the list as stale and keeps it off the map' },
+  nga_msi: { expect: [200, 206, 503], stale: true, note: 'NGA broadcast warnings: the newest warning listed in force was issued 2024-05-10, and since November 2026 the endpoint also answers HTTP 503 at times; the maritime job counts the list as stale and keeps it off the map' },
   gdelt_doc_api: { expect: [429], note: 'The GDELT DOC API rate-limits cloud egress (HTTP 429) and feeds no layer' },
+  // Intermittent: the free lookup sometimes answers (uptime about 80 percent), so a passing check reads "up" and the
+  // alert workflow reports a change only once the feed passes steadily (24-hour uptime of 95 percent or more). To lift
+  // it: set GREYNOISE_API_KEY as a Neon function variable, send it from the probe and the exposure lookups, then remove
+  // this entry and the matching one in .github/workflows/collector-alert.yml (runbook section 6).
 };
 export const KNOWN_GAP_VOLUME = { marad: 'marad_msci', asam: 'nga_asam', navwarn_security: 'nga_msi' };
+// Answer classes (3 November 2026). Some sources refuse cloud egress in more than one way: the GDELT DOC API alternates
+// between HTTP 429 and a timeout, and GreyNoise's free lookup answers 429. A 429, a timeout or a failed fetch (status 0)
+// is one answer, "refused at cloud egress", so the gap holds while the answer stays in that class; any other answer, an
+// HTTP 200 among them, lifts it. An entry already defined above keeps its own note and fields.
+export const EGRESS_REFUSED = [429, 0];
+KNOWN_GAPS.gdelt_doc_api = { ...KNOWN_GAPS.gdelt_doc_api, expect: EGRESS_REFUSED, answer_class: 'refused at cloud egress (429, timeout or failed fetch)' };
+// GreyNoise left the documented gaps on 17 November 2026: its keyless lookup has answered cloud egress steadily since
+// 10 November. A key (GREYNOISE_API_KEY) is still sent when it is set.
+// Open-data sources of the cables job (37e-cables.mjs): Overpass's status page and a one-line Wikidata SPARQL ASK, sent
+// with the same identifying User-Agent and an Accept header (overpass-api.de answers a bare request with HTTP 406).
+const OPEN_DATA_HEADERS = (accept) => () => ({ accept, 'user-agent': cableUserAgent(ENV().SEC_USER_AGENT || 'contact not set') });
+// Overpass has no probe: its status page did not answer this host within the probe deadline from 14 November 2026 on,
+// while the weekly cables job read the interpreter without trouble (8 and 15 November). That job's own run record is the
+// check; a failed run raises the collector alert.
+PROBES.push(['wikidata', WIKIDATA_SPARQL + '?format=json&query=' + encodeURIComponent('ASK {}'), [200, 206], OPEN_DATA_HEADERS('application/sparql-results+json')]);
+// GreyNoise: with GREYNOISE_API_KEY in the function environment the probe sends it (header "key"); without it the
+// keyless community lookup is used as before. The key lives only here, in the collector's Neon environment.
+export const greynoiseHeaders = () => (ENV().GREYNOISE_API_KEY ? { key: ENV().GREYNOISE_API_KEY, accept: 'application/json' } : { accept: 'application/json' });
+PROBES.find((p) => p[0] === 'greynoise')[3] = greynoiseHeaders;
 // up | down | known_gap for one feed check ({feed, ok, status}). A known-gap feed whose check passes while the gap
 // expects a refusal is "up" (the block lifted); one that fails with an unexpected answer is "down".
 export function feedState(c) {
@@ -54,7 +77,7 @@ export async function jobHealth() {
   const t0 = Date.now(), at = new Date().toISOString();
   const now = Math.floor(Date.now() / 1000);
   let infocon = null;
-  const checks = await pool(PROBES, 8, async ([feed, url, okc]) => {
+  const checks = await pool(PROBES, 8, async ([feed, url, okc, hdrs]) => {
     // ThreatFox and URLhaus: the authenticated API with the key, else the gate (21 October 2026) without a request.
     if (url && url.startsWith('abuse:')) {
       const r = await abuseProbe(url.slice(6));
@@ -69,7 +92,7 @@ export async function jobHealth() {
       return { feed, ok: r.ok, status: r.status, ms: r.ms, error: r.ok ? null : (r.error || `HTTP ${r.status}`) };
     }
     const u = url || `https://api.ioda.inetintel.cc.gatech.edu/v2/outages/events?from=${now - 3600}&until=${now}&entityType=country&limit=1`;
-    const r = await get(u, { timeout: 12000, headers: { range: 'bytes=0-4095' } });
+    const r = await get(u, { timeout: 12000, headers: { range: 'bytes=0-4095', ...(typeof hdrs === 'function' ? hdrs() : hdrs || {}) } });
     const ok = okc ? okc.includes(r.status) : (r.status >= 200 && r.status < 300);
     if (feed === 'dshield' && ok) { try { infocon = JSON.parse(r.text).status || null; } catch { /* left null */ } }
     return { feed, ok, status: r.status, ms: r.ms, error: ok ? null : (r.error || `HTTP ${r.status}`) };
@@ -80,16 +103,37 @@ export async function jobHealth() {
   // Infocon is DShield's own published level, read from its API; no check of ours feeds it, so known gaps cannot move it.
   return { checked: checks.length, down: doc.down, known_gaps: doc.known_gaps, infocon, published: await putDoc('health', doc), ms: Date.now() - t0 };
 }
-// Spike when the latest snapshot is at least five times the 30-day median, silence when it is empty or under a fifth of
-// it (Arici 3.5.1, 7.3.1; Kuhn p80); judged once a feed has seven days of runs.
+// Volume baseline per feed over 30 days of ti.feed_volume: the all-hours median (median_30d) and the median of the runs
+// in one UTC hour of the day (median_hour, hour_samples). The hour is $2 when given (a job judging the count it holds
+// now), else the hour of the feed's latest row, whose own row is then left out of the hour median. $1 limits the feeds
+// (null for all).
+export const VOLUME_BASELINE_SQL = `WITH v AS (SELECT feed, at, n FROM ti.feed_volume WHERE at > now() - interval '30 days' AND ($1::text[] IS NULL OR feed = ANY($1::text[]))),
+    last AS (SELECT DISTINCT ON (feed) feed, at, n, coalesce($2::int, extract(hour FROM at AT TIME ZONE 'UTC')::int) AS hour_utc FROM v ORDER BY feed, at DESC),
+    allh AS (SELECT feed, (percentile_cont(0.5) WITHIN GROUP (ORDER BY n))::real AS median_30d, count(*)::int AS runs, min(at) AS first_at FROM v GROUP BY feed),
+    hr AS (SELECT v.feed, (percentile_cont(0.5) WITHIN GROUP (ORDER BY v.n))::real AS median_hour, count(*)::int AS hour_samples FROM v JOIN last l ON l.feed = v.feed
+      AND extract(hour FROM v.at AT TIME ZONE 'UTC')::int = l.hour_utc AND ($2::int IS NOT NULL OR v.at < l.at) GROUP BY v.feed)
+  SELECT l.feed, l.n, l.at, a.median_30d, a.runs, a.first_at, l.hour_utc, h.median_hour, coalesce(h.hour_samples, 0)::int AS hour_samples
+  FROM last l JOIN allh a USING (feed) LEFT JOIN hr h USING (feed) ORDER BY l.feed`;
+export const HOUR_SAMPLES_MIN = 5;
+// Spike when the latest snapshot is at least five times its baseline, silence when it is under a fifth of it (Arici
+// 3.5.1, 7.3.1; Kuhn p80); judged once a feed has seven days of runs. The baseline is the median of the same UTC hour
+// once that hour has HOUR_SAMPLES_MIN earlier runs (feeds that follow the clock, such as FIRMS detections that track
+// satellite passes, are judged against their own hour), else the all-hours median. An empty snapshot is silence against
+// the all-hours median; against an hour whose median is zero it is normal. median_30d keeps its earlier meaning (all
+// hours); ratio is n over the baseline used, named in basis and baseline.
 export function volumeFlag(v, now = Date.now()) {
   const days = v.first_at ? (now - Date.parse(v.first_at)) / 86400000 : 0;
-  const med = v.median_30d == null ? null : Number(v.median_30d), n = v.n == null ? null : Number(v.n);
+  const num = (x) => (x == null ? null : Number(x));
+  const med = num(v.median_30d), medH = num(v.median_hour), n = num(v.n), samples = +v.hour_samples || 0;
+  const basis = medH != null && samples >= HOUR_SAMPLES_MIN ? 'hour' : 'all';
+  const base = basis === 'hour' ? medH : med;
   let flag = 'normal';
   if (days < 7) flag = 'baseline building';
-  else if (n === 0 || (med > 0 && n < med / 5)) flag = 'silence';
-  else if (med > 0 && n >= med * 5) flag = 'spike';
-  return { feed: v.feed, n, at: v.at, median_30d: med == null ? null : Math.round(med * 10) / 10, ratio: med ? Math.round((n / med) * 100) / 100 : null, runs: v.runs, baseline_days: Math.floor(days), flag };
+  else if (base > 0 ? n < base / 5 : basis === 'all' && n === 0) flag = 'silence';
+  else if (base > 0 && n >= base * 5) flag = 'spike';
+  const r1 = (x) => (x == null ? null : Math.round(x * 10) / 10);
+  return { feed: v.feed, n, at: v.at, median_30d: r1(med), ratio: base ? Math.round((n / base) * 100) / 100 : null, runs: v.runs, baseline_days: Math.floor(days), flag,
+    basis, baseline: r1(base), hour_utc: v.hour_utc == null ? null : +v.hour_utc, median_hour: r1(medH), hour_samples: samples };
 }
 export async function buildHealth({ checks, at, infocon }) {
   const [up, recent, runs, fails, vol] = await sqlTx([
@@ -99,10 +143,12 @@ export async function buildHealth({ checks, at, infocon }) {
       FROM ti.feed_check WHERE at > now() - interval '7 days' GROUP BY feed`],
     [`SELECT feed, ok FROM ti.feed_check WHERE at > now() - interval '12 hours' ORDER BY feed, at DESC`],
     [`SELECT DISTINCT ON (job) job, started_at, ms, ok, detail->>'error' AS error FROM ti.run ORDER BY job, started_at DESC`],
-    [`SELECT job, count(*) FILTER (WHERE NOT ok)::int AS failed_24h, count(*)::int AS runs_24h FROM ti.run WHERE started_at > now() - interval '24 hours' GROUP BY job`],
-    // Volume baseline (B5): latest snapshot size per feed against the median of its last 30 days of runs.
-    [`SELECT feed, (array_agg(n ORDER BY at DESC))[1] AS n, max(at) AS at, (percentile_cont(0.5) WITHIN GROUP (ORDER BY n))::real AS median_30d,
-        count(*)::int AS runs, min(at) AS first_at FROM ti.feed_volume WHERE at > now() - interval '30 days' GROUP BY feed ORDER BY feed`],
+    // Failures under the running collector version: a fault a deploy has fixed stops counting at the deploy (16 November
+    // 2026: the duplicate-link fault kept a psirt alert open for a day after the fix). failed_24h_all keeps every failure.
+    [`SELECT job, count(*) FILTER (WHERE NOT ok AND detail->>'version' = $1)::int AS failed_24h, count(*) FILTER (WHERE NOT ok)::int AS failed_24h_all, count(*)::int AS runs_24h
+      FROM ti.run WHERE started_at > now() - interval '24 hours' GROUP BY job`, [VERSION]],
+    // Volume baseline (B5): latest snapshot size per feed against its 30-day median, by UTC hour once that hour has history.
+    [VOLUME_BASELINE_SQL, [null, null]],
   ]);
   const streak = new Map();
   for (const r of recent) { const s = streak.get(r.feed) || { n: 0, done: false }; if (!s.done) { if (r.ok) s.done = true; else s.n++; } streak.set(r.feed, s); }
@@ -111,7 +157,7 @@ export async function buildHealth({ checks, at, infocon }) {
   const rows = up.map((u) => ({ kind: 'feed', feed: u.feed, ok: cur.has(u.feed) ? cur.get(u.feed).ok : null, status: cur.has(u.feed) ? cur.get(u.feed).status : null,
     ms: cur.has(u.feed) ? cur.get(u.feed).ms : null, uptime_24h: u.n24 ? r2((100 * u.ok24) / u.n24) : null, uptime_7d: u.n7 ? r2((100 * u.ok7) / u.n7) : null,
     checks_24h: u.n24, p50_ms: u.p50_ms, last_ok: u.last_ok, last_fail: u.last_fail, failing_streak: (streak.get(u.feed) || { n: 0 }).n }))
-    .concat(runs.map((r) => ({ kind: 'job', job: r.job, last_run: r.started_at, ms: r.ms, ok: r.ok, error: r.error, runs_24h: (fmap.get(r.job) || {}).runs_24h || 0, failed_24h: (fmap.get(r.job) || {}).failed_24h || 0 })))
+    .concat(runs.map((r) => ({ kind: 'job', job: r.job, last_run: r.started_at, ms: r.ms, ok: r.ok, error: r.error, runs_24h: (fmap.get(r.job) || {}).runs_24h || 0, failed_24h: (fmap.get(r.job) || {}).failed_24h || 0, failed_24h_all: (fmap.get(r.job) || {}).failed_24h_all || 0, version: VERSION })))
     .concat((vol || []).map((v) => ({ kind: 'volume', ...volumeFlag(v) })));
   // Additive fields: "state" on feed rows (up, down, known_gap) and on volume rows of gap sources, a "gap" note, and the
   // down and known_gaps lists. "ok" keeps its meaning (the raw check), so readers of the earlier shape are unaffected.
@@ -247,3 +293,5 @@ export async function jobRetention() {
   return { db_bytes: r[r.length - 1][0] && r[r.length - 1][0].bytes, ms: Date.now() - t0 };
 }
 
+// The ids of every upstream the health job checks (for the data sources registry check, pipeline/check_data_sources.mjs).
+export const HEALTH_FEED_IDS = () => PROBES.map((p) => p[0]);

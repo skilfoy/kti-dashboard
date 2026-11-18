@@ -2,22 +2,25 @@
 // .github/workflows/collector-auto-deploy.yml after the Site workflow deploys a main commit that changes the collector.
 //
 //   1. OLD   the hash of ti-docs/code/collector.mjs, confirmed as the pinned TI_CODE_SHA256 by the loader's own copy
-//            code/by-sha/OLD.mjs (written only after a good run of a bundle whose hash matched the pin).
+//            code/by-sha/OLD.mjs.gz (since 3.2.0; code/by-sha/OLD.mjs for a copy kept earlier), written only after a
+//            good run of a bundle whose hash matched the pin.
 //   2. NEW   the bundle built in this run; the service deployment for the commit must report the same hash (op=sha).
 //   3. Loader (only when neon/loader.mjs changed): code deploy of the loader, checked by the next scheduled run.
-//   4. Wait  until 2 to 9 minutes after a trigger minute (:04, :19, :34, :49), so the switch lands between runs.
-//   5. Push  presigned upload of code/collector.mjs through the service (op=push), checked by reading the object back.
+//   4. Wait  until 7 to 12 minutes after a trigger minute (:04, :19, :34, :49) with no lease held in op=status, so the
+//            switch lands between runs (scheduled runs arrive up to six minutes late, now and then twelve).
+//   5. Push  presigned uploads of code/collector.mjs and its gzipped copy code/collector.mjs.gz (read first by the
+//            loader since 3.2.0) through the service (op=push, op=push&gz=1), each checked by reading it back.
 //   6. Pin   environment-only deploy {TI_CODE_SHA256: NEW, TI_CODE_SHA256_PREV: OLD}; the other variables carry over.
-//   7. Check op=run&job=gdelt and op=status report the new version, and code/by-sha/NEW.mjs exists (probation passed,
-//            no fallback).
-//   On a failed check after step 5: the bucket object and TI_CODE_SHA256 go back to OLD (and the loader to its previous
+//   7. Check op=run&job=gdelt and op=status report the new version, and code/by-sha/NEW.mjs.gz exists (probation
+//            passed, no fallback).
+//   On a failed check after step 5: both bucket copies and TI_CODE_SHA256 go back to OLD (and the loader to its previous
 //   code if step 3 ran), and an issue "Collector deploy failed" carries the evidence. On success the merged pull request
 //   gets a comment. DRY_RUN=1 does every read and prints every write without making it.
 // Secrets (repository): NEON_API_KEY, NEON_STORAGE_KEY_ID, NEON_STORAGE_SECRET, VERCEL_AUTOMATION_BYPASS_SECRET,
 // VERCEL_TOKEN; GITHUB_TOKEN from the workflow. No secret value is ever printed.
 import { createHash, createHmac } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { deflateRawSync, crc32 } from 'node:zlib';
+import { deflateRawSync, crc32, gzipSync, gunzipSync } from 'node:zlib';
 import { pathToFileURL } from 'node:url';
 
 export const CONFIG = {
@@ -28,7 +31,7 @@ export const CONFIG = {
 };
 export const SECRETS = ['NEON_API_KEY', 'NEON_STORAGE_KEY_ID', 'NEON_STORAGE_SECRET', 'VERCEL_AUTOMATION_BYPASS_SECRET', 'VERCEL_TOKEN'];
 export const TRIGGER_MINUTES = [4, 19, 34, 49];
-export const WINDOW = { openAfterMin: 2, closeAfterMin: 9 };
+export const WINDOW = { openAfterMin: 7, closeAfterMin: 12 };
 export const COLLECTOR_PATHS = [/^neon\//, /^lib\/collector\.js$/, /^pipeline\/collector_build\.py$/];
 
 const sha256 = (b) => createHash('sha256').update(b).digest('hex');
@@ -37,7 +40,7 @@ const sha256 = (b) => createHash('sha256').update(b).digest('hex');
 export const missingSecrets = (env) => SECRETS.filter((k) => !env[k]);
 export const collectorChanged = (files) => files.some((f) => COLLECTOR_PATHS.some((re) => re.test(f)));
 export const loaderChanged = (files) => files.includes('neon/loader.mjs');
-// Milliseconds to wait before the switch: 0 inside a window (2 to 9 minutes after a trigger minute), else the time to
+// Milliseconds to wait before the switch: 0 inside a window (7 to 12 minutes after a trigger minute), else the time to
 // the next window's opening.
 export function waitForWindow(now) {
   const d = new Date(now);
@@ -52,6 +55,20 @@ export function waitForWindow(now) {
   return 0;
 }
 export const inWindow = (now) => waitForWindow(now) === 0;
+// The jobs whose lease is held at `now`, from op=status (leases: [{job, holder, until}]); an unreadable answer counts as
+// held, so the switch waits rather than guesses.
+export function leasesHeld(status, now) {
+  const L = status && Array.isArray(status.leases) ? status.leases : null;
+  if (!L) return ['(status unreadable)'];
+  return L.filter((l) => Date.parse(l.until) > now).map((l) => l.job);
+}
+// The loader's kept copy: gzipped since 3.2.0, plain before. Returns the source or null.
+export async function keptCopy(S, sha) {
+  const z = await S.get(`code/by-sha/${sha}.mjs.gz`);
+  if (z) { try { const src = gunzipSync(z); if (sha256(src) === sha) return src; } catch { /* fall through */ } }
+  const p = await S.get(`code/by-sha/${sha}.mjs`);
+  return p && sha256(p) === sha ? p : null;
+}
 // Why the switch failed, from what step 7 saw; an empty list means it passed.
 export function judgeSwitch(e) {
   const why = [];
@@ -66,7 +83,7 @@ export function judgeSwitch(e) {
     if (!e.run.ok) why.push('gdelt job failed: ' + String(e.run.error || 'no error text').slice(0, 200));
   }
   if (!e.status || e.status.version !== e.newVersion) why.push(`op=status reports version ${e.status ? e.status.version : 'none'}, expected ${e.newVersion}`);
-  if (e.probation !== true) why.push(`code/by-sha/${String(e.newSha).slice(0, 12)}.mjs missing or altered: the new bundle did not pass probation`);
+  if (e.probation !== true) why.push(`code/by-sha/${String(e.newSha).slice(0, 12)}.mjs.gz missing or altered: the new bundle did not pass probation`);
   return why;
 }
 // Version string inside a built bundle.
@@ -107,7 +124,7 @@ export function storage(env, http = fetch) {
   const url = (method, k) => presignUrl({ method, endpoint: CONFIG.storage, path: key(k), keyId: env.NEON_STORAGE_KEY_ID, secret: env.NEON_STORAGE_SECRET, region: CONFIG.region, amzDate: amzNow() });
   return {
     async get(k) { const r = await http(url('GET', k)); if (r.status === 404) return null; if (!r.ok) throw new Error(`storage GET ${k}: HTTP ${r.status}`); return Buffer.from(await r.arrayBuffer()); },
-    async put(k, body) { const r = await http(url('PUT', k), { method: 'PUT', body, headers: { 'content-type': 'text/javascript' } }); if (!r.ok) throw new Error(`storage PUT ${k}: HTTP ${r.status}`); },
+    async put(k, body) { const r = await http(url('PUT', k), { method: 'PUT', body, headers: { 'content-type': k.endsWith('.gz') ? 'application/gzip' : 'text/javascript' } }); if (!r.ok) throw new Error(`storage PUT ${k}: HTTP ${r.status}`); },
     uploadUrl: (k) => url('PUT', k),
   };
 }
@@ -174,14 +191,14 @@ export async function deploy({ env = process.env, http = fetch, wait = sleep, no
   if (missing.length) { log(`::notice::Collector deploy skipped: repository secrets not set: ${missing.join(', ')} (see docs/collector-auto-deploy.md)`); return { skipped: true, missing }; }
   const S = storage(env, http), N = neon(env, http), G = github(env, http);
   const src = readFileSync(bundlePath), NEW = sha256(src), newVersion = versionOf(src);
-  let OLD = null, oldSrc = null, pushed = false, pinned = false, loaderDeployed = false, namesBefore = [];
+  let OLD = null, oldSrc = null, oldGz = null, pushed = false, pinned = false, loaderDeployed = false, namesBefore = [];
   try {
     // 1. OLD, confirmed by the loader's copy.
     oldSrc = await S.get('code/collector.mjs');
     if (!oldSrc) throw new Error('ti-docs/code/collector.mjs not found');
     OLD = sha256(oldSrc);
-    const kept = await S.get(`code/by-sha/${OLD}.mjs`);
-    if (!kept || sha256(kept) !== OLD) throw new Error(`OLD ${OLD.slice(0, 12)} is not confirmed: code/by-sha/${OLD}.mjs is missing or altered, so the bucket object may not be the pinned bundle`);
+    if (!(await keptCopy(S, OLD))) throw new Error(`OLD ${OLD.slice(0, 12)} is not confirmed: code/by-sha/${OLD}.mjs.gz (or .mjs) is missing or altered, so the bucket object may not be the pinned bundle`);
+    oldGz = await S.get('code/collector.mjs.gz');
     const before = await N.get();
     namesBefore = (before.current_deployment && before.current_deployment.environment) || [];
     step('old', { old: OLD, old_version: versionOf(oldSrc), new: NEW, new_version: newVersion, deployment: before.current_deployment && before.current_deployment.id, names: namesBefore.length });
@@ -219,17 +236,29 @@ export async function deploy({ env = process.env, http = fetch, wait = sleep, no
       }
     }
     if (NEW === OLD) { step('collector unchanged', { reason: 'loader only' }); return { ok: true, evidence: ev }; }
-    // 4. Wait for the window, then 5. push and 6. pin within it.
-    const w = waitForWindow(now());
-    step('window', { wait_ms: w });
-    if (w && !dry) await wait(w);
-    if (dry) step('would push and pin', { upload: 'ti-docs/code/collector.mjs', environment: { TI_CODE_SHA256: NEW, TI_CODE_SHA256_PREV: OLD } });
+    // 4. Wait for a window with no lease held, then 5. push and 6. pin within it.
+    for (let k = 0; ; k++) {
+      const w = waitForWindow(now());
+      if (w) { step('window', { wait_ms: w }); if (dry) break; await wait(w); }
+      const st = await A('op=status', 30000), held = leasesHeld(st.json, now());
+      if (!held.length) { step('quiet', { leases_held: 0 }); break; }
+      if (k >= 40) throw new Error('no quiet moment in 40 tries; leases held: ' + held.join(', '));
+      step('leases held', { jobs: held });
+      if (dry) break;
+      await wait(30000);
+    }
+    if (dry) step('would push and pin', { upload: ['ti-docs/code/collector.mjs', 'ti-docs/code/collector.mjs.gz'], environment: { TI_CODE_SHA256: NEW, TI_CODE_SHA256_PREV: OLD } });
     else {
       const push = await A('op=push&asset=code&u=' + encodeURIComponent(S.uploadUrl('code/collector.mjs')));
       pushed = true;
       const back = await S.get('code/collector.mjs');
       step('pushed', { http: push.http, sha256: push.json && push.json.sha256, read_back: back && sha256(back) });
       if (push.http !== 200 || !back || sha256(back) !== NEW) throw new Error('upload not confirmed: the object reads back as ' + (back && sha256(back)));
+      const pushGz = await A('op=push&asset=code&gz=1&u=' + encodeURIComponent(S.uploadUrl('code/collector.mjs.gz')));
+      const backGz = await S.get('code/collector.mjs.gz');
+      let gzSha = null; try { gzSha = backGz && sha256(gunzipSync(backGz)); } catch { gzSha = 'unreadable'; }
+      step('pushed gzipped copy', { http: pushGz.http, read_back: gzSha });
+      if (pushGz.http !== 200 || gzSha !== NEW) throw new Error('gzipped upload not confirmed: it reads back as ' + gzSha);
       const d = await N.deploy({ environment: { TI_CODE_SHA256: NEW, TI_CODE_SHA256_PREV: OLD } });
       pinned = true;
       let fnNow = await N.get();
@@ -240,10 +269,9 @@ export async function deploy({ env = process.env, http = fetch, wait = sleep, no
       const job = (j) => ((j && j.jobs) || []).find((x) => x.job === 'gdelt') || {};
       if (job(run.json).skipped) { await wait(20000); run = await A('op=run&job=gdelt', 60000); }
       const status = await A('op=status', 30000);
-      const keptNew = await S.get(`code/by-sha/${NEW}.mjs`);
       const e = { envDeploy: fnNow.current_deployment, namesBefore, newVersion, newSha: NEW,
         run: { http: run.http, version: run.json && run.json.version, ok: !!job(run.json).ok, error: job(run.json).error }, status: { version: status.json && status.json.version },
-        probation: !!keptNew && sha256(keptNew) === NEW };
+        probation: !!(await keptCopy(S, NEW)) };
       const why = judgeSwitch(e);
       step('checks', { run: e.run, status: e.status, probation: e.probation, failures: why });
       if (why.length) throw new Error(why.join('; '));
@@ -257,6 +285,7 @@ export async function deploy({ env = process.env, http = fetch, wait = sleep, no
     const restored = [];
     if (!dry) {
       try { if (pushed && oldSrc) { await S.put('code/collector.mjs', oldSrc); restored.push('bucket object to OLD'); } } catch (e) { restored.push('bucket restore FAILED: ' + e.message); }
+      try { if (pushed && oldSrc) { await S.put('code/collector.mjs.gz', oldGz || gzipSync(oldSrc, { level: 9 })); restored.push('gzipped copy to OLD'); } } catch (e) { restored.push('gzipped copy restore FAILED: ' + e.message); }
       try { if (pinned && OLD) { await N.deploy({ environment: { TI_CODE_SHA256: OLD } }); restored.push('TI_CODE_SHA256 to OLD'); } } catch (e) { restored.push('pin restore FAILED: ' + e.message); }
       try { if (loaderDeployed && prevLoader) { await N.deploy({ zip: zipOne('index.mjs', prevLoader) }); restored.push('loader to its previous code'); } } catch (e) { restored.push('loader restore FAILED: ' + e.message); }
     }

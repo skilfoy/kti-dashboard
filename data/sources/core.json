@@ -1,0 +1,1049 @@
+{
+ "_note": "Hand-curated core of the source network. pipeline/feeds_build.py merges it with the open lists it names, validates every feed, and writes data/feeds.json. Categories: cyber-news, research, government, vulnerability, community, geopolitics, maritime, defense, think-tank. 'region' is a theater id or Global. A row with 'gnews' is a Google News query feed (titles and links as Google syndicates them).",
+ "feeds": [
+  [
+   "BleepingComputer",
+   "https://www.bleepingcomputer.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "The Hacker News",
+   "https://feeds.feedburner.com/TheHackersNews",
+   "cyber-news"
+  ],
+  [
+   "SecurityWeek",
+   "https://www.securityweek.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "Dark Reading",
+   "https://www.darkreading.com/rss.xml",
+   "cyber-news"
+  ],
+  [
+   "The Record",
+   "https://therecord.media/feed",
+   "cyber-news"
+  ],
+  [
+   "CyberScoop",
+   "https://cyberscoop.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "Krebs on Security",
+   "https://krebsonsecurity.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "Help Net Security",
+   "https://www.helpnetsecurity.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "Security Affairs",
+   "https://securityaffairs.com/feed",
+   "cyber-news"
+  ],
+  [
+   "Infosecurity Magazine",
+   "https://www.infosecurity-magazine.com/rss/news/",
+   "cyber-news"
+  ],
+  [
+   "SC Media",
+   "https://www.scworld.com/feed",
+   "cyber-news"
+  ],
+  [
+   "The Register (Security)",
+   "https://www.theregister.com/security/headlines.atom",
+   "cyber-news"
+  ],
+  [
+   "Ars Technica (Security)",
+   "https://arstechnica.com/tag/security/feed/",
+   "cyber-news"
+  ],
+  [
+   "WIRED (Security)",
+   "https://www.wired.com/feed/category/security/latest/rss",
+   "cyber-news"
+  ],
+  [
+   "TechCrunch (Security)",
+   "https://techcrunch.com/category/security/feed/",
+   "cyber-news"
+  ],
+  [
+   "DataBreaches.net",
+   "https://databreaches.net/feed/",
+   "cyber-news"
+  ],
+  [
+   "Cybernews",
+   "https://cybernews.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "HackRead",
+   "https://hackread.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "GBHackers",
+   "https://gbhackers.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "Cyber Security News",
+   "https://cybersecuritynews.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "Cyber Press",
+   "https://cyberpress.org/feed/",
+   "cyber-news"
+  ],
+  [
+   "Security Boulevard",
+   "https://securityboulevard.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "The Cyber Express",
+   "https://thecyberexpress.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "Graham Cluley",
+   "https://grahamcluley.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "Malwarebytes Labs",
+   "https://www.malwarebytes.com/blog/feed",
+   "cyber-news"
+  ],
+  [
+   "BankInfoSecurity",
+   "https://www.bankinfosecurity.com/rss-feeds",
+   "cyber-news"
+  ],
+  [
+   "GovInfoSecurity",
+   "https://www.govinfosecurity.com/rss-feeds",
+   "cyber-news"
+  ],
+  [
+   "CSO Online",
+   "https://www.csoonline.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "ZDNet (Security)",
+   "https://www.zdnet.com/topic/security/rss.xml",
+   "cyber-news"
+  ],
+  [
+   "Computer Weekly (Security)",
+   "https://www.computerweekly.com/rss/IT-security.xml",
+   "cyber-news"
+  ],
+  [
+   "Risky Business News",
+   "https://risky.biz/feeds/risky-business-news/",
+   "cyber-news"
+  ],
+  [
+   "The CyberWire",
+   "https://thecyberwire.com/feeds/rss.xml",
+   "cyber-news"
+  ],
+  [
+   "eSecurity Planet",
+   "https://www.esecurityplanet.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "Security Magazine",
+   "https://www.securitymagazine.com/rss/topic/2236-cybersecurity",
+   "cyber-news"
+  ],
+  [
+   "Industrial Cyber",
+   "https://industrialcyber.co/feed/",
+   "cyber-news"
+  ],
+  [
+   "CPO Magazine",
+   "https://www.cpomagazine.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "VentureBeat (Security)",
+   "https://venturebeat.com/category/security/feed/",
+   "cyber-news"
+  ],
+  [
+   "Cybersecurity Dive",
+   "https://www.cybersecuritydive.com/feeds/news/",
+   "cyber-news"
+  ],
+  [
+   "404 Media",
+   "https://www.404media.co/rss/",
+   "cyber-news"
+  ],
+  [
+   "The Stack",
+   "https://www.thestack.technology/rss/",
+   "cyber-news"
+  ],
+  [
+   "SiliconANGLE (Security)",
+   "https://siliconangle.com/category/security/feed/",
+   "cyber-news"
+  ],
+  [
+   "Bitdefender HotforSecurity",
+   "https://www.bitdefender.com/blog/api/rss/hotforsecurity/",
+   "cyber-news"
+  ],
+  [
+   "Security Week Network (ICS)",
+   "https://www.securityweek.com/category/ics-ot/feed/",
+   "cyber-news"
+  ],
+  [
+   "Cybersecurity Insiders",
+   "https://www.cybersecurity-insiders.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "Teiss",
+   "https://www.teiss.co.uk/feed",
+   "cyber-news"
+  ],
+  [
+   "IT Security Guru",
+   "https://www.itsecurityguru.org/feed/",
+   "cyber-news"
+  ],
+  [
+   "SecurityLab Daily (Heise Security)",
+   "https://www.heise.de/security/rss/news-atom.xml",
+   "cyber-news"
+  ],
+  [
+   "Ransomware.live",
+   "https://www.ransomware.live/rss.xml",
+   "cyber-news"
+  ],
+  [
+   "RedPacket Security",
+   "https://www.redpacketsecurity.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "The Daily Swig archive (PortSwigger Research)",
+   "https://portswigger.net/research/rss",
+   "research"
+  ],
+  [
+   "CISA Cybersecurity Advisories",
+   "https://www.cisa.gov/cybersecurity-advisories/all.xml",
+   "government"
+  ],
+  [
+   "CISA News",
+   "https://www.cisa.gov/news.xml",
+   "government"
+  ],
+  [
+   "CISA ICS Advisories",
+   "https://www.cisa.gov/cybersecurity-advisories/ics-advisories.xml",
+   "government"
+  ],
+  [
+   "NCSC (UK) News",
+   "https://www.ncsc.gov.uk/api/1/services/v1/news-rss-feed.xml",
+   "government"
+  ],
+  [
+   "NCSC (UK) Reports",
+   "https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml",
+   "government"
+  ],
+  [
+   "CERT-FR Alertes",
+   "https://www.cert.ssi.gouv.fr/alerte/feed/",
+   "government"
+  ],
+  [
+   "CERT-FR Menaces et incidents",
+   "https://www.cert.ssi.gouv.fr/cti/feed/",
+   "government"
+  ],
+  [
+   "CERT-FR Avis",
+   "https://www.cert.ssi.gouv.fr/avis/feed/",
+   "government"
+  ],
+  [
+   "Canadian Centre for Cyber Security",
+   "https://www.cyber.gc.ca/api/cccs/rss/v1/get?feed=alerts_advisories&lang=en",
+   "government"
+  ],
+  [
+   "JPCERT/CC",
+   "https://blogs.jpcert.or.jp/en/atom.xml",
+   "government"
+  ],
+  [
+   "CERT Polska",
+   "https://cert.pl/en/atom.xml",
+   "government"
+  ],
+  [
+   "BSI CERT-Bund",
+   "https://wid.cert-bund.de/content/public/securityAdvisory/rss",
+   "government"
+  ],
+  [
+   "ENISA News",
+   "https://www.enisa.europa.eu/news/enisa-news/RSS",
+   "government"
+  ],
+  [
+   "Australian Cyber Security Centre",
+   "https://www.cyber.gov.au/rss/advisories",
+   "government"
+  ],
+  [
+   "Singapore CSA",
+   "https://www.csa.gov.sg/rss/news",
+   "government"
+  ],
+  [
+   "HKCERT",
+   "https://www.hkcert.org/getrss/security-bulletin",
+   "government"
+  ],
+  [
+   "Europol Newsroom",
+   "https://www.europol.europa.eu/rss.xml",
+   "government"
+  ],
+  [
+   "US DOJ National Security Division",
+   "https://www.justice.gov/feeds/opa/justice-news.xml",
+   "government"
+  ],
+  [
+   "Treasury OFAC Recent Actions",
+   "https://ofac.treasury.gov/recent-actions/rss.xml",
+   "government"
+  ],
+  [
+   "Zero Day Initiative published",
+   "https://www.zerodayinitiative.com/rss/published/",
+   "vulnerability"
+  ],
+  [
+   "Zero Day Initiative upcoming",
+   "https://www.zerodayinitiative.com/rss/upcoming/",
+   "vulnerability"
+  ],
+  [
+   "Exploit-DB",
+   "https://www.exploit-db.com/rss.xml",
+   "vulnerability"
+  ],
+  [
+   "Full Disclosure",
+   "https://seclists.org/rss/fulldisclosure.rss",
+   "vulnerability"
+  ],
+  [
+   "oss-security",
+   "https://seclists.org/rss/oss-sec.rss",
+   "vulnerability"
+  ],
+  [
+   "watchTowr Labs",
+   "https://labs.watchtowr.com/rss/",
+   "vulnerability"
+  ],
+  [
+   "Horizon3.ai",
+   "https://horizon3.ai/feed/",
+   "vulnerability"
+  ],
+  [
+   "Rapid7 Blog",
+   "https://www.rapid7.com/blog/rss/",
+   "vulnerability"
+  ],
+  [
+   "VulnCheck Blog",
+   "https://vulncheck.com/feed/blog/atom.xml",
+   "vulnerability"
+  ],
+  [
+   "GitHub Security Advisories (reviewed)",
+   "https://github.com/advisories.atom",
+   "vulnerability"
+  ],
+  [
+   "Packet Storm",
+   "https://rss.packetstormsecurity.com/files/",
+   "vulnerability"
+  ],
+  [
+   "Tenable Research Advisories",
+   "https://www.tenable.com/security/research/feed",
+   "vulnerability"
+  ],
+  [
+   "r/netsec",
+   "https://www.reddit.com/r/netsec/.rss",
+   "community"
+  ],
+  [
+   "r/blueteamsec",
+   "https://www.reddit.com/r/blueteamsec/.rss",
+   "community"
+  ],
+  [
+   "r/cybersecurity",
+   "https://www.reddit.com/r/cybersecurity/.rss",
+   "community"
+  ],
+  [
+   "r/threatintel",
+   "https://www.reddit.com/r/threatintel/.rss",
+   "community"
+  ],
+  [
+   "Hacker News: security",
+   "https://hnrss.org/newest?q=breach+OR+ransomware+OR+vulnerability+OR+hacked&points=20",
+   "community"
+  ],
+  [
+   "Institute for the Study of War",
+   "https://www.understandingwar.org/rss.xml",
+   "think-tank"
+  ],
+  [
+   "Long War Journal",
+   "https://www.longwarjournal.org/feed",
+   "think-tank"
+  ],
+  [
+   "Just Security",
+   "https://www.justsecurity.org/feed/",
+   "think-tank"
+  ],
+  [
+   "Lawfare",
+   "https://www.lawfaremedia.org/feeds/articles",
+   "think-tank"
+  ],
+  [
+   "Atlantic Council",
+   "https://www.atlanticcouncil.org/feed/",
+   "think-tank"
+  ],
+  [
+   "Foreign Policy",
+   "https://foreignpolicy.com/feed/",
+   "think-tank"
+  ],
+  [
+   "Crisis Group",
+   "https://www.crisisgroup.org/rss.xml",
+   "think-tank"
+  ],
+  [
+   "RUSI Commentary",
+   "https://www.rusi.org/rss.xml",
+   "think-tank"
+  ],
+  [
+   "CSIS Analysis",
+   "https://www.csis.org/analysis/feed",
+   "think-tank"
+  ],
+  [
+   "Council on Foreign Relations",
+   "https://www.cfr.org/rss.xml",
+   "think-tank"
+  ],
+  [
+   "The Cipher Brief",
+   "https://www.thecipherbrief.com/feed",
+   "think-tank"
+  ],
+  [
+   "Bellingcat",
+   "https://www.bellingcat.com/feed/",
+   "think-tank"
+  ],
+  [
+   "DFRLab",
+   "https://dfrlab.org/feed/",
+   "think-tank"
+  ],
+  [
+   "Citizen Lab",
+   "https://citizenlab.ca/feed/",
+   "think-tank"
+  ],
+  [
+   "Naval News",
+   "https://www.navalnews.com/feed/",
+   "maritime"
+  ],
+  [
+   "USNI News",
+   "https://news.usni.org/feed",
+   "maritime"
+  ],
+  [
+   "Hellenic Shipping News",
+   "https://www.hellenicshippingnews.com/feed/",
+   "maritime"
+  ],
+  [
+   "Safety4Sea",
+   "https://safety4sea.com/feed/",
+   "maritime"
+  ],
+  [
+   "Seatrade Maritime",
+   "https://www.seatrade-maritime.com/rss.xml",
+   "maritime"
+  ],
+  [
+   "Offshore Energy",
+   "https://www.offshore-energy.biz/feed/",
+   "maritime"
+  ],
+  [
+   "The War Zone",
+   "https://www.twz.com/feed",
+   "defense"
+  ],
+  [
+   "Military Times",
+   "https://www.militarytimes.com/arc/outboundfeeds/rss/?outputType=xml",
+   "defense"
+  ],
+  [
+   "Defense News",
+   "https://www.defensenews.com/arc/outboundfeeds/rss/?outputType=xml",
+   "defense"
+  ],
+  [
+   "Janes",
+   "https://www.janes.com/feeds/news",
+   "defense"
+  ],
+  [
+   "Army Recognition",
+   "https://armyrecognition.com/feed",
+   "defense"
+  ]
+ ],
+ "gnews_topics_cyber": [
+  "cyberattack",
+  "data breach",
+  "ransomware attack",
+  "hackers stole",
+  "zero-day exploited",
+  "actively exploited vulnerability",
+  "supply chain attack software",
+  "malicious code injected website",
+  "card skimmer",
+  "credential theft campaign",
+  "phishing campaign",
+  "vishing attack",
+  "DDoS attack",
+  "nation-state hackers",
+  "APT hackers",
+  "Chinese hackers",
+  "Russian hackers",
+  "North Korean hackers",
+  "Iranian hackers",
+  "cyber espionage",
+  "spyware",
+  "infostealer malware",
+  "botnet",
+  "critical infrastructure cyberattack",
+  "water utility cyberattack",
+  "hospital cyberattack",
+  "bank cyberattack",
+  "airline cyber incident",
+  "telecom breach",
+  "OT ICS attack",
+  "SCADA vulnerability",
+  "GPS jamming",
+  "undersea cable cut",
+  "satellite hacking",
+  "CISA warns",
+  "FBI warns hackers",
+  "security incident disclosed",
+  "SEC 8-K cybersecurity incident",
+  "extortion leak site",
+  "ShinyHunters",
+  "Scattered Spider",
+  "Lazarus Group",
+  "cryptocurrency hack stolen",
+  "AI model jailbreak attack",
+  "npm malicious package",
+  "PyPI malicious package",
+  "browser zero-day patch",
+  "Patch Tuesday",
+  "VPN vulnerability exploited",
+  "firewall vulnerability exploited",
+  "cloud misconfiguration exposed",
+  "insider threat arrested"
+ ],
+ "gnews_topics_theater": [
+  [
+   "T-RSY",
+   "Houthi Red Sea attack"
+  ],
+  [
+   "T-RSY",
+   "Yemen Houthis ship"
+  ],
+  [
+   "T-HRM",
+   "Strait of Hormuz"
+  ],
+  [
+   "T-HRM",
+   "Iran IRGC"
+  ],
+  [
+   "T-AFP",
+   "Pakistan Afghanistan border Taliban"
+  ],
+  [
+   "T-AFP",
+   "Pakistan militants attack"
+  ],
+  [
+   "T-HOA",
+   "Ethiopia"
+  ],
+  [
+   "T-HOA",
+   "al-Shabaab Somalia"
+  ],
+  [
+   "T-HOA",
+   "Eritrea"
+  ],
+  [
+   "T-LEV",
+   "Israel Lebanon Hezbollah"
+  ],
+  [
+   "T-LEV",
+   "Syria"
+  ],
+  [
+   "T-LEV",
+   "Gaza"
+  ],
+  [
+   "T-UKR",
+   "Ukraine Russia strikes"
+  ],
+  [
+   "T-UKR",
+   "Russia drone attack Ukraine"
+  ],
+  [
+   "T-SAH",
+   "Sahel jihadists"
+  ],
+  [
+   "T-SAH",
+   "Mali Burkina Faso Niger junta"
+  ],
+  [
+   "T-SDN",
+   "Sudan RSF"
+  ],
+  [
+   "T-SDN",
+   "Darfur El Fasher"
+  ],
+  [
+   "T-EUH",
+   "Europe sabotage Russia"
+  ],
+  [
+   "T-EUH",
+   "Baltic drone incursion"
+  ],
+  [
+   "T-KOR",
+   "North Korea missile"
+  ],
+  [
+   "T-KOR",
+   "North Korea crypto theft"
+  ],
+  [
+   "T-MEX",
+   "Mexico cartel"
+  ],
+  [
+   "T-MEX",
+   "cartel fentanyl strike"
+  ],
+  [
+   "T-SCS",
+   "South China Sea Philippines"
+  ],
+  [
+   "T-SCS",
+   "Second Thomas Shoal"
+  ],
+  [
+   "T-TWN",
+   "Taiwan Strait PLA"
+  ],
+  [
+   "T-TWN",
+   "Taiwan China military drills"
+  ],
+  [
+   "T-CAS",
+   "Central Asia Kazakhstan Uzbekistan"
+  ],
+  [
+   "T-CAS",
+   "Kyrgyzstan Tajikistan"
+  ],
+  [
+   "T-SAS",
+   "India Pakistan Kashmir"
+  ],
+  [
+   "T-SAS",
+   "Pakistan"
+  ],
+  [
+   "T-VEN",
+   "Venezuela Maduro"
+  ],
+  [
+   "T-VEN",
+   "Caribbean US strike boat"
+  ],
+  [
+   "T-BAL",
+   "Serbia Kosovo"
+  ],
+  [
+   "T-BAL",
+   "Bosnia Republika Srpska"
+  ]
+ ],
+ "gnews_sites": [
+  [
+   "Dawn",
+   "dawn.com",
+   "geopolitics",
+   "T-SAS"
+  ],
+  [
+   "Pakistan Today",
+   "pakistantoday.com.pk",
+   "geopolitics",
+   "T-SAS"
+  ],
+  [
+   "The News International",
+   "thenews.com.pk",
+   "geopolitics",
+   "T-SAS"
+  ],
+  [
+   "Associated Press of Pakistan",
+   "app.com.pk",
+   "geopolitics",
+   "T-SAS"
+  ],
+  [
+   "Addis Standard",
+   "addisstandard.com",
+   "geopolitics",
+   "T-HOA"
+  ],
+  [
+   "Borkena",
+   "borkena.com",
+   "geopolitics",
+   "T-HOA"
+  ],
+  [
+   "The Reporter (Ethiopia)",
+   "thereporterethiopia.com",
+   "geopolitics",
+   "T-HOA"
+  ],
+  [
+   "The EastAfrican",
+   "theeastafrican.co.ke",
+   "geopolitics",
+   "T-HOA"
+  ],
+  [
+   "ReliefWeb",
+   "reliefweb.int",
+   "geopolitics",
+   "Global"
+  ],
+  [
+   "Reuters",
+   "reuters.com",
+   "geopolitics",
+   "Global"
+  ],
+  [
+   "Associated Press",
+   "apnews.com",
+   "geopolitics",
+   "Global"
+  ],
+  [
+   "Bloomberg",
+   "bloomberg.com",
+   "geopolitics",
+   "Global"
+  ],
+  [
+   "Financial Times",
+   "ft.com",
+   "geopolitics",
+   "Global"
+  ],
+  [
+   "UKMTO",
+   "ukmto.org",
+   "maritime",
+   "T-RSY"
+  ],
+  [
+   "Lloyd's List",
+   "lloydslist.com",
+   "maritime",
+   "Global"
+  ]
+ ],
+ "countries": {
+  "Pakistan": "T-SAS",
+  "India": "T-SAS",
+  "Iran": "T-HRM",
+  "Russia": "T-UKR",
+  "Ukraine": "T-UKR",
+  "Mexico": "T-MEX",
+  "Philippines": "T-SCS",
+  "Nigeria": "T-SAH",
+  "Myanmar (Burma)": "Global",
+  "Poland": "T-EUH",
+  "Hong Kong SAR China": "T-TWN",
+  "Indonesia": "T-SCS",
+  "Australia": "Global",
+  "Bangladesh": "T-SAS",
+  "Brazil": "Global",
+  "Canada": "Global",
+  "France": "T-EUH",
+  "Germany": "T-EUH",
+  "Ireland": "Global",
+  "Italy": "T-EUH",
+  "Japan": "Global",
+  "South Africa": "Global",
+  "Spain": "Global",
+  "United Kingdom": "Global",
+  "United States": "Global"
+ },
+ "gnews_topics_lang": [
+  [
+   "de",
+   "DE",
+   "DE:de",
+   "Cyberangriff"
+  ],
+  [
+   "de",
+   "DE",
+   "DE:de",
+   "Datenleck Hacker"
+  ],
+  [
+   "fr",
+   "FR",
+   "FR:fr",
+   "cyberattaque"
+  ],
+  [
+   "fr",
+   "FR",
+   "FR:fr",
+   "fuite de données piratage"
+  ],
+  [
+   "es",
+   "ES",
+   "ES:es",
+   "ciberataque"
+  ],
+  [
+   "es-419",
+   "MX",
+   "MX:es-419",
+   "hackeo filtración de datos"
+  ],
+  [
+   "it",
+   "IT",
+   "IT:it",
+   "attacco informatico"
+  ],
+  [
+   "pt-BR",
+   "BR",
+   "BR:pt-419",
+   "ataque hacker vazamento"
+  ],
+  [
+   "nl",
+   "NL",
+   "NL:nl",
+   "cyberaanval"
+  ],
+  [
+   "pl",
+   "PL",
+   "PL:pl",
+   "cyberatak"
+  ],
+  [
+   "ja",
+   "JP",
+   "JP:ja",
+   "サイバー攻撃"
+  ],
+  [
+   "ko",
+   "KR",
+   "KR:ko",
+   "해킹 사이버공격"
+  ],
+  [
+   "zh-TW",
+   "TW",
+   "TW:zh-Hant",
+   "駭客 攻擊"
+  ],
+  [
+   "uk",
+   "UA",
+   "UA:uk",
+   "кібератака"
+  ],
+  [
+   "ru",
+   "RU",
+   "RU:ru",
+   "кибератака"
+  ],
+  [
+   "ar",
+   "AE",
+   "AE:ar",
+   "هجوم سيبراني"
+  ],
+  [
+   "he",
+   "IL",
+   "IL:he",
+   "מתקפת סייבר"
+  ],
+  [
+   "tr",
+   "TR",
+   "TR:tr",
+   "siber saldırı"
+  ],
+  [
+   "hi",
+   "IN",
+   "IN:hi",
+   "साइबर हमला"
+  ],
+  [
+   "id",
+   "ID",
+   "ID:id",
+   "serangan siber"
+  ],
+  [
+   "vi",
+   "VN",
+   "VN:vi",
+   "tấn công mạng"
+  ],
+  [
+   "sv",
+   "SE",
+   "SE:sv",
+   "cyberattack"
+  ],
+  [
+   "en",
+   "IN",
+   "IN:en",
+   "cyber attack India"
+  ],
+  [
+   "en",
+   "AU",
+   "AU:en",
+   "cyber attack Australia"
+  ],
+  [
+   "en",
+   "GB",
+   "GB:en",
+   "cyber attack UK"
+  ],
+  [
+   "en",
+   "CA",
+   "CA:en",
+   "cyberattack Canada"
+  ],
+  [
+   "en",
+   "SG",
+   "SG:en",
+   "cyber attack Singapore"
+  ],
+  [
+   "en",
+   "NG",
+   "NG:en",
+   "cyber attack Nigeria"
+  ]
+ ]
+}

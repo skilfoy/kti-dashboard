@@ -19,7 +19,8 @@ const to = yml.findIndex((l, i) => i > from && l.trim() === 'SCRIPT');
 ok(from > 0 && to > from, 'workflow embeds the script');
 const indent = yml[from].match(/^ */)[0].length;
 const src = yml.slice(from + 1, to).map((l) => l.slice(indent)).join('\n') + '\n';
-ok(/^permissions:\n  issues: write\n\n/m.test(yml.join('\n')) && !/actions\/checkout|contents:/.test(yml.join('\n')), 'workflow token: issues write only, no checkout');
+ok(/^permissions:\n  issues: write\n  contents: read\n\n/m.test(yml.join('\n')) && !/contents: write|pull-requests:|actions: write/.test(yml.join('\n')) && /sparse-checkout:\s*\|\n\s+pipeline\/lead_watch\.mjs\n\s+data\/authored\/judgments\.json/.test(yml.join('\n')),
+  'workflow token: issues write and contents read only; the checkout is sparse (the lead watch script and the judgments)');
 const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'alert-')), 'collector_alert.mjs');
 fs.writeFileSync(file, src);
 process.env.HEALTH_URL = 'https://health.test/api/health';
@@ -42,6 +43,7 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
 }
 {
   const h = clone();
+  h.collector.checked_at = minAgo(0);   // silence is judged at the record's time; here the record is written at NOW
   Object.assign(job(h, 'snap'), { ok: false, error: 'no snapshot succeeded: 503' });
   job(h, 'gdelt').last_run = minAgo(120);
   Object.assign(job(h, 'links'), { failed_24h: 3, runs_24h: 24 });
@@ -53,6 +55,20 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
   const by = Object.fromEntries(r.problems.map((p) => [p.title, p]));
   ok(/last run failed .*503/.test(by['Collector: snap failing'].lines[0]) && /silent for 120 minutes/.test(by['Collector: gdelt failing'].lines[0]) && /3 of 24 runs failed/.test(by['Collector: links failing'].lines[0])
     && /no run recorded/.test(by['Collector: sec8k failing'].lines[0]), 'job problem detail');
+  ok(/under the running collector version/.test(by['Collector: links failing'].lines[0]), 'failures are counted under the running version');
+}
+// 17 November 2026: a record written at 00:21 and read at 00:55 showed lists, leaksites and links last run at 23:23,
+// because the health job runs first in its invocation. Measured at the record's time they are 58 minutes quiet.
+{
+  const h = clone();
+  h.collector.checked_at = minAgo(34);
+  for (const j of ['lists', 'leaksites', 'links']) job(h, j).last_run = minAgo(92);
+  ok(!titles(A.evaluate(h, NOW)).some((x) => /lists|leaksites|links/.test(x)), 'silence is judged at the record time, not the read time');
+  for (const j of ['lists', 'leaksites', 'links']) job(h, j).last_run = minAgo(34 + 95);
+  ok(titles(A.evaluate(h, NOW)).filter((x) => /lists|leaksites|links/.test(x)).length === 3, 'a job quiet for 95 minutes at the record time is silent');
+  const v = clone(); v.collector.checked_at = minAgo(0);
+  Object.assign(job(v, 'leaksites'), { failed_24h: 0, failed_24h_all: 3, runs_24h: 14 });
+  ok(!titles(A.evaluate(v, NOW)).includes('Collector: leaksites failing'), 'failures under an earlier version do not count');
   ok(A.silentAfterMin('gdelt') === 90 && A.silentAfterMin('blogs') === 90 && A.silentAfterMin('unit42') === 1530 && A.silentAfterMin('sec8k') === 930 && A.silentAfterMin('ransompay') === 10170, 'silence judged against each cadence');
 }
 {
@@ -68,7 +84,7 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
 {
   const h = clone();
   Object.assign(feed(h, 'marad_msci'), { ok: true, status: 200, failing_streak: 0 });
-  Object.assign(feed(h, 'nga_msi'), { ok: false, status: 503, error: 'HTTP 503' });
+  Object.assign(feed(h, 'nga_msi'), { ok: false, status: 404, error: 'HTTP 404' }); // 503 joined the documented answers on 14 November 2026
   feed(h, 'gdelt_doc_api').status = 429;
   h.collector.volume.find((v) => v.feed === 'asam').n = 3;
   const r = A.evaluate(h, NOW);
@@ -78,6 +94,12 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
   Object.assign(feed(h, 'gdelt_doc_api'), { status: 429, ok: false, state: 'down' });
   const r2 = A.evaluate(h, NOW);
   ok(!titles(r2).includes('Collector: ukmto answer changed') && titles(r2).includes('Collector: gdelt_doc_api answer changed'), 'state field wins when present');
+}
+// GreyNoise: retired from the documented gaps on 17 November 2026. It is no map feed either, so neither a recovery nor a
+// failing streak opens an issue; the exposure monitor reports its own lookups.
+{
+  const gn = (o) => { const h = clone(); Object.assign(feed(h, 'greynoise'), o); return titles(A.evaluate(h, NOW)); };
+  ok(!A.KNOWN_GAPS.greynoise && gn({}).length === 0 && gn({ ok: true, status: 200, uptime_24h: 98 }).length === 0 && gn({ ok: false, status: 429, failing_streak: 40 }).length === 0, 'greynoise: no gap, no issue');
 }
 {
   const h = clone();
@@ -89,6 +111,27 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
   ok(!rc.complete && JSON.stringify(titles(rc)) === '["Collector: collector record failing"]' && rc.closable.includes('Collector: api/health failing'), 'unreadable collector record');
   const re = A.evaluate({ error: 'HTTP 502' }, NOW);
   ok(!re.complete && JSON.stringify(titles(re)) === '["Collector: api/health failing"]' && re.closable.length === 0, 'endpoint down');
+}
+
+// Answer classes (3 November 2026): the GDELT DOC API alternates between 429 and timeouts; both hold the gap, 200 lifts it.
+{
+  const g = (o) => { const h = clone(); Object.assign(feed(h, 'gdelt_doc_api'), o); return titles(A.evaluate(h, NOW)); };
+  ok(g({ ok: false, status: 0, error: 'timeout', failing_streak: 24 }).length === 0 && g({ ok: false, status: 429 }).length === 0, 'gdelt_doc_api: timeout and 429 are one answer class');
+  ok(JSON.stringify(g({ ok: true, status: 200, failing_streak: 0 })) === '["Collector: gdelt_doc_api answer changed"]', 'a 200 lifts the gap and is reported');
+}
+// Weekly cables job: no problem before its first run; silent after a week plus 90 minutes; a held snapshot is a failure.
+{
+  ok(A.CADENCE_MIN.cables === 10080 && A.silentAfterMin('cables') === 10170, 'cables cadence weekly');
+  const h = clone();
+  ok(!titles(A.evaluate(h, NOW)).includes('Collector: cables failing'), 'no cables run yet: nothing raised');
+  h.collector.jobs.push({ kind: 'job', job: 'cables', last_run: minAgo(6 * 1440), ok: true, runs_24h: 0, failed_24h: 0 });
+  ok(!titles(A.evaluate(h, NOW)).includes('Collector: cables failing'), 'six days quiet is within a weekly cadence');
+  h.collector.jobs.find((j) => j.job === 'cables').last_run = minAgo(7 * 1440 + 120);
+  ok(titles(A.evaluate(h, NOW)).includes('Collector: cables failing'), 'a week and two hours quiet is silent');
+  Object.assign(h.collector.jobs.find((j) => j.job === 'cables'), { last_run: minAgo(60), ok: false, error: 'cables snapshot held: 100 ways against 374' });
+  const p = A.evaluate(h, NOW).problems.find((x) => x.title === 'Collector: cables failing');
+  ok(p && /held: 100 ways/.test(p.lines[0]), 'a held snapshot is reported with its reason');
+  ok(!A.MAP_FEEDS.includes('overpass') && !A.MAP_FEEDS.includes('wikidata'), 'overpass and wikidata are not map feeds');
 }
 
 // ---------------------------------------------------------------- plan
@@ -151,6 +194,17 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
   health = null;
   const r = await A.readHealth('https://health.test/api/health', [1, 1]);
   ok(r.error === 'HTTP 502', 'endpoint failure after three tries ' + JSON.stringify(r));
+}
+
+// ---------------------------------------------------------------- a job whose every source is a documented gap
+{
+  const h = clone();
+  Object.assign(job(h, 'maritime'), { ok: false, error: 'maritime: no source answered: [{"id":"MARAD","status":403},{"id":"UKMTO","status":403}]', last_run: minAgo(20), runs_24h: 24, failed_24h: 24 });
+  ok(!titles(A.evaluate(h, NOW)).includes('Collector: maritime failing'), 'a maritime run that fails because no documented-gap source answered raises nothing');
+  Object.assign(job(h, 'maritime'), { error: 'maritime: relation ti.maritime does not exist' });
+  ok(titles(A.evaluate(h, NOW)).includes('Collector: maritime failing'), 'a maritime failure with another error is still a problem');
+  Object.assign(job(h, 'maritime'), { error: 'maritime: no source answered: []', last_run: minAgo(400) });
+  ok(titles(A.evaluate(h, NOW)).includes('Collector: maritime failing'), 'a silent maritime job is still a problem');
 }
 
 console.log(`PASS ${pass} checks (collector alerts)`);

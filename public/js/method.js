@@ -10,7 +10,7 @@
     }
     return `${out.slice(0, 8)}-${out.slice(8, 12)}-5${out.slice(13, 16)}-${((parseInt(out[16], 16) & 3) | 8).toString(16)}${out.slice(17, 20)}-${out.slice(20, 32)}`;
   };
-  const TLP_AMBER = 'marking-definition--f88d31f6-486f-44da-b317-01333bde0b82';
+  const TLP_GREEN = 'marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da'; // STIX 2.1's TLP:GREEN marking definition
   const CONF = { HIGH: 85, MEDIUM: 50, LOW: 15 };
 
   function stix(judgments, confidence, evidence, items, ledger) {
@@ -30,9 +30,9 @@
         type: 'report', spec_version: '2.1', id: `report--${uuid(j.judgment_id)}`, created_by_ref: ident, created: at, modified: at,
         name: `${j.judgment_id}: ${j.title}`, description: `${j.assessment} ${j.cta}`, report_types: ['threat-report'], published: at,
         confidence: CONF[c.confidence] ?? 15, labels: [j.likelihood, `confidence:${c.confidence || 'LOW'}`, `severity:${j.severity}`],
-        object_refs: [ident], object_marking_refs: [TLP_AMBER, pap],
+        object_refs: [ident], object_marking_refs: [TLP_GREEN, pap],
         external_references: refs.map((i) => ({ source_name: i.source_name, url: i.url, description: `${i.date} ${i.title} [${i.grade}, ${i.veracity}]` })),
-        x_likelihood: j.likelihood, x_probability: j.probability, x_nist_csf: j.csf, x_pirs: j.pirs,
+        x_likelihood: j.likelihood, x_probability: j.probability, x_horizon: j.horizon || null, x_nist_csf: j.csf, x_pirs: j.pirs,
       });
     }
     return JSON.stringify({ type: 'bundle', id: `bundle--${uuid('bundle' + at)}`, objects }, null, 2);
@@ -41,6 +41,8 @@
   TI.page('method', (sec) => {
     // Credibility and RSIT on the threat map (intel.js).
     if (TI.intel) TI.intel.methodCards(sec);
+    // Forecast record and change log (changes.js).
+    if (TI.changes) TI.changes.method(sec);
     const tc = sec.querySelector('#tbl-conf');
     if (TI.tableState(tc, ['confidence'])) {
       TI.table(tc, TI.rows('confidence'), [
@@ -78,6 +80,11 @@
         { field: 'hash', label: 'Hash', cls: 'ti-mono' },
       ], { sort: 'run_id', dir: 'desc' });
     }
+    const adv = sec.querySelector('#stix-adv-out');
+    if (adv) {
+      if (TI.failed('live_psirt')) adv.value = 'The advisory document is unavailable.';
+      else if (TI.ready('live_psirt')) { const m = TI.rows('live_psirt').find((r) => r.kind === 'meta') || {}; adv.value = stixAdvisories(TI.rows('live_psirt').filter((r) => r.kind === 'advisory'), m.generated || new Date().toISOString()); }
+    }
     const out = sec.querySelector('#stix-out');
     const ids = ['judgments', 'confidence', 'evidence', 'items', 'ledger'];
     if (TI.failed(...ids)) out.value = 'Failed to load';
@@ -85,5 +92,31 @@
     if (TI.catalog) TI.catalog.draw(sec);
   });
   dash.onData(() => TI.draw('method'));
-  TI.root.addEventListener('focusin', (ev) => { if (ev.target.id === 'stix-out') ev.target.select(); });
+  TI.root.addEventListener('focusin', (ev) => { if (ev.target.id === 'stix-out' || ev.target.id === 'stix-adv-out') ev.target.select(); });
+  // Advisories as STIX 2.1: vulnerability objects by CVE and one report per advisory.
+  function stixAdvisories(rows, at) {
+    const ident = `identity--${uuid('producer')}`;
+    const objects = [{ type: 'identity', spec_version: '2.1', id: ident, created: at, modified: at, name: 'Global threat intelligence (open-source analysis)', identity_class: 'organization' }];
+    const seen = new Map();
+    const vuln = (cve, kev) => {
+      if (!seen.has(cve)) {
+        const o = { type: 'vulnerability', spec_version: '2.1', id: `vulnerability--${uuid(cve)}`, created_by_ref: ident, created: at, modified: at, name: cve, object_marking_refs: [TLP_GREEN],
+          external_references: [{ source_name: 'cve', external_id: cve }] };
+        seen.set(cve, o); objects.push(o);
+      }
+      if (kev) seen.get(cve).labels = ['cisa-kev'];
+      return seen.get(cve).id;
+    };
+    for (const a of rows) {
+      // List cells arrive as JSON text from the runtime (app.js TI.list).
+      const kev = new Set(TI.list(a.kev));
+      const refs = TI.list(a.cves).map((c) => vuln(c, kev.has(c)));
+      if (!refs.length) continue;
+      const when = a.published || a.first_seen || at;
+      objects.push({ type: 'report', spec_version: '2.1', id: `report--${uuid(a.link)}`, created_by_ref: ident, created: when, modified: when, published: when, name: a.title, report_types: ['vulnerability'],
+        labels: ['vendor-advisory'].concat(kev.size ? ['names-kev-cve'] : []), object_refs: refs, object_marking_refs: [TLP_GREEN], external_references: [{ source_name: a.vendor || a.feed, url: a.link }] });
+    }
+    return JSON.stringify({ type: 'bundle', id: `bundle--${uuid('advisories ' + at.slice(0, 10))}`, objects }, null, 1);
+  }
+  TI.stixAdvisories = stixAdvisories;
 })();

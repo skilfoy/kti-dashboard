@@ -156,7 +156,10 @@ export async function jobFires() {
   const [, prior, series, firsts] = await sqlTx([
     [`INSERT INTO ti.fire_cell (aoi, cell, day, n, frp, cc) SELECT aoi, cell, day, n, frp, cc FROM jsonb_to_recordset($1::jsonb) AS x(aoi text, cell text, day date, n int, frp real, cc text)
       ON CONFLICT (aoi, cell, day) DO UPDATE SET n = GREATEST(ti.fire_cell.n, EXCLUDED.n), frp = GREATEST(ti.fire_cell.frp, EXCLUDED.frp)`, [cellRows]],
-    [`SELECT DISTINCT aoi, cell FROM ti.fire_cell WHERE day >= (now() AT TIME ZONE 'UTC')::date - 31 AND day < (now() AT TIME ZONE 'UTC')::date - 1`],
+    // Novelty needs only the prior cells that today's detections touch; the full 30-day set ran to 9,000 rows an hour of
+    // Postgres transfer (3.0.4).
+    [`SELECT DISTINCT f.aoi, f.cell FROM ti.fire_cell f JOIN (SELECT DISTINCT aoi, cell FROM jsonb_to_recordset($1::jsonb) AS x(aoi text, cell text)) t ON t.aoi = f.aoi AND t.cell = f.cell
+      WHERE f.day >= (now() AT TIME ZONE 'UTC')::date - 31 AND f.day < (now() AT TIME ZONE 'UTC')::date - 1`, [per.flatMap((a) => a.pts.map((p) => ({ aoi: a.aoi.id, cell: p.cell })))]],
     [`SELECT aoi, to_char(day, 'YYYY-MM-DD') AS d, sum(n)::int AS n, round(sum(frp))::int AS frp, count(*)::int AS cells FROM ti.fire_cell
       WHERE day > (now() AT TIME ZONE 'UTC')::date - 31 GROUP BY 1, 2 ORDER BY 1, 2`],
     [`SELECT aoi, to_char(min(day), 'YYYY-MM-DD') AS first FROM ti.fire_cell GROUP BY 1`],

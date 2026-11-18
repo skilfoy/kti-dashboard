@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS ti.disruption (source text NOT NULL, entity text NOT 
 CREATE TABLE IF NOT EXISTS ti.run (id bigserial PRIMARY KEY, job text NOT NULL, started_at timestamptz NOT NULL, ms int, ok boolean, detail jsonb);
 CREATE INDEX IF NOT EXISTS run_job_started ON ti.run (job, started_at);
 CREATE TABLE IF NOT EXISTS ti.lease (job text PRIMARY KEY, holder text, until timestamptz NOT NULL DEFAULT 'epoch');
+-- 'cables' (reserved since G26) runs the weekly submarine cable job (neon/parts/37e-cables.mjs) on open data only;
+-- TeleGeography's geocoded data is an annual paid licence and is not used. Keep the row.
 INSERT INTO ti.lease (job) VALUES ('gdelt'),('infra'),('health'),('snap'),('ioda'),('cables'),('retention') ON CONFLICT DO NOTHING;
 
 -- Added 2026-10-22 (collector 2026-10-22.1). Small key-value state for jobs that cache upstream reads (Unit 42 notes, Gen Threat
@@ -61,3 +63,53 @@ CREATE TABLE IF NOT EXISTS ti.link_check (url text PRIMARY KEY, label text, kind
 CREATE TABLE IF NOT EXISTS ti.enrich (type text NOT NULL, q text NOT NULL, analyzer text NOT NULL, ok boolean, result jsonb, error text, at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (type, q, analyzer));
 INSERT INTO ti.lease (job) VALUES ('lists'),('fires'),('maritime'),('leaksites'),('ransompay'),('unit42'),('genioc'),('lanesreg'),('blogs'),('links'),('sec8k') ON CONFLICT DO NOTHING;
 -- ti_app's DML on these tables comes from the schema's default privileges (checked with has_table_privilege after creation).
+-- Added 2026-11-03: submarine cables from OpenStreetMap (ODbL 1.0, "© OpenStreetMap contributors"), joined with Wikidata
+-- (CC0) by exact name. Snapshot tables, replaced whole by the weekly cables job; no OSM user or edit metadata is kept.
+-- Metadata (osm_base, counts, source URL, licence, attribution) lives in ti.kv under 'cables:meta'.
+CREATE TABLE IF NOT EXISTS ti.cable (osm_id bigint PRIMARY KEY, name text, tags jsonb NOT NULL DEFAULT '{}', parts jsonb NOT NULL, points int NOT NULL,
+  wikidata jsonb, seen_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS ti.cable_station (osm_id bigint PRIMARY KEY, name text, lat real NOT NULL, lon real NOT NULL, cc text, tags jsonb NOT NULL DEFAULT '{}',
+  seen_at timestamptz NOT NULL DEFAULT now());
+INSERT INTO ti.lease (job) VALUES ('cables') ON CONFLICT DO NOTHING;
+-- Added 2026-11-14 (collector 2026-11-14.1): vendor and CERT advisories (titles, links, dates, CVE identifiers) and the
+-- machine triage labels over blog and advisory titles (37f-triage.mjs). Budget, last run and evaluation live in ti.kv.
+CREATE TABLE IF NOT EXISTS ti.advisory (link text PRIMARY KEY, feed text NOT NULL, title text, published timestamptz, cves jsonb NOT NULL DEFAULT '[]', seen_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS advisory_published ON ti.advisory (published);
+CREATE TABLE IF NOT EXISTS ti.triage (link text PRIMARY KEY, kind text NOT NULL, source text, title text, published timestamptz, cves jsonb NOT NULL DEFAULT '[]',
+  relevance int NOT NULL, vector text, theater text, actors jsonb NOT NULL DEFAULT '[]', why text, model text, prompt_v text, at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS triage_at ON ti.triage (at);
+INSERT INTO ti.lease (job) VALUES ('psirt'),('triage'),('triageeval') ON CONFLICT DO NOTHING;
+-- Added 2026-11-15 (collector 2026-11-15.3): the story a triage row belongs to (the representative's link; null when alone).
+ALTER TABLE ti.triage ADD COLUMN IF NOT EXISTS cluster text;
+-- Added 2026-11-15 (collector 2026-11-15.4): the verifier's result on relevance 3 stories, and the KEV watchlist's first
+-- score and rank per CVE with the time KEV later listed it.
+ALTER TABLE ti.triage ADD COLUMN IF NOT EXISTS verify text;
+ALTER TABLE ti.triage ADD COLUMN IF NOT EXISTS verify_model text;
+CREATE TABLE IF NOT EXISTS ti.kevrank (cve text PRIMARY KEY, first_seen timestamptz NOT NULL DEFAULT now(), first_score real NOT NULL, first_rank int NOT NULL, of_n int NOT NULL, in_kev_at timestamptz);
+-- Added 2026-11-17 (collector 2026-11-17.1): titles from theater news feeds, read by the triage job (37g-news.mjs).
+CREATE TABLE IF NOT EXISTS ti.news (link text PRIMARY KEY, feed text NOT NULL, source text, title text, published timestamptz NOT NULL, seen_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS news_published ON ti.news (published);
+INSERT INTO ti.lease (job) VALUES ('news') ON CONFLICT DO NOTHING;
+
+-- Source network and search (3.0): feed state, collected entries with a full-text index, agentic reports.
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE TABLE IF NOT EXISTS ti.feed (id text PRIMARY KEY, url text NOT NULL, active boolean NOT NULL DEFAULT true, via text, alt text, url_used text, etag text, last_modified text,
+  status text, fails int NOT NULL DEFAULT 0, entries int, checked_at timestamptz, ok_at timestamptz, primary_at timestamptz, next_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS feed_next ON ti.feed (next_at) WHERE active;
+CREATE TABLE IF NOT EXISTS ti.item (link text PRIMARY KEY, fp text NOT NULL, feed text NOT NULL, source text, host text, title text NOT NULL, summary text,
+  published timestamptz NOT NULL, category text, region text, lang text, seen_at timestamptz NOT NULL DEFAULT now(),
+  tsv tsvector GENERATED ALWAYS AS (to_tsvector('simple', coalesce(title, '') || ' ' || coalesce(summary, ''))) STORED);
+CREATE UNIQUE INDEX IF NOT EXISTS item_fp ON ti.item (fp);
+CREATE INDEX IF NOT EXISTS item_published ON ti.item (published);
+CREATE INDEX IF NOT EXISTS item_feed ON ti.item (feed, published);
+CREATE INDEX IF NOT EXISTS item_tsv ON ti.item USING gin (tsv);
+CREATE INDEX IF NOT EXISTS item_title_trgm ON ti.item USING gin (title gin_trgm_ops);
+CREATE TABLE IF NOT EXISTS ti.report (id text PRIMARY KEY, q text NOT NULL, type text NOT NULL, prompt text, status text NOT NULL, who text, steps jsonb NOT NULL DEFAULT '[]'::jsonb,
+  body text, sources jsonb, model text, corpus jsonb, error text, created_at timestamptz NOT NULL DEFAULT now(), started_at timestamptz, done_at timestamptz);
+CREATE INDEX IF NOT EXISTS report_created ON ti.report (created_at);
+INSERT INTO ti.lease (job) VALUES ('sources'), ('reports') ON CONFLICT DO NOTHING;
+-- Oracle A1 launcher (3.1.0).
+INSERT INTO ti.lease (job) VALUES ('ocia1') ON CONFLICT DO NOTHING;
+-- 2026-11-18: pg_stat_statements is enabled on the production database (CREATE EXTENSION pg_stat_statements, as the
+-- owner) to rank the collector's reads by the Postgres transfer they cost (Free plan: 5 GB a month). It is left out of
+-- this file because PGlite, which the tests load this schema into, does not ship it.

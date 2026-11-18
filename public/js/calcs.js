@@ -268,6 +268,202 @@ dash.calc('latest_run', {
   fn: (ledger) => ledger.slice(-1),
 });
 
+// ---- The change log and the forecast record ----
+dash.calc('run_changes', {
+  title: 'Changes by run',
+  description: 'Every change the validator logged (theater level and trend, judgment title, likelihood, severity, status, rank and horizon, indicator state, vector level and trend), newest first, with baseline rows left out and a plain-language line for each.',
+  inputs: ['history', 'ledger'],
+  fn: (history, ledger) => {
+    const LV = { 5: 'CRITICAL', 4: 'HIGH', 3: 'ELEVATED', 2: 'GUARDED', 1: 'NORMAL' };
+    const KIND = { theater: 'Theater', judgment: 'Judgment', indicator: 'Indicator', vector: 'Vector' };
+    const FIELD = { threatcon: 'ThreatCon level', trend: 'trend', title: 'title', likelihood: 'likelihood', severity: 'severity', status: 'status', exec_rank: 'executive rank', horizon: 'horizon', state: 'state', level: 'level' };
+    const show = (e, x) => (e.kind === 'theater' && e.field === 'threatcon' ? `${x} ${LV[x] || ''}`.trim() : String(x));
+    const last = (ledger.slice(-1)[0] || {}).run_id;
+    return history.filter((e) => e.from != null).map((e) => {
+      const num = e.field === 'threatcon' || e.field === 'level';
+      return {
+        event_id: e.event_id, run_id: e.run_id, date: e.date, kind: KIND[e.kind] || e.kind, id: e.id, name: e.name, what: FIELD[e.field] || e.field,
+        from: show(e, e.from), to: show(e, e.to),
+        direction: num ? (+e.to > +e.from ? 'Raised' : 'Lowered') : '',
+        latest: e.run_id === last ? 'Yes' : 'No',
+      };
+    }).reverse();
+  },
+});
+
+dash.calc('run_summary', {
+  title: 'Latest run against the one before',
+  description: 'The newest ledger entry beside the previous one: changes logged in the run, net change in cited items, the last ThreatCon level change on record and the date the change log begins.',
+  inputs: ['ledger', 'history'],
+  fn: (ledger, history) => {
+    const cur = ledger.slice(-1)[0] || {};
+    const prev = ledger.slice(-2, -1)[0] || {};
+    const moves = history.filter((e) => e.from != null);
+    const lv = moves.filter((e) => e.kind === 'theater' && e.field === 'threatcon').slice(-1)[0];
+    return [{
+      run_id: cur.run_id || '', at: cur.at || '', kind: cur.kind || '', prev_run: prev.run_id || '', prev_at: prev.at || '',
+      changes: moves.filter((e) => e.run_id === cur.run_id).length,
+      baseline_set: history.filter((e) => e.from == null && e.run_id === cur.run_id).length,
+      items: cur.items ?? null, items_delta: cur.items != null && prev.items != null ? cur.items - prev.items : null,
+      changes_14d: moves.filter((e) => Date.parse(cur.at) - Date.parse(e.date + 'T00:00:00Z') <= 14 * 864e5).length,
+      last_level_change: lv ? `${lv.name}: ${lv.from} to ${lv.to} on ${lv.date}` : '',
+      record_from: history.length ? history[0].date : '',
+    }];
+  },
+});
+
+dash.calc('theater_history', {
+  title: 'Theater level and trend history',
+  description: 'For each theater, the date its current ThreatCon level and its current trend took effect and the value each replaced, read from the change log. A value unchanged since the log began carries the log\'s first date.',
+  inputs: ['theaters', 'history'],
+  fn: (theaters, history) => theaters.map((t) => {
+    const ev = history.filter((e) => e.kind === 'theater' && e.id === t.theater_id);
+    const lastOf = (f) => ev.filter((e) => e.field === f).slice(-1)[0];
+    const lv = lastOf('threatcon'), tr = lastOf('trend');
+    const part = (e, label) => (!e ? '' : e.from == null ? `${label} unchanged since the record began on ${e.date}` : `${label} since ${e.date}, from ${e.from}`);
+    return {
+      theater_id: t.theater_id,
+      level_since: lv ? lv.date : '', level_from: lv && lv.from != null ? lv.from : '',
+      trend_since: tr ? tr.date : '', trend_from: tr && tr.from != null ? tr.from : '',
+      level_changes: ev.filter((e) => e.field === 'threatcon' && e.from != null).length,
+      summary: [part(lv, `ThreatCon ${t.threatcon}`), part(tr, t.trend)].filter(Boolean).join('; ') || 'No history recorded',
+    };
+  }),
+});
+
+dash.calc('forecast_record', {
+  title: 'Forecast record summary',
+  description: 'Judgment horizons scored so far: counts by outcome and the mean Brier score, (p - outcome) squared with p the midpoint of the stated probability range, over outcomes that held or did not hold. A score of 0 is a certain, correct forecast; always saying 50% scores 0.25.',
+  inputs: ['outcomes', 'judgments'],
+  fn: (outcomes, judgments) => {
+    const scored = outcomes.filter((o) => o.brier != null);
+    const next = judgments.filter((j) => j.horizon && j.status !== 'Retired').map((j) => j.horizon).sort()[0] || '';
+    return [{
+      resolved: outcomes.length, held: outcomes.filter((o) => o.outcome === 'Held').length,
+      not_held: outcomes.filter((o) => o.outcome === 'Did not hold').length,
+      indeterminate: outcomes.filter((o) => o.outcome === 'Indeterminate').length,
+      scored: scored.length, brier_mean: scored.length ? Math.round((scored.reduce((s, o) => s + o.brier, 0) / scored.length) * 1e4) / 1e4 : null,
+      open: judgments.filter((j) => j.horizon && j.status !== 'Retired').length, next_horizon: next,
+    }];
+  },
+});
+
+// ---- Calibration of the forecast record ----
+dash.calc('calibration', {
+  title: 'Calibration by likelihood term',
+  description: 'Scored judgments grouped by the likelihood term they carried: how many there were, how many held, the observed rate, and the midpoint of the probability range the term stands for. A calibrated record has an observed rate near the stated midpoint in each row. With fewer than ten outcomes in a row the observed rate is an anecdote, and the note column says so.',
+  inputs: ['outcomes'],
+  fn: (outcomes) => {
+    const by = new Map();
+    for (const o of outcomes) { const g = by.get(o.likelihood) || by.set(o.likelihood, { likelihood: o.likelihood, probability: o.probability, p: Number(o.p), n: 0, held: 0, brier: 0 }).get(o.likelihood); g.n++; if (o.outcome === 'Held') g.held++; g.brier += Number(o.brier) || 0; }
+    return [...by.values()].sort((a, b) => b.p - a.p).map((g) => ({ ...g, observed: Math.round((g.held / g.n) * 1000) / 1000, gap: Math.round((g.held / g.n - g.p) * 1000) / 1000, brier: Math.round((g.brier / g.n) * 10000) / 10000,
+      note: g.n < 10 ? `${g.n} of the 10 outcomes a rate needs` : '' }));
+  },
+});
+
+// ---- Corroboration behind each ranked judgment ----
+dash.calc('judgment_corroboration', {
+  title: 'Corroboration by judgment',
+  description: 'For each ranked judgment, the supporting evidence items counted by independent origin: distinct publishers, distinct source categories (official, industry, media, research, party claim), and the share that comes from the single most-cited publisher. A judgment is flagged when one publisher carries more than half of its support or when all support comes from one category, since agreement among reports that share an origin is one report.',
+  inputs: ['judgments', 'evidence', 'items'],
+  fn: (judgments, evidence, items) => {
+    const byId = new Map(items.map((i) => [i.item_id, i]));
+    return judgments.filter((j) => (j.exec_rank || 0) > 0 && j.status !== 'Retired').sort((a, b) => a.exec_rank - b.exec_rank).map((j) => {
+      const sup = evidence.filter((e) => e.judgment_id === j.judgment_id && e.role === 'Supports').map((e) => byId.get(e.item_id)).filter(Boolean);
+      const count = (f) => { const m = new Map(); for (const i of sup) m.set(f(i), (m.get(f(i)) || 0) + 1); return m; };
+      const pubs = count((i) => i.source_name || i.source_id), cats = count((i) => i.category);
+      const top = [...pubs.entries()].sort((a, b) => b[1] - a[1])[0] || ['', 0];
+      const share = sup.length ? Math.round((top[1] / sup.length) * 1000) / 1000 : null;
+      const flag = !sup.length ? 'no supporting items' : share > 0.5 ? 'one publisher carries most support' : cats.size === 1 ? 'one source category' : pubs.size < 3 ? 'fewer than three publishers' : '';
+      return { judgment_id: j.judgment_id, exec_rank: j.exec_rank, title: j.title, supporting: sup.length, publishers: pubs.size, categories: cats.size, category_list: [...cats.keys()].sort().join(', '),
+        top_publisher: top[0], top_share: share, flag };
+    });
+  },
+});
+
+// ---- Seven days in review ----
+dash.calc('week_review', {
+  title: 'Seven days in review',
+  description: 'Counts over the seven days ending at the latest run: logged changes by kind, evidence items added, the theaters with the most new items, forecast outcomes recorded, and what the analyst run did with machine leads.',
+  inputs: ['history', 'items', 'outcomes', 'leads', 'ledger'],
+  fn: (history, items, outcomes, leads, ledger) => {
+    const end = ((ledger.slice(-1)[0] || {}).at || '').slice(0, 10), from = end ? new Date(Date.parse(end) - 6 * 864e5).toISOString().slice(0, 10) : '';
+    const inWin = (d) => !!d && d >= from && d <= end;
+    const ev = history.filter((h) => inWin(h.date)), it = items.filter((i) => inWin(i.reported || i.date));
+    const n = (k, f) => ev.filter((h) => h.kind === k && (!f || h.field === f)).length;
+    const th = new Map(); for (const i of it) th.set(i.theater_name || i.theater_id, (th.get(i.theater_name || i.theater_id) || 0) + 1);
+    const ld = leads.filter((l) => inWin(l.date)), good = ld.filter((l) => l.disposition === 'used' || l.disposition === 'duplicate').length;
+    return [{ from, to: end, level_moves: n('theater', 'threatcon'), trend_moves: n('theater', 'trend'), judgment_changes: n('judgment'), indicator_changes: n('indicator'), vector_changes: n('vector'), changes: ev.length,
+      items_added: it.length, theaters: [...th.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, c]) => `${k} (${c})`).join(', '), outcomes: outcomes.filter((o) => inWin(o.resolved)).length,
+      leads_opened: ld.length, leads_used: ld.filter((l) => l.disposition === 'used').length, lead_precision: ld.length ? Math.round((good / ld.length) * 1000) / 1000 : null }];
+  },
+});
+
+// ---- Analysis of competing hypotheses over the ranked judgments ----
+dash.calc('ach_matrix', {
+  title: 'Competing hypotheses',
+  description: 'For each ranked judgment, the judgment (H1) and each stated alternative, with the count of evidence items rated consistent, inconsistent or not diagnostic for it. H1 is read from each evidence row\'s role (Supports, Weakens, Context); the alternatives from the row\'s ach ratings. In this method the hypothesis with the least inconsistent evidence stands. An alternative that fewer than a quarter of the items are consistent or inconsistent with is marked as one that little evidence bears on: the evidence base has not tested it, which names a collection gap. Unrated counts show how much of the evidence is yet to be rated.',
+  inputs: ['judgments', 'evidence'],
+  fn: (judgments, evidence) => {
+    const out = [];
+    for (const j of judgments.filter((x) => (x.exec_rank || 0) > 0 && x.status !== 'Retired').sort((a, b) => a.exec_rank - b.exec_rank)) {
+      const ev = evidence.filter((e) => e.judgment_id === j.judgment_id);
+      const alts = [...String(j.alternatives || '').matchAll(/\bH(\d+):\s*([\s\S]*?)(?=\s*\bH\d+:|$)/g)].map((m) => ({ h: 'H' + m[1], text: m[2].trim() }));
+      const rate = (e, h) => (h === 'H1' ? { Supports: 'C', Weakens: 'I', Context: 'N' }[e.role] : (String(e.ach || '').match(new RegExp('\\b' + h + ':([CIN])')) || [])[1]) || null;
+      const rows = [{ h: 'H1', text: j.title }, ...alts].map((x) => {
+        const r = ev.map((e) => rate(e, x.h));
+        const n = (k) => r.filter((v) => v === k).length;
+        return { key: j.judgment_id + '-' + x.h, judgment_id: j.judgment_id, exec_rank: j.exec_rank, hypothesis: x.h, text: x.text, consistent: n('C'), inconsistent: n('I'), neutral: n('N'), unrated: r.filter((v) => !v).length, evidence: ev.length,
+          rated_share: ev.length ? Math.round(((ev.length - r.filter((v) => !v).length) / ev.length) * 1000) / 1000 : null };
+      });
+      const complete = rows.every((r) => r.unrated === 0);
+      const tested = (r) => r.hypothesis === 'H1' || (r.evidence ? (r.consistent + r.inconsistent) / r.evidence : 0) >= 0.25;
+      const least = Math.min(...rows.filter(tested).map((r) => r.inconsistent));
+      // A hypothesis that little of the evidence bears on is untested, which is a collection gap and no kind of support.
+      for (const r of rows) {
+        const diag = r.evidence ? (r.consistent + r.inconsistent) / r.evidence : 0;
+        out.push({ ...r, diagnostic_share: Math.round(diag * 1000) / 1000,
+          standing: !complete ? 'rating incomplete' : r.hypothesis !== 'H1' && diag < 0.25 ? 'little evidence bears on it' : r.inconsistent === least ? 'least inconsistent' : 'more inconsistent' });
+      }
+    }
+    return out;
+  },
+});
+
+// ---- Lead feedback: what the analyst run did with the machine leads it opened ----
+dash.calc('lead_use', {
+  title: 'Lead feedback summary',
+  description: 'Machine leads the analyst run opened, by what it did with them. Precision is the share used or already held (used + duplicate) over all leads opened; the same share is given for leads the triage tier labelled relevance 3.',
+  inputs: ['leads'],
+  fn: (leads) => {
+    const n = (f) => leads.filter(f).length, good = (l) => l.disposition === 'used' || l.disposition === 'duplicate';
+    const top = leads.filter((l) => l.relevance === 3);
+    const share = (a, b) => (b ? Math.round((a / b) * 1000) / 1000 : null);
+    return [{ opened: leads.length, used: n((l) => l.disposition === 'used'), duplicate: n((l) => l.disposition === 'duplicate'), rejected: n((l) => l.disposition === 'rejected'),
+      wrong: n((l) => l.disposition === 'wrong'), precision: share(n(good), leads.length), top_opened: top.length, top_precision: share(top.filter(good).length, top.length),
+      first: leads.map((l) => l.date).sort()[0] || '', last: leads.map((l) => l.date).sort().pop() || '' }];
+  },
+});
+
+// ---- Citation verification ----
+dash.calc('verification_summary', {
+  title: 'Citation verification by state',
+  description: 'Cited items by what an independent fetch of each URL found, with the share of fetched pages that carry the claim (excerpt found or claim supported) and the share of the evidence base that could be judged at all. Blocked, thin and error states are unverifiable from the workflow, which is said plainly.',
+  inputs: ['verification'],
+  fn: (v) => {
+    const LABEL = { excerpt_found: 'Excerpt found on the page', claim_supported: 'Figures and names found on the page', weak_match: 'Partial match', mismatch: 'Page does not carry the claim',
+      derived: 'Computed from a dataset (the dataset page answers)', thin: 'Too little page text to judge', blocked: 'Site refused the request', gone: 'Page gone (404 or 410)', error: 'Fetch failed', pending: 'Not fetched yet' };
+    const ORDER = Object.keys(LABEL);
+    const n = v.length || 1;
+    const count = (s) => v.filter((r) => r.state === s).length;
+    const judged = count('excerpt_found') + count('claim_supported') + count('weak_match') + count('mismatch') + count('gone');
+    const good = count('excerpt_found') + count('claim_supported');
+    return ORDER.map((s) => ({ state: s, label: LABEL[s], items: count(s), share: count(s) / n,
+      judged, judged_share: judged / n, supported: good, supported_share: judged ? good / judged : null,
+      newest_check: v.map((r) => r.checked_at).filter(Boolean).sort().pop() || '' }));
+  },
+});
+
 // ---- Per-vertical calibration and residual risk (every vertical computed; the page shows the selected one) ----
 dash.calc('theater_calibrated', {
   title: 'Theater level by vertical',
@@ -398,3 +594,51 @@ dash.calc('residual_summary', {
   },
 });
 
+
+// ---- Detection coverage by judgment (3.0) ----
+// Each judgment's technique scope: the ATT&CK techniques of its intrusion vector (the mapping below, from the vector's
+// definition on the Vectors page), the techniques of every ATT&CK group its text names, and any technique ID it cites,
+// each looked up in the SigmaHQ rule index of the Defense page (defense_techniques, built from the SigmaHQ repository by
+// pipeline/build_defense.py), with Elastic and Splunk rules and Atomic Red Team tests beside it.
+const VECTOR_TECHNIQUES = {
+  'Exploitation & edge devices': ['T1190', 'T1133', 'T1210', 'T1068', 'T1203', 'T1211', 'T1505.003'],
+  Fraud: ['T1566.002', 'T1656', 'T1534', 'T1585', 'T1586', 'T1657'],
+  'Identity & valid accounts': ['T1078', 'T1078.004', 'T1110', 'T1110.003', 'T1555', 'T1621', 'T1556', 'T1539', 'T1550.004'],
+  'Phishing & social engineering': ['T1566', 'T1566.001', 'T1566.002', 'T1566.004', 'T1204.001', 'T1204.002', 'T1598', 'T1656'],
+  'Ransomware & malware': ['T1486', 'T1490', 'T1489', 'T1562.001', 'T1059.001', 'T1047', 'T1021.001', 'T1567.002'],
+  'Supply chain & third parties': ['T1195', 'T1195.001', 'T1195.002', 'T1199', 'T1072', 'T1554'],
+  DDoS: ['T1498', 'T1499', 'T1498.001', 'T1499.002'],
+  Insider: ['T1078', 'T1052', 'T1567', 'T1530', 'T1213', 'T1074'],
+};
+dash.calc('judgment_detection', {
+  title: 'Detection coverage by judgment',
+  description: 'For each judgment, the ATT&CK techniques in its scope (its intrusion vector\'s techniques, the techniques of the ATT&CK groups its text names, and technique IDs it cites) and how many of them SigmaHQ rules detect, with stable and high-severity rule counts, the techniques without a Sigma rule, and the Elastic, Splunk and Atomic Red Team content beside them.',
+  inputs: ['judgments', 'defense_techniques', 'attack_groups', 'attack_group_techniques', 'defense_content'],
+  fn: (judgments, techs, groups, gt, content) => {
+    const T = new Map(techs.map((t) => [t.technique_id, t]));
+    const byGroup = new Map();
+    for (const r of gt) (byGroup.get(r.group_id) || byGroup.set(r.group_id, []).get(r.group_id)).push(r.technique_id);
+    const names = groups.flatMap((g) => [g.name, ...String(g.aliases || '').split(/,\s*/)].filter((n) => n && n.length >= 5).map((n) => [n.toLowerCase(), g]));
+    const rules = new Map();
+    for (const c of content) if (c.source === 'Sigma') (rules.get(c.technique_id) || rules.set(c.technique_id, []).get(c.technique_id)).push(c);
+    return judgments.filter((j) => j.status !== 'Retired').map((j) => {
+      const text = [j.title, j.situation, j.assessment, j.attribution_judgment, j.alternatives].join(' ');
+      const low = text.toLowerCase();
+      const named = [...new Map(names.filter(([n]) => new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(low)).map(([, g]) => [g.group_id, g])).values()];
+      // A named group contributes its techniques that the threat model weights most (choke), so one prolific group
+      // does not swamp the vector's scope.
+      const fromGroups = named.flatMap((g) => (byGroup.get(g.group_id) || []).filter((id) => T.has(id)).sort((a, b) => (T.get(b).choke || 0) - (T.get(a).choke || 0)).slice(0, 12));
+      const cited = [...new Set((text.match(/\bT\d{4}(?:\.\d{3})?\b/g) || []))];
+      const scope = [...new Set([...(VECTOR_TECHNIQUES[j.vector] || []), ...fromGroups, ...cited])].filter((id) => T.has(id));
+      const rows = scope.map((id) => T.get(id));
+      const covered = rows.filter((t) => (t.sigma || 0) > 0), stable = rows.filter((t) => (t.sigma_stable || 0) > 0), high = rows.filter((t) => (t.sigma_high || 0) > 0);
+      const gaps = rows.filter((t) => !(t.sigma > 0)).map((t) => `${t.technique_id} ${t.name}${(t.elastic || 0) + (t.splunk || 0) ? ' (Elastic or Splunk only)' : ''}`);
+      const top = rows.flatMap((t) => (rules.get(t.technique_id) || []).slice(0, 1).map((r) => `${t.technique_id}: ${r.title}`)).slice(0, 6);
+      return { judgment_id: j.judgment_id, exec_rank: j.exec_rank || 0, title: j.title, vector: j.vector || '', groups: named.map((g) => g.name).join(', '),
+        techniques: scope.length, with_sigma: covered.length, with_stable: stable.length, with_high: high.length,
+        coverage: scope.length ? Math.round((covered.length / scope.length) * 1000) / 1000 : null,
+        sigma_rules: rows.reduce((a, t) => a + (t.sigma || 0), 0), other_rules: rows.reduce((a, t) => a + (t.elastic || 0) + (t.splunk || 0), 0), atomic: rows.reduce((a, t) => a + (t.atomic || 0), 0),
+        gaps: gaps.join('; '), top_rules: top.join('; '), scope_note: scope.length ? '' : 'No cyber technique scope: the judgment names no intrusion vector, ATT&CK group or technique.' };
+    }).sort((a, b) => (a.exec_rank || 99) - (b.exec_rank || 99));
+  },
+});

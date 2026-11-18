@@ -1,0 +1,143 @@
+{
+ "head": {
+  "vars": [
+   "item",
+   "label",
+   "owner",
+   "ownerLabel",
+   "length",
+   "service",
+   "inception"
+  ]
+ },
+ "results": {
+  "bindings": [
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q530880"
+    },
+    "label": {
+     "type": "literal",
+     "value": "SEA-ME-WE 3"
+    },
+    "owner": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q1"
+    },
+    "ownerLabel": {
+     "type": "literal",
+     "value": "China Telecom"
+    },
+    "length": {
+     "type": "literal",
+     "value": "39000"
+    },
+    "inception": {
+     "type": "literal",
+     "value": "2000-03-01T00:00:00Z"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q530880"
+    },
+    "label": {
+     "type": "literal",
+     "value": "SEA-ME-WE 3"
+    },
+    "owner": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q2"
+    },
+    "ownerLabel": {
+     "type": "literal",
+     "value": "Orange S.A."
+    },
+    "length": {
+     "type": "literal",
+     "value": "39000"
+    },
+    "inception": {
+     "type": "literal",
+     "value": "2000-03-01T00:00:00Z"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q24254372"
+    },
+    "label": {
+     "type": "literal",
+     "value": "MAREA"
+    },
+    "length": {
+     "type": "literal",
+     "value": "6600"
+    },
+    "service": {
+     "type": "literal",
+     "value": "2018-02-01T00:00:00Z"
+    },
+    "inception": {
+     "type": "literal",
+     "value": "2016-01-01T00:00:00Z"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q100"
+    },
+    "label": {
+     "type": "literal",
+     "value": "Southern Cross Cable"
+    },
+    "length": {
+     "type": "literal",
+     "value": "30500"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q200"
+    },
+    "label": {
+     "type": "literal",
+     "value": "Asia-America Gateway"
+    },
+    "length": {
+     "type": "literal",
+     "value": "20000"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q201"
+    },
+    "label": {
+     "type": "literal",
+     "value": "Asia America Gateway"
+    },
+    "length": {
+     "type": "literal",
+     "value": "20100"
+    }
+   },
+   {
+    "item": {
+     "type": "uri",
+     "value": "http://www.wikidata.org/entity/Q300"
+    },
+    "label": {
+     "type": "literal",
+     "value": "Unmatched Cable"
+    }
+   }
+  ]
+ }
+}

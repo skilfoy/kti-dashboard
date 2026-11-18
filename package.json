@@ -1,6 +1,6 @@
 {
   "name": "global-threat-intelligence",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "description": "Global threat intelligence: a static site and the threat-feeds service behind it, deployed together on Vercel",
   "engines": { "node": "24.x" },

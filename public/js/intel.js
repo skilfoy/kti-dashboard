@@ -289,27 +289,109 @@
         { field: 'ok_at', label: 'Last good', fmt: 'date', hideSm: true },
       ], { empty: 'No links were checked.' });
     }
-    const tb = sec.querySelector('#tbl-blog-items');
-    if (tb && TI.tableState(tb, ['live_blogs'])) {
-      const m = metaOf('live_blogs') || {};
-      setCount(sec, 'blogs-asof', fresh(m));
-      note(sec, 'blogs-sum', `${int(m.blogs_ok)} of ${int(m.blogs)} blog feeds read this cycle (of ${int(m.listed)} blogs listed). Items are candidates: the daily run fetches and confirms any item before it cites one. `, m.method || '', ' ', m.terms || '');
-      TI.table(tb, kindRows('live_blogs', 'item'), [
+    const tp = sec.querySelector('#tbl-psirt');
+    if (tp && TI.tableState(tp, ['live_psirt'])) {
+      const m = metaOf('live_psirt') || {};
+      const feeds = TI.list(m.feeds);
+      setCount(sec, 'psirt-asof', fresh(m));
+      note(sec, 'psirt-sum', `${int(m.advisories)} advisories from ${int(feeds.filter((f) => f.ok).length)} of ${int(feeds.length)} feeds; ${int(m.kev_hits)} name a CVE in CISA KEV (${int(m.kev_entries)} entries read). `, m.kev_note ? m.kev_note + '. ' : '', m.method || '', ' ', m.terms || '');
+      TI.table(tp, kindRows('live_psirt', 'advisory'), [
         { field: 'published', label: 'Published', fmt: 'date', cls: 'ti-nowrap' },
-        { field: 'title', label: 'Item', link: 'link', cls: 'ti-wrap' },
-        { field: 'blog', label: 'Blog' },
-        { field: 'type', label: 'Type', hideSm: true },
-      ], { sort: 'published', dir: 'desc', limit: 120, empty: 'No blog items in 7 days.' });
+        { field: 'vendor', label: 'Publisher' },
+        { field: 'title', label: 'Advisory', link: 'link', cls: 'ti-wrap' },
+        { field: 'cves', label: 'CVEs', get: (r) => { const c = TI.list(r.cves); return c.slice(0, 4).join(', ') + (c.length > 4 ? ` +${c.length - 4}` : ''); }, hideSm: true },
+        { field: 'kev', label: 'In KEV', get: (r) => (TI.list(r.kev).length ? TI.list(r.kev).join(', ') + (r.ransomware ? ' (ransomware use known)' : '') : ''), attr: { 'data-status': (r) => ((r.kev || []).length ? 'review' : '') } },
+      ], { sort: 'published', dir: 'desc', limit: 150, empty: 'No advisories in 14 days.' });
+      const tk = sec.querySelector('#tbl-kevrank');
+      if (tk) {
+        const wl = TI.obj(m.watchlist), ev = TI.obj(wl.eval), pc = (x) => (x == null ? 'n/a' : Math.round(x * 100) + '%');
+        note(sec, 'kevrank-sum', wl.method || 'The watchlist has not been built yet.', ' ', ev.tracked
+          ? `Scored so far: of ${int(ev.tracked)} CVEs first ranked a week or more ago, KEV has since listed ${int(ev.added)} (${pc(ev.base_rate)}); the top tenth by first score holds ${int(ev.top_decile_added)} of them (${pc(ev.recall_top_decile)} of the listed, ${pc(ev.top_decile_rate)} of the tenth). NDCG at ${ev.k}: ${ev.ndcg_at_k == null ? 'n/a' : ev.ndcg_at_k}.`
+          : 'No CVE has been tracked for a week yet, so the ranking is unscored; the first figures appear from 22 November 2026.', wl.epss_note ? ' ' + wl.epss_note + '.' : '');
+        TI.table(tk, kindRows('live_psirt', 'kevrank'), [
+          { field: 'score', label: 'Score', num: true, get: (r) => d3.format('.2f')(r.score) },
+          { field: 'cve', label: 'CVE', cls: 'ti-nowrap' },
+          { field: 'title', label: 'Advisory', link: 'link', cls: 'ti-wrap' },
+          { field: 'epss_percentile', label: 'EPSS pct.', num: true, get: (r) => (r.epss_percentile == null ? '' : Math.round(r.epss_percentile * 100)) },
+          { field: 'edge', label: 'Edge', get: (r) => (r.edge ? 'yes' : ''), hideSm: true },
+          { field: 'wording', label: 'Exploit wording', get: (r) => (r.wording ? 'yes' : ''), hideSm: true },
+          { field: 'publishers', label: 'Publishers', num: true, fmt: 'int', hideSm: true },
+        ], { sort: 'score', dir: 'desc', limit: 25, empty: 'No unlisted advisory CVEs in 14 days.' });
+      }
+      const tpf = sec.querySelector('#tbl-psirt-feeds');
+      if (tpf) TI.table(tpf, feeds, [
+        { field: 'vendor', label: 'Publisher', link: 'url' },
+        { field: 'klass', label: 'Class' },
+        { field: 'ok', label: 'Feed', get: (r) => (r.ok ? 'ok' : r.error || 'failed'), attr: { 'data-status': (r) => (r.ok ? 'ok' : 'review') } },
+        { field: 'items', label: 'Entries', num: true, fmt: 'int' },
+      ], { sort: 'vendor', empty: 'No feeds were read.' });
     }
-    const tbf = sec.querySelector('#tbl-blog-feeds');
-    if (tbf && TI.tableState(tbf, ['live_blogs'])) {
-      TI.table(tbf, kindRows('live_blogs', 'blog'), [
-        { field: 'name', label: 'Blog', link: 'url', cls: 'ti-wrap' },
-        { field: 'type', label: 'Type' },
-        { field: 'status', label: 'Feed', attr: { 'data-status': (r) => r.status } },
-        { field: 'items', label: 'Items, 7d', num: true, fmt: 'int' },
-        { field: 'newest', label: 'Newest', fmt: 'date', hideSm: true },
-      ], { sort: 'items', dir: 'desc', limit: 80, empty: 'No blogs were read.' });
+    // Source network (3.0): every feed the collector reads, its state, and how a failing feed was healed.
+    const tn = sec.querySelector('#tbl-network');
+    if (tn && TI.tableState(tn, ['live_sources'])) {
+      const m = metaOf('live_sources') || {}, cats = TI.obj(m.by_category), via = TI.obj(m.by_via);
+      const th = TI.ready('theaters') ? TI.index(TI.rows('theaters'), 'theater_id') : new Map();
+      setCount(sec, 'network-asof', fresh(m));
+      note(sec, 'network-sum', `${int(m.feeds)} feeds (${Object.entries(cats).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${int(v)} ${k}`).join(', ')}); ${int(m.feeds_ok)} answered at their last read, `,
+        `${int(m.healed)} through a healed route (${Object.entries(via).filter(([k]) => k && k !== 'null' && k !== 'primary').map(([k, v]) => `${k} ${int(v)}`).join(', ') || 'none'}). `,
+        `${int(m.items_24h)} entries in 24 hours and ${int(m.items_45d)} in 45 days, from ${int(m.publishers)} publishers, all searchable on the Search page. `, m.method || '', ' ', m.terms || '');
+      TI.table(tn, kindRows('live_sources', 'feed'), [
+        { field: 'name', label: 'Feed', link: 'url', cls: 'ti-wrap' },
+        { field: 'category', label: 'Category' },
+        { field: 'region', label: 'Theater', get: (r) => { const t = th.get(r.region); return t ? `${t.short} (${r.region})` : r.region; }, hideSm: true },
+        { field: 'tier', label: 'Tier', num: true, hideSm: true },
+        { field: 'status', label: 'Last read', get: (r) => (r.ok ? (r.via && r.via !== 'primary' ? 'ok via ' + r.via : 'ok') : r.status), attr: { 'data-status': (r) => (r.ok ? (r.via && r.via !== 'primary' ? 'review' : 'ok') : 'fail') } },
+        { field: 'items_7d', label: 'Entries, 7 days', num: true, fmt: 'int' },
+        { field: 'newest', label: 'Newest', fmt: 'date', cls: 'ti-nowrap', hideSm: true },
+      ], { sort: 'items_7d', dir: 'desc', limit: 1200, empty: 'No feeds were read.' });
+    }
+    const ta = sec.querySelector('#tbl-actors');
+    if (ta && TI.tableState(ta, ['live_triage', 'attack_groups', 'judgments'])) {
+      const groups = TI.rows('attack_groups'), judgments = TI.rows('judgments');
+      const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+      const gIdx = new Map();
+      for (const g of groups) for (const nm of [g.name].concat(String(g.aliases || '').split(','))) if (norm(nm).length >= 3) gIdx.set(norm(nm), g);
+      const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const rows = kindRows('live_triage', 'actor').map((a) => {
+        const g = gIdx.get(norm(a.actor)) || gIdx.get(norm(String(a.actor).replace(/\b(group|gang|team)\b/gi, '')));
+        const re = new RegExp('(^|[^a-z0-9])' + esc(String(a.actor).toLowerCase()) + '([^a-z0-9]|$)');
+        const js = judgments.filter((j) => re.test([j.title, j.situation, j.assessment, j.attribution_judgment].join(' ').toLowerCase())).map((j) => j.judgment_id);
+        return { ...a, attack_group: g ? `${g.name} (${g.group_id})` : '', nexus: g ? g.nexus || '' : '', judgments: js.join(', ') };
+      });
+      TI.table(ta, rows, [
+        { field: 'actor', label: 'Name' },
+        { field: 'stories', label: 'Stories', num: true, fmt: 'int' },
+        { field: 'publishers', label: 'Publishers', num: true, fmt: 'int', hideSm: true },
+        { field: 'last_seen', label: 'Last seen', fmt: 'date', cls: 'ti-nowrap' },
+        { field: 'attack_group', label: 'ATT&CK group' },
+        { field: 'nexus', label: 'Nexus per ATT&CK', hideSm: true },
+        { field: 'judgments', label: 'Named in' },
+        { field: 'latest_title', label: 'Latest headline', link: 'latest_link', cls: 'ti-wrap', hideSm: true },
+      ], { sort: 'stories', dir: 'desc', limit: 60, empty: 'No actor names in 30 days of leads.' });
+    }
+    const tt = sec.querySelector('#tbl-triage');
+    if (tt && TI.tableState(tt, ['live_triage'])) {
+      const m = metaOf('live_triage') || {}, ev = m.eval ? TI.obj(m.eval) : null, pct = (x) => (x == null ? 'n/a' : Math.round(x * 100) + '%');
+      const show = !!(ev && ev.promoted);
+      setCount(sec, 'triage-asof', fresh(m));
+      note(sec, 'triage-sum', `${m.marking || 'Machine triage, unreviewed'}. ${int(m.labelled_24h)} titles labelled in 24 hours; ${int(m.count)} stories of relevance 1 or more shown, from ${int(m.titles)} titles. `, m.method || '');
+      note(sec, 'triage-eval', ev
+        ? `Agreement with the analyst's labels on ${int(ev.items)} of ${int(ev.gold_items)} evidence items (prompt ${ev.prompt_version}): theater ${pct(ev.theater_accuracy)} (macro F1 ${pct(ev.theater_macro_f1)}), vector ${pct(ev.vector_accuracy)} on ${int(ev.vector_items)} items, vector assigned where the analyst gave none ${pct(ev.vector_false_positive_rate)}. ${show ? 'The tier meets its thresholds; vector and theater labels are shown.' : `Vector and theater labels stay hidden until the full set clears the thresholds (theater ${pct(ev.thresholds.theater_accuracy)}, vector ${pct(ev.thresholds.vector_accuracy)}, false vector at most ${pct(ev.thresholds.vector_false_positive_rate)}, ${int(ev.thresholds.min_items)} items).`}`
+        : 'The tier has not been scored against the analyst\'s labels yet; vector and theater labels stay hidden until it has.');
+      const cols = [
+        { field: 'relevance', label: 'Rel.', num: true, fmt: 'int' },
+        { field: 'verify', label: 'Second model', get: (r) => (r.verify === 'confirmed' ? 'agrees' : r.verify === 'lowered' ? 'lowered from 3' : ''), hideSm: true },
+        { field: 'published', label: 'Published', fmt: 'date', cls: 'ti-nowrap' },
+        { field: 'title', label: 'Title', link: 'link', cls: 'ti-wrap' },
+        { field: 'source', label: 'Source', hideSm: true },
+        { field: 'from', label: 'From', hideSm: true },
+        { field: 'also', label: 'Also carried by', get: (r) => (r.also ? `${r.also} more` + (TI.list(r.also_sources).length ? ': ' + TI.list(r.also_sources).slice(0, 3).join(', ') : '') : ''), hideSm: true },
+        { field: 'cves', label: 'CVEs', get: (r) => TI.list(r.cves).slice(0, 3).join(', '), hideSm: true },
+        { field: 'kev', label: 'In KEV', get: (r) => TI.list(r.kev).join(', '), attr: { 'data-status': (r) => (TI.list(r.kev).length ? 'review' : '') } },
+      ];
+      if (show) cols.push({ field: 'vector', label: 'Vector', hideSm: true }, { field: 'theater', label: 'Theater', hideSm: true });
+      cols.push({ field: 'why', label: 'Model\'s reason', cls: 'ti-wrap', hideSm: true });
+      TI.table(tt, kindRows('live_triage', 'lead'), cols, { sort: 'relevance', dir: 'desc', limit: 120, empty: 'No leads in 72 hours.' });
     }
     const tv = sec.querySelector('#tbl-volume');
     if (tv && TI.tableState(tv, ['live_health'])) {

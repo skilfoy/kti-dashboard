@@ -19,6 +19,10 @@ on:
         description: Rebuild every machine-built dataset from its sources
         type: boolean
         default: false
+      verify_max:
+        description: Cited pages to fetch for citation verification in this run (default 150; 1500 for a full sweep)
+        type: string
+        default: "150"
 
 permissions:
   contents: read
@@ -32,19 +36,21 @@ env:
   VERCEL_PROJECT_ID: prj_eISaKjcBNEHSxvuO7OvW6Nf94s5P
   VERCEL_TELEMETRY_DISABLED: "1"
   PUBLIC_DOMAIN: intel.kilfoycyber.com
+  # The operator side: the project's team-scoped *.vercel.app address behind Vercel Authentication, where /api/admin answers.
+  OPERATOR_HOST: threat-feeds-skilfoys-projects.vercel.app
 
 jobs:
   site:
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: "3.12"
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "24"
           cache: npm
@@ -59,7 +65,7 @@ jobs:
       # other run restores the newest one.
       - name: Restore built feeds
         id: feeds
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: feeds
           key: feeds-${{ github.run_id }}
@@ -99,13 +105,65 @@ jobs:
 
       - name: Save built feeds
         if: steps.rebuild.outcome == 'success'
-        uses: actions/cache/save@v6
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: feeds
           key: feeds-${{ github.run_id }}
 
+      # Currency rules (overdue reviews, passed horizons) print as WARN lines here and never fail a deploy: they gate
+      # the reassessment itself, and the "Reassessment watch" workflow raises them as an issue.
       - name: Validate the authored datasets
-        run: python3 -I pipeline/authored_build.py data/authored --check
+        run: |
+          set -o pipefail
+          python3 -I pipeline/authored_build.py data/authored --check | tee validate.txt
+          grep '^WARN ' validate.txt | sed 's/^WARN /::warning::/' || true
+          rm -f validate.txt
+
+      # Citation verification, without a model: fetch cited pages and record whether each carries its item's claim
+      # (pipeline/verify_citations.py). Results persist in their own cache and build up over runs: new items first,
+      # then retries, then the oldest verified pages. On a pull request the gate fails the check when a new item
+      # (I-1126 on) cites a page that is gone or does not carry the claim, so such an item cannot reach main.
+      - name: Restore citation verification state
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: verification
+          key: verification-${{ github.run_id }}
+          restore-keys: verification-
+
+      - name: Verify citations
+        env:
+          VERIFY_MAX: ${{ inputs.verify_max || '150' }}
+        run: |
+          set -o pipefail
+          mkdir -p verification
+          python3 -I pipeline/verify_citations.py --items data/authored/items.json --state verification/state.json \
+            --out feeds/verification.json --max "$VERIFY_MAX" --gate-from 1126 | tee verify.txt
+          tail -n 12 verify.txt >> "$GITHUB_STEP_SUMMARY"
+          rm -f verify.txt
+
+      - name: Save citation verification state
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: verification
+          key: verification-${{ github.run_id }}
+
+      # The citation repair queue (pipeline/citation_queue.py) in the run summary, and the verification dataset as an
+      # artifact, so the daily run reads both through GitHub (runbook section 2, item 9).
+      - name: Citation repair queue
+        if: always() && hashFiles('feeds/verification.json') != ''
+        run: |
+          { echo '### Citation repair queue (first ten)'; echo '```'
+            python3 -I pipeline/citation_queue.py --verification feeds/verification.json --max 10 || true
+            echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the verification dataset
+        if: always() && hashFiles('feeds/verification.json') != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: verification
+          path: feeds/verification.json
+          retention-days: 7
 
       - name: Assemble the site data
         run: python3 -I pipeline/site_build.py --authored data/authored --feeds feeds --out public --commit "$GITHUB_SHA"
@@ -117,6 +175,14 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           node test/e2e.mjs --live-optional
+
+      # The same check on the production service's current answers, so page code that throws on real data shapes (a
+      # list or record cell arriving as JSON text) fails here before it reaches the public site. A dataset the service
+      # cannot answer shows as a failed panel, which this check allows; a script error fails it.
+      - name: Browser check on live answers
+        run: |
+          node test/save_live.mjs --base https://intel.kilfoycyber.com --out live-answers
+          node test/e2e.mjs --live live-answers --live-optional
 
       # Idempotent: attaches the public domain to the Vercel project once, then reports its verification state.
       - name: Attach the public domain
@@ -137,6 +203,11 @@ jobs:
           curl -sS -o config.json -H "Authorization: Bearer $VERCEL_TOKEN" "$api/v6/domains/$PUBLIC_DOMAIN/config?$q&projectIdOrName=$VERCEL_PROJECT_ID" || true
           python3 -c "import json; d=json.load(open('config.json')); print('DNS misconfigured:', d.get('misconfigured'), '| recommended CNAME:', (d.get('recommendedCNAME') or [{}])[0].get('value'))" | tee -a "$GITHUB_STEP_SUMMARY" || true
           rm -f domain.json config.json
+          # Retired addresses (14 November 2026): project-dcxjt.vercel.app predates the public domain. Removed if present.
+          for old in project-dcxjt.vercel.app; do
+            rc=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE -H "Authorization: Bearer $VERCEL_TOKEN" "$api/v9/projects/$VERCEL_PROJECT_ID/domains/$old?$q")
+            echo "Retired address $old: HTTP $rc (200 removed, 404 already absent)" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
           case "$code" in 2*) ;; *) echo "::warning::Could not attach $PUBLIC_DOMAIN (HTTP $code); the deploy continues" ;; esac
 
       - name: Deploy to production
@@ -154,11 +225,18 @@ jobs:
           # previous deployment; pointing it explicitly makes the public site follow every deploy.
           vercel alias set "$url" "$PUBLIC_DOMAIN" --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"
           echo "Pointed $PUBLIC_DOMAIN at $url" | tee -a "$GITHUB_STEP_SUMMARY"
+          # The operator side stopped following production deploys on 2 November 2026 and served that day's build and
+          # service code for eleven days, so the daily run read stale catalogs through it. It is pointed explicitly too.
+          if vercel alias set "$url" "$OPERATOR_HOST" --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID"; then
+            echo "Pointed $OPERATOR_HOST at $url" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::Could not point $OPERATOR_HOST at $url; the operator side may serve an older deployment"
+          fi
 
       # Until DNS for the public domain resolves to Vercel this check warns instead of failing the run.
       - name: Check the public site
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: |
           sleep 20
-          if getent hosts "$PUBLIC_DOMAIN" > /dev/null; then node test/smoke.mjs "https://$PUBLIC_DOMAIN"
+          if getent hosts "$PUBLIC_DOMAIN" > /dev/null; then EXPECT_COMMIT="$GITHUB_SHA" node test/smoke.mjs "https://$PUBLIC_DOMAIN"
           else echo "::warning::$PUBLIC_DOMAIN does not resolve yet; add its DNS record to check the public site"; fi

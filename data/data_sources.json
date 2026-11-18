@@ -1,0 +1,4706 @@
+{
+ "schema": 1,
+ "title": "KTI data sources registry",
+ "description": "One row per upstream the platform reads or has evaluated. Secrets appear by name and location only, never by value. Checked by pipeline/check_data_sources.mjs.",
+ "generated": "2026-11-03",
+ "statuses": [
+  "live",
+  "known_gap",
+  "held",
+  "candidate",
+  "declined",
+  "not_implemented"
+ ],
+ "rows": [
+  {
+   "id": "cisa-kev",
+   "name": "CISA Known Exploited Vulnerabilities",
+   "owner": "CISA (U.S. government)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "kev",
+    "early_warning",
+    "kev_monthly",
+    "vuln_ladder",
+    "cvss_bands",
+    "kev_attack",
+    "weaponization",
+    "page:vulnerabilities",
+    "page:defense"
+   ],
+   "url": "https://github.com/cisagov/kev-data",
+   "access": "open",
+   "secret": null,
+   "licence": "U.S. government work (public domain); kev-data mirror CC0-1.0",
+   "attribution": "",
+   "commercial_use": "Unrestricted",
+   "cadence": "three times a day (site build)",
+   "health_feed": "cisa_kev",
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-KEV"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "cve-list",
+   "name": "CVE List V5 records",
+   "owner": "CVE Program (MITRE)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "kev",
+    "early_warning",
+    "vuln_ladder",
+    "page:vulnerabilities"
+   ],
+   "url": "https://github.com/CVEProject/cvelistV5",
+   "access": "open",
+   "secret": null,
+   "licence": "CVE Terms of Use (free to copy and distribute)",
+   "attribution": "CVE records from the CVE Program",
+   "commercial_use": "Allowed under the CVE terms",
+   "cadence": "three times a day (site build)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-CVE"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "cvss-bt",
+   "name": "CVSS-BT enrichment (EPSS, VulnCheck KEV, Metasploit, Nuclei, Exploit-DB flags)",
+   "owner": "t0sche",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "kev",
+    "early_warning",
+    "vuln_ladder",
+    "cvss_bands",
+    "page:vulnerabilities"
+   ],
+   "url": "https://github.com/t0sche/cvss-bt",
+   "access": "open",
+   "secret": null,
+   "licence": "Repository licence (see repository); carries FIRST EPSS (free with attribution) and VulnCheck KEV signals",
+   "attribution": "",
+   "commercial_use": "Check each upstream's terms",
+   "cadence": "three times a day (site build)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-CVSSBT",
+    "S-VCKEV",
+    "S-MSF",
+    "S-NUC"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "first-epss",
+   "name": "FIRST EPSS",
+   "owner": "FIRST",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_epss",
+    "page:vulnerabilities"
+   ],
+   "url": "https://www.first.org/epss/",
+   "access": "open",
+   "secret": null,
+   "licence": "Free to use with attribution to FIRST (EPSS terms)",
+   "attribution": "EPSS scores from FIRST.org",
+   "commercial_use": "",
+   "cadence": "live (proxy), hourly snapshot",
+   "health_feed": "epss",
+   "jobs": [
+    "snap"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-EPSS"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "cisa-csaf",
+   "name": "CISA ICS advisories (CSAF 2.0)",
+   "owner": "CISA (U.S. government)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "ics_advisories",
+    "page:vulnerabilities"
+   ],
+   "url": "https://github.com/cisagov/CSAF",
+   "access": "open",
+   "secret": null,
+   "licence": "U.S. government work (public domain)",
+   "attribution": "",
+   "commercial_use": "Unrestricted",
+   "cadence": "three times a day (site build)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-CSAF"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "poc-in-github",
+   "name": "PoC-in-GitHub",
+   "owner": "nomi-sec",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "weaponization",
+    "weaponization_sources",
+    "page:vulnerabilities"
+   ],
+   "url": "https://github.com/nomi-sec/PoC-in-GitHub",
+   "access": "open",
+   "secret": null,
+   "licence": "Repository licence (see repository)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "three times a day (site build)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-POCGH"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "nuclei-templates",
+   "name": "Nuclei templates",
+   "owner": "ProjectDiscovery",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "weaponization",
+    "weaponization_sources"
+   ],
+   "url": "https://github.com/projectdiscovery/nuclei-templates",
+   "access": "open",
+   "secret": null,
+   "licence": "MIT",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "three times a day (site build)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-NUC"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "metasploit",
+   "name": "Metasploit Framework modules",
+   "owner": "Rapid7",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "weaponization",
+    "weaponization_sources"
+   ],
+   "url": "https://github.com/rapid7/metasploit-framework",
+   "access": "open",
+   "secret": null,
+   "licence": "BSD-3-Clause",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "three times a day (site build)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-MSF"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "nvd",
+   "name": "NIST National Vulnerability Database",
+   "owner": "NIST (U.S. government)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "page:vulnerabilities"
+   ],
+   "url": "https://nvd.nist.gov/",
+   "access": "open",
+   "secret": null,
+   "licence": "U.S. government work (public domain)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "not_implemented",
+   "gap_note": "Not collected: CVE data comes from CVE List V5 records and CVSS-BT; NVD appears only as a link target on vulnerability rows (pipeline/build_data.py nvd_url)",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "ghsa",
+   "name": "GitHub Security Advisories",
+   "owner": "GitHub",
+   "category": "Vulnerabilities",
+   "feeds": [],
+   "url": "https://github.com/advisories",
+   "access": "open",
+   "secret": null,
+   "licence": "CC BY 4.0 (GitHub Advisory Database; unverified here)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "not_implemented",
+   "gap_note": "Not collected; no code reads it",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "mitre-attack",
+   "name": "MITRE ATT&CK Enterprise",
+   "owner": "MITRE",
+   "category": "Adversaries and defense",
+   "feeds": [
+    "attack_groups",
+    "attack_techniques",
+    "attack_group_techniques",
+    "attack_campaigns",
+    "defense_techniques",
+    "defense_telemetry",
+    "defense_group_sectors",
+    "page:actors",
+    "page:defense"
+   ],
+   "url": "https://github.com/mitre-attack/attack-stix-data",
+   "access": "open",
+   "secret": null,
+   "licence": "ATT&CK Terms of Use (royalty-free, attribution)",
+   "attribution": "© The MITRE Corporation. ATT&CK is a registered trademark of The MITRE Corporation.",
+   "commercial_use": "",
+   "cadence": "three times a day (site build)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-ATT"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "misp-galaxy",
+   "name": "MISP galaxy threat-actor cluster (with CFR tracker fields)",
+   "owner": "MISP Project",
+   "category": "Adversaries and defense",
+   "feeds": [
+    "attack_groups",
+    "defense_group_sectors",
+    "live_actors",
+    "page:actors"
+   ],
+   "url": "https://github.com/MISP/misp-galaxy",
+   "access": "open",
+   "secret": null,
+   "licence": "CC0-1.0 / BSD-2-Clause (dual)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "three times a day (site build) and live (/api/actors)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-MISP"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "ctid-tie",
+   "name": "CTID Technique Inference Engine",
+   "owner": "Center for Threat-Informed Defense (MITRE Engenuity)",
+   "category": "Adversaries and defense",
+   "feeds": [
+    "defense_techniques",
+    "defense_cooccur",
+    "defense_sources",
+    "page:defense"
+   ],
+   "url": "https://github.com/center-for-threat-informed-defense/technique-inference-engine",
+   "access": "open",
+   "secret": null,
+   "licence": "Apache-2.0",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "three times a day (site build)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-CTID-TIE"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "ctid-top",
+   "name": "CTID Top ATT&CK Techniques",
+   "owner": "Center for Threat-Informed Defense",
+   "category": "Adversaries and defense",
+   "feeds": [
+    "defense_techniques",
+    "defense_sources"
+   ],
+   "url": "https://github.com/center-for-threat-informed-defense/top-attack-techniques",
+   "access": "open",
+   "secret": null,
+   "licence": "Apache-2.0",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "three times a day (site build)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-CTID-TOP"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "ctid-mappings",
+   "name": "CTID Mappings Explorer (KEV and CRI Profile mappings)",
+   "owner": "Center for Threat-Informed Defense",
+   "category": "Adversaries and defense",
+   "feeds": [
+    "kev_attack",
+    "cri_crosswalk",
+    "defense_sources"
+   ],
+   "url": "https://github.com/center-for-threat-informed-defense/mappings-explorer",
+   "access": "open",
+   "secret": null,
+   "licence": "Apache-2.0",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "three times a day (site build)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-CTID-MAP"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "sigma",
+   "name": "Sigma rules",
+   "owner": "SigmaHQ",
+   "category": "Adversaries and defense",
+   "feeds": [
+    "defense_content",
+    "defense_sources"
+   ],
+   "url": "https://github.com/SigmaHQ/sigma",
+   "access": "open",
+   "secret": null,
+   "licence": "Detection Rule License 1.1",
+   "attribution": "Rule titles and links to SigmaHQ; rule bodies stay in the repository",
+   "commercial_use": "",
+   "cadence": "three times a day (site build)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-SIGMA"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "elastic-rules",
+   "name": "Elastic detection rules",
+   "owner": "Elastic",
+   "category": "Adversaries and defense",
+   "feeds": [
+    "defense_content",
+    "defense_sources"
+   ],
+   "url": "https://github.com/elastic/detection-rules",
+   "access": "open",
+   "secret": null,
+   "licence": "Elastic License 2.0",
+   "attribution": "",
+   "commercial_use": "Elastic License 2.0 limits offering as a managed service",
+   "cadence": "three times a day (site build)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-ELASTIC"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "splunk-content",
+   "name": "Splunk security content",
+   "owner": "Splunk",
+   "category": "Adversaries and defense",
+   "feeds": [
+    "defense_content",
+    "defense_sources"
+   ],
+   "url": "https://github.com/splunk/security_content",
+   "access": "open",
+   "secret": null,
+   "licence": "Apache-2.0",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "three times a day (site build)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-SPLUNK"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "atomic-red-team",
+   "name": "Atomic Red Team",
+   "owner": "Red Canary",
+   "category": "Adversaries and defense",
+   "feeds": [
+    "defense_content",
+    "defense_sources"
+   ],
+   "url": "https://github.com/redcanaryco/atomic-red-team",
+   "access": "open",
+   "secret": null,
+   "licence": "MIT",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "three times a day (site build)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-ART"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "threatcluster-datasets",
+   "name": "ThreatCluster datasets (leak-site claims, incident clusters)",
+   "owner": "ThreatCluster (Jam0k)",
+   "category": "Ransomware",
+   "feeds": [
+    "ransomware_groups",
+    "ransomware_monthly",
+    "ransomware_sectors",
+    "ransomware_countries",
+    "vector_baseline",
+    "page:ransomware",
+    "page:vectors"
+   ],
+   "url": "https://github.com/Jam0k/Threat-Intelligence-Datasets",
+   "access": "open",
+   "secret": null,
+   "licence": "CC BY 4.0",
+   "attribution": "Data: ThreatCluster (CC BY 4.0)",
+   "commercial_use": "",
+   "cadence": "three times a day (site build), snapshot ages until refreshed",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-TCV",
+    "S-TCI"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "threatcluster-api",
+   "name": "ThreatCluster API (leak-site crawl, stats, IOC feed)",
+   "owner": "ThreatCluster",
+   "category": "Ransomware",
+   "feeds": [
+    "live_leaksites",
+    "live_lists",
+    "page:ransomware"
+   ],
+   "url": "https://threatcluster.io/",
+   "access": "open",
+   "secret": null,
+   "licence": "Public endpoints, no key; ThreatCluster terms",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (collector)",
+   "health_feed": "threatcluster",
+   "jobs": [
+    "leaksites"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-TCAPI"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "ransomware-live",
+   "name": "ransomware.live API",
+   "owner": "ransomware.live",
+   "category": "Ransomware",
+   "feeds": [
+    "live_ransomware",
+    "live_cyberattacks",
+    "live_leaksites",
+    "live_exposure",
+    "page:ransomware",
+    "page:brief"
+   ],
+   "url": "https://www.ransomware.live/",
+   "access": "open",
+   "secret": null,
+   "licence": "Free public API; victim names are dropped by this site",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "live (proxy), 30-minute snapshots",
+   "health_feed": "ransomware_live",
+   "jobs": [
+    "snap"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-RLIVE"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "ransomwhere",
+   "name": "Ransomwhere ransom-payment dataset",
+   "owner": "Jack Cable",
+   "category": "Ransomware",
+   "feeds": [
+    "live_ransompay",
+    "page:ransomware"
+   ],
+   "url": "https://ransomwhe.re/",
+   "access": "open",
+   "secret": null,
+   "licence": "CC BY 4.0",
+   "attribution": "Cable, J. (2024). Ransomwhere: A Crowdsourced Ransomware Payment Dataset. Zenodo. https://doi.org/10.5281/zenodo.6512122",
+   "commercial_use": "",
+   "cadence": "weekly (collector, Mondays)",
+   "health_feed": "ransomwhere",
+   "jobs": [
+    "ransompay"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-RWHERE"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "ransomwatch",
+   "name": "ransomwatch posts.json",
+   "owner": "joshhighet",
+   "category": "Ransomware",
+   "feeds": [],
+   "url": "https://github.com/joshhighet/ransomwatch",
+   "access": "open",
+   "secret": null,
+   "licence": "Repository licence (see repository)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "declined",
+   "gap_note": "Evaluated and rejected: stale (sources.json S-RWATCH)",
+   "source_ids": [
+    "S-RWATCH"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "abusech-feodo",
+   "name": "abuse.ch Feodo Tracker",
+   "owner": "abuse.ch",
+   "category": "Infrastructure",
+   "feeds": [
+    "live_threatmap",
+    "page:map"
+   ],
+   "url": "https://feodotracker.abuse.ch/",
+   "access": "open",
+   "secret": null,
+   "licence": "CC0-1.0",
+   "attribution": "",
+   "commercial_use": "Free for any use (CC0)",
+   "cadence": "30 minutes (collector)",
+   "health_feed": "feodo",
+   "jobs": [
+    "infra"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-ABUSE"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "abusech-threatfox",
+   "name": "abuse.ch ThreatFox",
+   "owner": "abuse.ch",
+   "category": "Infrastructure",
+   "feeds": [
+    "live_threatfox",
+    "live_threatmap",
+    "live_exposure",
+    "page:map"
+   ],
+   "url": "https://threatfox.abuse.ch/",
+   "access": "key",
+   "secret": {
+    "name": "ABUSECH_AUTH_KEY",
+    "where": "neon_function_variable"
+   },
+   "licence": "abuse.ch terms of use (revised 21 October 2026): free for not-for-profit use with an Auth-Key",
+   "attribution": "",
+   "commercial_use": "Commercial use may need a Spamhaus subscription",
+   "cadence": "30 minutes (collector)",
+   "health_feed": "threatfox",
+   "jobs": [
+    "infra",
+    "snap"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-ABUSE"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "abusech-urlhaus",
+   "name": "abuse.ch URLhaus",
+   "owner": "abuse.ch",
+   "category": "Infrastructure",
+   "feeds": [
+    "live_threatmap",
+    "page:map"
+   ],
+   "url": "https://urlhaus.abuse.ch/",
+   "access": "key",
+   "secret": {
+    "name": "ABUSECH_AUTH_KEY",
+    "where": "neon_function_variable"
+   },
+   "licence": "abuse.ch terms of use (revised 21 October 2026): free for not-for-profit use with an Auth-Key",
+   "attribution": "",
+   "commercial_use": "Commercial use may need a Spamhaus subscription",
+   "cadence": "30 minutes (collector)",
+   "health_feed": "urlhaus",
+   "jobs": [
+    "infra"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-ABUSE"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "abusech-malwarebazaar",
+   "name": "abuse.ch MalwareBazaar and YARAify",
+   "owner": "abuse.ch",
+   "category": "Enrichment",
+   "feeds": [
+    "live_enrich"
+   ],
+   "url": "https://bazaar.abuse.ch/",
+   "access": "key",
+   "secret": {
+    "name": "ABUSECH_AUTH_KEY",
+    "where": "neon_function_variable"
+   },
+   "licence": "abuse.ch terms of use (revised 21 October 2026)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "on demand (/api/enrich)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-ABUSE"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "sans-dshield",
+   "name": "SANS ISC DShield (top sources, Infocon)",
+   "owner": "SANS Internet Storm Center",
+   "category": "Infrastructure",
+   "feeds": [
+    "live_threatmap",
+    "live_health",
+    "page:map"
+   ],
+   "url": "https://isc.sans.edu/",
+   "access": "open",
+   "secret": null,
+   "licence": "SANS ISC data, free with attribution (Creative Commons BY-NC-SA per ISC; unverified here)",
+   "attribution": "SANS Internet Storm Center",
+   "commercial_use": "",
+   "cadence": "30 minutes (collector)",
+   "health_feed": "dshield",
+   "jobs": [
+    "infra",
+    "health"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "ip-api",
+   "name": "ip-api.com geolocation",
+   "owner": "ip-api.com",
+   "category": "Infrastructure",
+   "feeds": [
+    "live_threatmap"
+   ],
+   "url": "https://ip-api.com/",
+   "access": "open",
+   "secret": null,
+   "licence": "Free endpoint for non-commercial use",
+   "attribution": "",
+   "commercial_use": "Free endpoint is non-commercial only",
+   "cadence": "as needed (collector, cached 30 days)",
+   "health_feed": "ip_api",
+   "jobs": [
+    "infra"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "geojs",
+   "name": "GeoJS geolocation (fallback)",
+   "owner": "GeoJS",
+   "category": "Infrastructure",
+   "feeds": [
+    "live_threatmap"
+   ],
+   "url": "https://www.geojs.io/",
+   "access": "open",
+   "secret": null,
+   "licence": "Free API (GeoJS terms)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "as needed (collector)",
+   "health_feed": "geojs",
+   "jobs": [
+    "infra"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "greynoise",
+   "name": "GreyNoise community lookup",
+   "owner": "GreyNoise Intelligence",
+   "category": "Infrastructure",
+   "feeds": [
+    "live_exposure",
+    "page:residual"
+   ],
+   "url": "https://www.greynoise.io/",
+   "access": "key",
+   "secret": {
+    "name": "GREYNOISE_API_KEY",
+    "where": "neon_function_variable"
+   },
+   "licence": "GreyNoise terms (community API)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "30-minute probe; on demand (/api/exposure)",
+   "health_feed": "greynoise",
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "hibp",
+   "name": "Have I Been Pwned (breaches by domain)",
+   "owner": "Troy Hunt",
+   "category": "Exposure",
+   "feeds": [
+    "live_exposure",
+    "page:residual"
+   ],
+   "url": "https://haveibeenpwned.com/",
+   "access": "open",
+   "secret": null,
+   "licence": "CC BY 4.0 (breach metadata)",
+   "attribution": "Data from Have I Been Pwned",
+   "commercial_use": "",
+   "cadence": "on demand (/api/exposure)",
+   "health_feed": "hibp",
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "tor-exits",
+   "name": "Tor Project exit list",
+   "owner": "The Tor Project",
+   "category": "Infrastructure",
+   "feeds": [
+    "live_exposure",
+    "live_lists"
+   ],
+   "url": "https://check.torproject.org/torbulkexitlist",
+   "access": "open",
+   "secret": null,
+   "licence": "Public list",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (collector) and on demand",
+   "health_feed": "tor_exits",
+   "jobs": [
+    "lists"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "ioda",
+   "name": "IODA internet outage events",
+   "owner": "Georgia Tech Internet Intelligence Lab",
+   "category": "Internet health",
+   "feeds": [
+    "live_outages",
+    "page:map"
+   ],
+   "url": "https://ioda.inetintel.cc.gatech.edu/",
+   "access": "open",
+   "secret": null,
+   "licence": "IODA terms (unverified here); attribution requested",
+   "attribution": "IODA, Georgia Tech Internet Intelligence Lab",
+   "commercial_use": "",
+   "cadence": "30 minutes (collector)",
+   "health_feed": "ioda",
+   "jobs": [
+    "ioda"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-IODA"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "terms_verified": false
+  },
+  {
+   "id": "blocklist-de",
+   "name": "blocklist.de attackers, last 48 hours",
+   "owner": "blocklist.de",
+   "category": "Corroboration lists",
+   "feeds": [
+    "live_lists",
+    "page:map"
+   ],
+   "url": "https://lists.blocklist.de/lists/all.txt",
+   "access": "open",
+   "secret": null,
+   "licence": "Free download; terms page not machine-readable",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (collector)",
+   "health_feed": "blocklist_de",
+   "jobs": [
+    "lists"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-LISTS"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "cins-army",
+   "name": "CINS Army bad actors",
+   "owner": "Sentinel IPS",
+   "category": "Corroboration lists",
+   "feeds": [
+    "live_lists",
+    "page:map"
+   ],
+   "url": "https://cinsscore.com/list/ci-badguys.txt",
+   "access": "open",
+   "secret": null,
+   "licence": "Provided to parse and use in any way you see fit",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (collector)",
+   "health_feed": "cins_army",
+   "jobs": [
+    "lists"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-LISTS"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "spamhaus-drop",
+   "name": "Spamhaus DROP",
+   "owner": "Spamhaus",
+   "category": "Corroboration lists",
+   "feeds": [
+    "live_lists",
+    "page:map"
+   ],
+   "url": "https://www.spamhaus.org/drop/drop_v4.json",
+   "access": "open",
+   "secret": null,
+   "licence": "Spamhaus DROP terms (free)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (collector)",
+   "health_feed": "spamhaus_drop",
+   "jobs": [
+    "lists"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-LISTS"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "c2intelfeeds",
+   "name": "C2IntelFeeds C2 IPs, last 30 days",
+   "owner": "drb-ra",
+   "category": "Corroboration lists",
+   "feeds": [
+    "live_lists",
+    "page:map"
+   ],
+   "url": "https://github.com/drb-ra/C2IntelFeeds",
+   "access": "open",
+   "secret": null,
+   "licence": "CC BY-NC-SA 4.0",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (collector)",
+   "health_feed": null,
+   "jobs": [
+    "lists"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-LISTS"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "threatview",
+   "name": "ThreatView IP high confidence",
+   "owner": "ThreatView",
+   "category": "Corroboration lists",
+   "feeds": [
+    "live_lists",
+    "page:map"
+   ],
+   "url": "https://threatview.io/",
+   "access": "open",
+   "secret": null,
+   "licence": "Open-access community feed (ThreatView terms)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (collector)",
+   "health_feed": null,
+   "jobs": [
+    "lists"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-LISTS"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "et-compromised",
+   "name": "Proofpoint Emerging Threats compromised IPs",
+   "owner": "Proofpoint",
+   "category": "Corroboration lists",
+   "feeds": [
+    "live_lists",
+    "page:map"
+   ],
+   "url": "https://rules.emergingthreats.net/",
+   "access": "open",
+   "secret": null,
+   "licence": "Emerging Threats Open terms",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (collector)",
+   "health_feed": null,
+   "jobs": [
+    "lists"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-LISTS"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "greensnow",
+   "name": "GreenSnow attackers",
+   "owner": "GreenSnow",
+   "category": "Corroboration lists",
+   "feeds": [
+    "live_lists",
+    "page:map"
+   ],
+   "url": "https://greensnow.co/",
+   "access": "open",
+   "secret": null,
+   "licence": "No licence stated; confirm before client use",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (collector)",
+   "health_feed": null,
+   "jobs": [
+    "lists"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-LISTS"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "ipsum",
+   "name": "IPsum aggregate",
+   "owner": "stamparm",
+   "category": "Corroboration lists",
+   "feeds": [
+    "live_lists",
+    "page:map"
+   ],
+   "url": "https://github.com/stamparm/ipsum",
+   "access": "open",
+   "secret": null,
+   "licence": "Unlicense (repository)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (collector)",
+   "health_feed": null,
+   "jobs": [
+    "lists"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-LISTS"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "gdelt-exports",
+   "name": "GDELT 2.0 Event exports (15-minute files)",
+   "owner": "The GDELT Project",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_gdelt",
+    "page:map",
+    "page:theaters"
+   ],
+   "url": "http://data.gdeltproject.org/gdeltv2/",
+   "access": "open",
+   "secret": null,
+   "licence": "GDELT terms: free and open, attribution with a link",
+   "attribution": "Data from The GDELT Project (gdeltproject.org)",
+   "commercial_use": "",
+   "cadence": "15 minutes (collector)",
+   "health_feed": "gdelt_exports",
+   "jobs": [
+    "gdelt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-GDELT"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "gdelt-doc-api",
+   "name": "GDELT DOC 2.0 API",
+   "owner": "The GDELT Project",
+   "category": "Geopolitics",
+   "feeds": [],
+   "url": "https://api.gdeltproject.org/api/v2/doc/doc",
+   "access": "open",
+   "secret": null,
+   "licence": "GDELT terms: free and open, attribution with a link",
+   "attribution": "Data from The GDELT Project (gdeltproject.org)",
+   "commercial_use": "",
+   "cadence": "30-minute probe only",
+   "health_feed": "gdelt_doc_api",
+   "jobs": [],
+   "status": "known_gap",
+   "gap_note": "Rate-limits cloud egress (HTTP 429, or a timeout); feeds no layer. 429, timeout and failed fetch are one answer class for this gap.",
+   "source_ids": [
+    "S-GDELT"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "gap_id": "gdelt_doc_api"
+  },
+  {
+   "id": "lanes",
+   "name": "Lanes News open data (temperatures, daily pages, registry, naming)",
+   "owner": "Lanes News",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_lanes",
+    "live_lanesreg",
+    "page:theaters",
+    "osint_tools"
+   ],
+   "url": "https://lanes.news/data",
+   "access": "open",
+   "secret": null,
+   "licence": "CC BY 4.0",
+   "attribution": "Lanes News (2026), lanes.news/data, CC BY 4.0",
+   "commercial_use": "",
+   "cadence": "hourly snapshots; registry daily",
+   "health_feed": "lanes",
+   "jobs": [
+    "snap",
+    "lanesreg"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-LANES",
+    "S-LANESREG"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "ofac",
+   "name": "U.S. Treasury OFAC Recent Actions",
+   "owner": "U.S. Department of the Treasury",
+   "category": "Sanctions",
+   "feeds": [
+    "live_ofac",
+    "page:theaters"
+   ],
+   "url": "https://ofac.treasury.gov/recent-actions",
+   "access": "open",
+   "secret": null,
+   "licence": "U.S. government work (public domain)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (collector)",
+   "health_feed": "ofac_recent_actions",
+   "jobs": [
+    "snap"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-OFAC-RA"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "nasa-firms",
+   "name": "NASA FIRMS VIIRS active fires",
+   "owner": "NASA LANCE",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_fires",
+    "page:map",
+    "page:theaters"
+   ],
+   "url": "https://firms.modaps.eosdis.nasa.gov/",
+   "access": "key",
+   "secret": {
+    "name": "FIRMS_MAP_KEY",
+    "where": "neon_function_variable"
+   },
+   "licence": "NASA open data (no restrictions; acknowledgement requested)",
+   "attribution": "NASA FIRMS (LANCE)",
+   "commercial_use": "",
+   "cadence": "hourly (collector)",
+   "health_feed": null,
+   "jobs": [
+    "fires"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-FIRMS"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "marad",
+   "name": "MARAD MSCI advisories",
+   "owner": "U.S. Maritime Administration",
+   "category": "Maritime",
+   "feeds": [
+    "live_maritime",
+    "page:theaters"
+   ],
+   "url": "https://www.maritime.dot.gov/msci-advisories",
+   "access": "open",
+   "secret": null,
+   "licence": "U.S. government work (public domain)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (collector)",
+   "health_feed": "marad_msci",
+   "jobs": [
+    "maritime"
+   ],
+   "status": "known_gap",
+   "gap_note": "Akamai edge refuses cloud addresses (HTTP 403) since 22 Oct 2026; never worked around",
+   "source_ids": [
+    "S-MARAD"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "gap_id": "marad_msci"
+  },
+  {
+   "id": "nga-asam",
+   "name": "NGA MSI Anti-Shipping Activity Messages",
+   "owner": "U.S. National Geospatial-Intelligence Agency",
+   "category": "Maritime",
+   "feeds": [
+    "live_maritime"
+   ],
+   "url": "https://msi.nga.mil/Piracy",
+   "access": "open",
+   "secret": null,
+   "licence": "U.S. government work (public domain)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (collector)",
+   "health_feed": null,
+   "jobs": [
+    "maritime"
+   ],
+   "status": "known_gap",
+   "gap_note": "API answers 404 or nothing recent; the job checks the newest report and keeps a stale list off the map",
+   "source_ids": [
+    "S-NGA-ASAM"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "gap_id": "nga_asam"
+  },
+  {
+   "id": "nga-navwarn",
+   "name": "NGA broadcast navigational warnings",
+   "owner": "U.S. National Geospatial-Intelligence Agency",
+   "category": "Maritime",
+   "feeds": [
+    "live_maritime"
+   ],
+   "url": "https://msi.nga.mil/NavWarnings",
+   "access": "open",
+   "secret": null,
+   "licence": "U.S. government work (public domain)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (collector)",
+   "health_feed": "nga_msi",
+   "jobs": [
+    "maritime"
+   ],
+   "status": "known_gap",
+   "gap_note": "Answers HTTP 200 but lists nothing issued after 2024-05-10; kept off the map as stale",
+   "source_ids": [
+    "S-NGA-NAVWARN"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "gap_id": "nga_msi"
+  },
+  {
+   "id": "ukmto",
+   "name": "UK Maritime Trade Operations incidents",
+   "owner": "UKMTO (Royal Navy)",
+   "category": "Maritime",
+   "feeds": [
+    "live_maritime"
+   ],
+   "url": "https://www.ukmto.org/",
+   "access": "open",
+   "secret": null,
+   "licence": "UKMTO site terms (unverified)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (collector)",
+   "health_feed": "ukmto",
+   "jobs": [
+    "maritime"
+   ],
+   "status": "known_gap",
+   "gap_note": "Cloudflare rule refuses cloud addresses (HTTP 403) since 22 Oct 2026; never worked around",
+   "source_ids": [
+    "S-UKMTO"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "gap_id": "ukmto"
+  },
+  {
+   "id": "eia-chokepoints",
+   "name": "U.S. EIA World Oil Transit Chokepoints",
+   "owner": "U.S. Energy Information Administration",
+   "category": "Geopolitics",
+   "feeds": [
+    "chokepoints",
+    "page:theaters"
+   ],
+   "url": "https://www.eia.gov/international/analysis/special-topics/World_Oil_Transit_Chokepoints",
+   "access": "open",
+   "secret": null,
+   "licence": "U.S. government work (public domain)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "when EIA publishes (analyst-set)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Cited per row in data/authored/chokepoints.json"
+  },
+  {
+   "id": "osm-cables",
+   "name": "OpenStreetMap submarine cables and landing stations (Overpass)",
+   "owner": "OpenStreetMap contributors",
+   "category": "Geopolitics",
+   "feeds": [
+    "api:context/cables",
+    "open-data:cables.geojson"
+   ],
+   "url": "https://www.openstreetmap.org/",
+   "access": "open",
+   "secret": null,
+   "licence": "ODbL-1.0",
+   "attribution": "© OpenStreetMap contributors",
+   "commercial_use": "Allowed; share-alike on the derived database (ODbL)",
+   "cadence": "weekly (collector, Sundays 05:19 UTC)",
+   "health_feed": null,
+   "jobs": [
+    "cables"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Partial coverage: on 2 Nov 2026, 374 ways (189 named) and 12 landing stations. Derived dataset published at /open-data/cables.geojson under the ODbL."
+  },
+  {
+   "id": "wikidata-cables",
+   "name": "Wikidata submarine communications cables (Q506572)",
+   "owner": "Wikidata community (Wikimedia Foundation)",
+   "category": "Geopolitics",
+   "feeds": [
+    "api:context/cables"
+   ],
+   "url": "https://www.wikidata.org/wiki/Q506572",
+   "access": "open",
+   "secret": null,
+   "licence": "CC0-1.0",
+   "attribution": "",
+   "commercial_use": "Unrestricted (CC0)",
+   "cadence": "weekly (collector, with the cables job)",
+   "health_feed": "wikidata",
+   "jobs": [
+    "cables"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "terms_verified": true,
+   "note": "Joined onto OSM cables by exact normalised name only. On 3 Nov 2026: 176 items; 112 with inception (P571), 5 with service entry (P729), 51 with owner (P127), 120 with length (P2043)."
+  },
+  {
+   "id": "telegeography",
+   "name": "TeleGeography Submarine Cable Map",
+   "owner": "TeleGeography",
+   "category": "Geopolitics",
+   "feeds": [],
+   "url": "https://www.submarinecablemap.com/",
+   "access": "open",
+   "secret": null,
+   "licence": "Commercial licence (annual) for geocoded data",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "declined",
+   "gap_note": "Declined: Sean will not license data; its API is not called. Two diagnostic /probe targets remain in neon/parts/50-http.mjs and are never a data source.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "sec-edgar",
+   "name": "SEC EDGAR full-text search (Form 8-K)",
+   "owner": "U.S. Securities and Exchange Commission",
+   "category": "Disclosures",
+   "feeds": [
+    "live_sec8k",
+    "page:brief"
+   ],
+   "url": "https://www.sec.gov/edgar/search/",
+   "access": "open",
+   "secret": {
+    "name": "SEC_USER_AGENT",
+    "where": "neon_function_variable"
+   },
+   "licence": "U.S. government work; SEC fair access policy (declared User-Agent, 10 requests a second)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "twice a day (collector, 12 and 22 UTC)",
+   "health_feed": "sec_edgar",
+   "jobs": [
+    "sec8k"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-SEC8K"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "SEC_USER_AGENT is a contact string, not a secret credential; it also identifies the cables job to Overpass and Wikidata"
+  },
+  {
+   "id": "unit42-github",
+   "name": "Unit 42 Timely Threat Intel (GitHub)",
+   "owner": "Palo Alto Networks",
+   "category": "Reports and blogs",
+   "feeds": [
+    "live_unit42",
+    "page:brief"
+   ],
+   "url": "https://github.com/PaloAltoNetworks/Unit42-timely-threat-intel",
+   "access": "open",
+   "secret": null,
+   "licence": "GPL-3.0",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "daily (collector, 06 UTC)",
+   "health_feed": "github_api",
+   "jobs": [
+    "unit42"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-U42GH"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "gen-ioc",
+   "name": "Gen Threat Labs IOC sets",
+   "owner": "Gen Digital",
+   "category": "Reports and blogs",
+   "feeds": [
+    "live_genioc"
+   ],
+   "url": "https://github.com/gendigitalinc/ioc",
+   "access": "open",
+   "secret": null,
+   "licence": "Detection Rule License 1.1",
+   "attribution": "Gen Digital (Gen Threat Labs)",
+   "commercial_use": "",
+   "cadence": "daily (collector, 07 UTC)",
+   "health_feed": null,
+   "jobs": [
+    "genioc"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-GENIOC"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "cti-blogs",
+   "name": "First-party CTI blogs (awesome_threat_intel_blogs list)",
+   "owner": "muchdogesec and each publisher",
+   "category": "Reports and blogs",
+   "feeds": [
+    "live_blogs",
+    "live_sources",
+    "page:sources"
+   ],
+   "url": "https://github.com/muchdogesec/awesome_threat_intel_blogs",
+   "access": "open",
+   "secret": null,
+   "licence": "List CC BY 4.0; items: titles and links only, each to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "read by the sources job on its tier (3.0); the blogs job runs by hand",
+   "health_feed": null,
+   "jobs": [
+    "blogs",
+    "sources"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [
+    "S-BLOGS"
+   ],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "psirt-fortinet",
+   "name": "Fortinet PSIRT advisories",
+   "owner": "Fortinet",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://filestore.fortinet.com/fortiguard/rss/ir.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "psirt-paloalto",
+   "name": "Palo Alto Networks security advisories",
+   "owner": "Palo Alto Networks",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://security.paloaltonetworks.com/rss.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "psirt-cisco",
+   "name": "Cisco security advisories",
+   "owner": "Cisco",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "psirt-sonicwall",
+   "name": "SonicWall PSIRT advisories",
+   "owner": "SonicWall",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://psirtapi.global.sonicwall.com/api/v1/feed/rss.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "psirt-ivanti",
+   "name": "Ivanti security advisories",
+   "owner": "Ivanti",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.ivanti.com/blog/topics/security-advisory/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "psirt-msrc",
+   "name": "Microsoft Security Update Guide",
+   "owner": "Microsoft",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://api.msrc.microsoft.com/update-guide/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "psirt-cisa",
+   "name": "CISA cybersecurity advisories",
+   "owner": "CISA",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.cisa.gov/cybersecurity-advisories/all.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "psirt-certeu",
+   "name": "CERT-EU security advisories",
+   "owner": "CERT-EU",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://cert.europa.eu/publications/security-advisories-rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "psirt-cccs",
+   "name": "Canadian Centre for Cyber Security alerts and advisories",
+   "owner": "Canadian Centre for Cyber Security",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.cyber.gc.ca/api/cccs/atom/v1/get?feed=alerts_advisories&lang=en",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-15",
+   "reviewed": "2026-11-15"
+  },
+  {
+   "id": "psirt-ncscuk",
+   "name": "NCSC (UK) reports",
+   "owner": "National Cyber Security Centre (UK)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-15",
+   "reviewed": "2026-11-15"
+  },
+  {
+   "id": "psirt-msisac",
+   "name": "MS-ISAC advisories",
+   "owner": "Center for Internet Security",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.cisecurity.org/feed/advisories",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-15",
+   "reviewed": "2026-11-15"
+  },
+  {
+   "id": "psirt-splunk",
+   "name": "Splunk security advisories",
+   "owner": "Splunk",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://advisory.splunk.com/feed.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-15",
+   "reviewed": "2026-11-15"
+  },
+  {
+   "id": "psirt-tenable",
+   "name": "Tenable product security advisories",
+   "owner": "Tenable",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.tenable.com/security/feed",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-15",
+   "reviewed": "2026-11-15"
+  },
+  {
+   "id": "psirt-aws",
+   "name": "AWS security bulletins",
+   "owner": "Amazon Web Services",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://aws.amazon.com/security/security-bulletins/rss/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-15",
+   "reviewed": "2026-11-15"
+  },
+  {
+   "id": "psirt-sophos",
+   "name": "Sophos security advisories",
+   "owner": "Sophos",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.sophos.com/en-us/security-advisories/feed",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-gitlab",
+   "name": "GitLab security releases",
+   "owner": "GitLab",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://about.gitlab.com/security-releases.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-chrome",
+   "name": "Chrome releases",
+   "owner": "Google",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://chromereleases.googleblog.com/feeds/posts/default",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-zdi",
+   "name": "Zero Day Initiative published advisories",
+   "owner": "Trend Micro Zero Day Initiative",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.zerodayinitiative.com/rss/published/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-jpcert",
+   "name": "JPCERT/CC alerts",
+   "owner": "JPCERT/CC",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.jpcert.or.jp/english/rss/jpcert-en.rdf",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-jvn",
+   "name": "Japan Vulnerability Notes",
+   "owner": "JPCERT/CC and IPA",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://jvn.jp/en/rss/jvn.rdf",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-certbund",
+   "name": "CERT-Bund security advisories",
+   "owner": "BSI (Germany)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://wid.cert-bund.de/content/public/securityAdvisory/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-certfr-alerte",
+   "name": "CERT-FR alerts",
+   "owner": "ANSSI (France)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.cert.ssi.gouv.fr/alerte/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-certfr-avis",
+   "name": "CERT-FR advisories",
+   "owner": "ANSSI (France)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://www.cert.ssi.gouv.fr/avis/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "psirt-ncscnl",
+   "name": "NCSC-NL advisories",
+   "owner": "NCSC (Netherlands)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_psirt",
+    "page:sources"
+   ],
+   "url": "https://advisories.ncsc.nl/rss/advisories",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links, dates and CVE identifiers only; each advisory belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every three hours",
+   "health_feed": null,
+   "jobs": [
+    "psirt"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-16",
+   "reviewed": "2026-11-16"
+  },
+  {
+   "id": "news-bbcworld",
+   "name": "BBC News (World)",
+   "owner": "BBC News (World)",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-aljazeera",
+   "name": "Al Jazeera",
+   "owner": "Al Jazeera",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.aljazeera.com/xml/rss/all.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-france24",
+   "name": "France 24",
+   "owner": "France 24",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.france24.com/en/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-dw",
+   "name": "Deutsche Welle",
+   "owner": "Deutsche Welle",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://rss.dw.com/rdf/rss-en-all",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-guardianworld",
+   "name": "The Guardian (World)",
+   "owner": "The Guardian (World)",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.theguardian.com/world/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-unnews",
+   "name": "UN News",
+   "owner": "United Nations",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://news.un.org/feed/subscribe/en/news/all/rss.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-defenseone",
+   "name": "Defense One",
+   "owner": "Defense One",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.defenseone.com/rss/all/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-breakingdefense",
+   "name": "Breaking Defense",
+   "owner": "Breaking Defense",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://breakingdefense.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-warontherocks",
+   "name": "War on the Rocks",
+   "owner": "War on the Rocks",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://warontherocks.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-therecord",
+   "name": "The Record",
+   "owner": "The Record",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://therecord.media/feed",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-gcaptain",
+   "name": "gCaptain",
+   "owner": "gCaptain",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://gcaptain.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-maritimeexec",
+   "name": "The Maritime Executive",
+   "owner": "The Maritime Executive",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://maritime-executive.com/articles.rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-splash247",
+   "name": "Splash247",
+   "owner": "Splash247",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://splash247.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-mee",
+   "name": "Middle East Eye",
+   "owner": "Middle East Eye",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.middleeasteye.net/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-jpost",
+   "name": "The Jerusalem Post",
+   "owner": "The Jerusalem Post",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.jpost.com/rss/rssfeedsfrontpage.aspx",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-iranintl",
+   "name": "Iran International",
+   "owner": "Iran International",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.iranintl.com/en/feed",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-arabnews",
+   "name": "Arab News",
+   "owner": "Arab News",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.arabnews.com/rss.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-meduza",
+   "name": "Meduza (English)",
+   "owner": "Meduza (English)",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://meduza.io/rss/en/all",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-ukrinform",
+   "name": "Ukrinform",
+   "owner": "Ukrinform",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.ukrinform.net/rss/block-lastnews",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-notesfrompoland",
+   "name": "Notes from Poland",
+   "owner": "Notes from Poland",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://notesfrompoland.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-lrt",
+   "name": "LRT (Lithuania)",
+   "owner": "LRT (Lithuania)",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.lrt.lt/en/news-in-english?rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-err",
+   "name": "ERR News (Estonia)",
+   "owner": "ERR News (Estonia)",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://news.err.ee/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-balkaninsight",
+   "name": "Balkan Insight",
+   "owner": "Balkan Insight",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://balkaninsight.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-radiotamazuj",
+   "name": "Radio Tamazuj",
+   "owner": "Radio Tamazuj",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.radiotamazuj.org/en/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-dabanga",
+   "name": "Dabanga",
+   "owner": "Dabanga",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.dabangasudan.org/en/feed",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-somaliguardian",
+   "name": "Somali Guardian",
+   "owner": "Somali Guardian",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.somaliguardian.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-shabelle",
+   "name": "Shabelle Media",
+   "owner": "Shabelle Media",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://shabellemedia.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-africanews",
+   "name": "Africanews",
+   "owner": "Africanews",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.africanews.com/feed/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-amutv",
+   "name": "Amu TV",
+   "owner": "Amu TV",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://amu.tv/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-afintl",
+   "name": "Afghanistan International",
+   "owner": "Afghanistan International",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.afintl.com/en/feed",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-tribunepk",
+   "name": "The Express Tribune",
+   "owner": "The Express Tribune",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://tribune.com.pk/feed/home",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-thehindu",
+   "name": "The Hindu (National)",
+   "owner": "The Hindu (National)",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.thehindu.com/news/national/feeder/default.rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-timesca",
+   "name": "The Times of Central Asia",
+   "owner": "The Times of Central Asia",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://timesca.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-kunuz",
+   "name": "Kun.uz",
+   "owner": "Kun.uz",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://kun.uz/en/news/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-24kg",
+   "name": "24.kg",
+   "owner": "24.kg",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://24.kg/english/rss/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-thediplomat",
+   "name": "The Diplomat",
+   "owner": "The Diplomat",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://thediplomat.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-yonhap",
+   "name": "Yonhap",
+   "owner": "Yonhap",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://en.yna.co.kr/RSS/news.xml",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-nknews",
+   "name": "NK News",
+   "owner": "NK News",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.nknews.org/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-taipeitimes",
+   "name": "Taipei Times",
+   "owner": "Taipei Times",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.taipeitimes.com/xml/index.rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-inquirer",
+   "name": "Inquirer Global Nation",
+   "owner": "Inquirer Global Nation",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://globalnation.inquirer.net/feed",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-rappler",
+   "name": "Rappler",
+   "owner": "Rappler",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://www.rappler.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-mexiconewsdaily",
+   "name": "Mexico News Daily",
+   "owner": "Mexico News Daily",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://mexiconewsdaily.com/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-insightcrime",
+   "name": "InSight Crime",
+   "owner": "InSight Crime",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://insightcrime.org/feed/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "news-mercopress",
+   "name": "MercoPress",
+   "owner": "MercoPress",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_news",
+    "live_triage",
+    "page:sources",
+    "page:theaters"
+   ],
+   "url": "https://en.mercopress.com/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, links and dates only; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly",
+   "health_feed": null,
+   "jobs": [
+    "news",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "openrouter-triage",
+   "name": "OpenRouter free models (machine triage)",
+   "owner": "OpenRouter and the model providers",
+   "category": "Enrichment",
+   "feeds": [
+    "live_triage",
+    "page:sources"
+   ],
+   "url": "https://openrouter.ai/docs/api-reference/limits",
+   "access": "key",
+   "secret": {
+    "name": "OPENROUTER_API_KEY",
+    "where": "neon_function_variable"
+   },
+   "licence": "Free model variants under OpenRouter terms; only public titles are sent, and free providers may log or train on prompts",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly, at most 40 requests a day",
+   "health_feed": null,
+   "jobs": [
+    "triage",
+    "triageeval"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-14",
+   "reviewed": "2026-11-14"
+  },
+  {
+   "id": "orkl",
+   "name": "ORKL threat report library",
+   "owner": "ORKL",
+   "category": "Enrichment",
+   "feeds": [
+    "live_enrich"
+   ],
+   "url": "https://orkl.eu/",
+   "access": "open",
+   "secret": null,
+   "licence": "ORKL terms (free API)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "on demand (/api/enrich)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "circl",
+   "name": "CIRCL BGP Ranking, IP-to-ASN history and hashlookup",
+   "owner": "CIRCL",
+   "category": "Enrichment",
+   "feeds": [
+    "live_enrich"
+   ],
+   "url": "https://www.circl.lu/",
+   "access": "open",
+   "secret": null,
+   "licence": "CIRCL open services (free; attribution)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "on demand (/api/enrich)",
+   "health_feed": "circl_bgpranking",
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "tranco",
+   "name": "Tranco research ranking",
+   "owner": "Tranco (KU Leuven and partners)",
+   "category": "Enrichment",
+   "feeds": [
+    "live_enrich"
+   ],
+   "url": "https://tranco-list.eu/",
+   "access": "open",
+   "secret": null,
+   "licence": "Tranco terms (free for research; cite the paper)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "on demand (/api/enrich)",
+   "health_feed": "tranco",
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "cl0q",
+   "name": "cl0q",
+   "owner": "cl0q",
+   "category": "Enrichment",
+   "feeds": [
+    "live_enrich",
+    "osint_tools",
+    "osint_tools"
+   ],
+   "url": "https://cl0q.com/",
+   "access": "key",
+   "secret": {
+    "name": "CLOQ_API_KEY",
+    "where": "neon_function_variable"
+   },
+   "licence": "cl0q terms",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "on demand (/api/enrich)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Search and the data API need no key; the key raises limits"
+  },
+  {
+   "id": "github-api",
+   "name": "GitHub REST API (repository trees and contents)",
+   "owner": "GitHub",
+   "category": "Platform",
+   "feeds": [
+    "live_unit42",
+    "live_genioc"
+   ],
+   "url": "https://api.github.com/",
+   "access": "open",
+   "secret": null,
+   "licence": "GitHub terms of service",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "daily (collector)",
+   "health_feed": "github_api",
+   "jobs": [
+    "unit42",
+    "genioc"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Unauthenticated; rate-limited per address"
+  },
+  {
+   "id": "overpass-api",
+   "name": "Overpass API (OpenStreetMap query service)",
+   "owner": "Overpass API operators (overpass-api.de, overpass.private.coffee)",
+   "category": "Platform",
+   "feeds": [
+    "api:context/cables"
+   ],
+   "url": "https://overpass-api.de/",
+   "access": "open",
+   "secret": null,
+   "licence": "Service usage policy (fair use; identify the client); data ODbL",
+   "attribution": "© OpenStreetMap contributors",
+   "commercial_use": "",
+   "cadence": "weekly (collector)",
+   "health_feed": null,
+   "jobs": [
+    "cables"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "analyst-reassessment",
+   "name": "Cited open-source reporting (daily analyst reassessment)",
+   "owner": "Kilfoy Threat Intelligence (analyst)",
+   "category": "Analyst",
+   "feeds": [
+    "sources",
+    "items",
+    "theaters",
+    "theater_indicators",
+    "judgments",
+    "evidence",
+    "vectors",
+    "pirs",
+    "collection_matrix",
+    "method",
+    "followons",
+    "ledger",
+    "history",
+    "outcomes",
+    "leads",
+    "verification",
+    "page:brief",
+    "page:theaters",
+    "page:vectors",
+    "page:requirements",
+    "page:method",
+    "page:sources"
+   ],
+   "url": "https://intel.kilfoycyber.com/",
+   "access": "open",
+   "secret": null,
+   "licence": "Analyst text: site terms; each cited item links its publisher under the publisher's terms",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "daily (06:45 America/Chicago)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "The closed source registry (data/authored/sources.json) lists every outlet the analyst may cite with its grade; those outlets are not repeated here."
+  },
+  {
+   "id": "analyst-calibration",
+   "name": "Analyst-set calibration (verticals, controls, indicator rules)",
+   "owner": "Sean Kilfoy",
+   "category": "Analyst",
+   "feeds": [
+    "verticals",
+    "controls",
+    "indicator_rules",
+    "page:residual",
+    "page:theaters"
+   ],
+   "url": "https://intel.kilfoycyber.com/",
+   "access": "open",
+   "secret": null,
+   "licence": "Own data",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "changed only on Sean's instruction",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "autorecon-ingest",
+   "name": "AutoRecon results for owned assets (Sean's ingest)",
+   "owner": "Sean Kilfoy",
+   "category": "Exposure",
+   "feeds": [
+    "assets",
+    "page:residual"
+   ],
+   "url": "https://github.com/Tib3rius/AutoRecon",
+   "access": "open",
+   "secret": null,
+   "licence": "Own data (tool GPL-3.0)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "when Sean supplies results",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Only assets Sean owns or is authorized to test"
+  },
+  {
+   "id": "darknet-ingest",
+   "name": "darknet-mcp-server results for own estate (Sean's ingest)",
+   "owner": "Sean Kilfoy",
+   "category": "Exposure",
+   "feeds": [
+    "exposure_darkweb",
+    "page:residual"
+   ],
+   "url": "https://intel.kilfoycyber.com/",
+   "access": "open",
+   "secret": null,
+   "licence": "Own data; counts, dates and categories only",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "when Sean supplies results",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "kti-build",
+   "name": "KTI site build and collector (own records)",
+   "owner": "Kilfoy Threat Intelligence",
+   "category": "Platform",
+   "feeds": [
+    "catalogs",
+    "defense_sources",
+    "weaponization_sources",
+    "live_health",
+    "live_links",
+    "page:sources"
+   ],
+   "url": "https://intel.kilfoycyber.com/",
+   "access": "open",
+   "secret": null,
+   "licence": "Own data",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every build; collector every 15 minutes",
+   "health_feed": null,
+   "jobs": [
+    "health",
+    "retention",
+    "links"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Feed catalog versions, source lists, health record and link checks the platform writes about itself"
+  },
+  {
+   "id": "tool-hullcipher",
+   "name": "HullCipher",
+   "owner": "HullCipher",
+   "category": "OSINT toolkit",
+   "feeds": [
+    "osint_tools",
+    "page:sources"
+   ],
+   "url": "https://hullcipher.com/",
+   "access": "registration",
+   "secret": null,
+   "licence": "Publisher terms (see the toolkit row)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "reference (no collection)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Toolkit use: Linked"
+  },
+  {
+   "id": "tool-searchwebcode",
+   "name": "SearchWebCode",
+   "owner": "SearchWebCode",
+   "category": "OSINT toolkit",
+   "feeds": [
+    "osint_tools",
+    "page:sources"
+   ],
+   "url": "https://www.searchwebcode.com/",
+   "access": "registration",
+   "secret": null,
+   "licence": "Publisher terms (see the toolkit row)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "reference (no collection)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "held",
+   "gap_note": "Homepages only; crawl schedule sets freshness; weak fingerprints give false positives.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Toolkit use: Held for decision"
+  },
+  {
+   "id": "tool-soar-atlas",
+   "name": "Soar Atlas",
+   "owner": "Soar Atlas",
+   "category": "OSINT toolkit",
+   "feeds": [
+    "osint_tools",
+    "page:sources"
+   ],
+   "url": "https://soaratlas.com/",
+   "access": "registration",
+   "secret": null,
+   "licence": "Publisher terms (see the toolkit row)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "reference (no collection)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Toolkit use: Linked"
+  },
+  {
+   "id": "tool-freezeradar",
+   "name": "FreezeRadar",
+   "owner": "FreezeRadar",
+   "category": "OSINT toolkit",
+   "feeds": [
+    "osint_tools",
+    "page:sources"
+   ],
+   "url": "https://freezeradar.com/",
+   "access": "open",
+   "secret": null,
+   "licence": "Publisher terms (see the toolkit row)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "reference (no collection)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Toolkit use: Reference"
+  },
+  {
+   "id": "tool-spiderfoot-tools",
+   "name": "SpiderFoot.tools",
+   "owner": "SpiderFoot.tools",
+   "category": "OSINT toolkit",
+   "feeds": [
+    "osint_tools",
+    "page:sources"
+   ],
+   "url": "https://spiderfoot.tools/",
+   "access": "registration",
+   "secret": null,
+   "licence": "Publisher terms (see the toolkit row)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "reference (no collection)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Toolkit use: Reference"
+  },
+  {
+   "id": "tool-activedns",
+   "name": "ActiveDNS",
+   "owner": "ActiveDNS",
+   "category": "OSINT toolkit",
+   "feeds": [
+    "osint_tools",
+    "page:sources"
+   ],
+   "url": "https://activedns.net/",
+   "access": "open",
+   "secret": null,
+   "licence": "Publisher terms (see the toolkit row)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "reference (no collection)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Toolkit use: Reference"
+  },
+  {
+   "id": "tool-sanctionskit",
+   "name": "SanctionsKit",
+   "owner": "SanctionsKit",
+   "category": "OSINT toolkit",
+   "feeds": [
+    "osint_tools",
+    "page:sources"
+   ],
+   "url": "https://www.sanctionskit.com/search",
+   "access": "registration",
+   "secret": null,
+   "licence": "Publisher terms (see the toolkit row)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "reference (no collection)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Toolkit use: Reference"
+  },
+  {
+   "id": "tool-pagesource",
+   "name": "PageSource Search",
+   "owner": "PageSource Search",
+   "category": "OSINT toolkit",
+   "feeds": [
+    "osint_tools",
+    "page:sources"
+   ],
+   "url": "https://www.pagesourcesearch.com",
+   "access": "registration",
+   "secret": null,
+   "licence": "Publisher terms (see the toolkit row)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "reference (no collection)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "held",
+   "gap_note": "New index (first crawl September 2026), five pages a site, weekly recrawl, no client-side rendering.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Toolkit use: Held for decision"
+  },
+  {
+   "id": "tool-view-tg",
+   "name": "VIEW",
+   "owner": "VIEW",
+   "category": "OSINT toolkit",
+   "feeds": [
+    "osint_tools",
+    "page:sources"
+   ],
+   "url": "https://view.tg/en",
+   "access": "open",
+   "secret": null,
+   "licence": "Publisher terms (see the toolkit row)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "reference (no collection)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Toolkit use: Reference"
+  },
+  {
+   "id": "tool-nations-online",
+   "name": "Nations Online",
+   "owner": "Nations Online",
+   "category": "OSINT toolkit",
+   "feeds": [
+    "osint_tools",
+    "page:sources"
+   ],
+   "url": "https://www.nationsonline.org/",
+   "access": "open",
+   "secret": null,
+   "licence": "Publisher terms (see the toolkit row)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "reference (no collection)",
+   "health_feed": null,
+   "jobs": [],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "note": "Toolkit use: Linked"
+  },
+  {
+   "id": "cand-usgs-earthquakes",
+   "name": "USGS earthquake GeoJSON feed",
+   "owner": "U.S. Geological Survey",
+   "category": "Candidates",
+   "feeds": [],
+   "url": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php",
+   "access": "open",
+   "secret": null,
+   "licence": "U.S. Public Domain (USGS-authored data)",
+   "attribution": "",
+   "commercial_use": "Unrestricted",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "candidate",
+   "gap_note": "Not collected. Licence verified on usgs.gov (Copyrights and Credits) on 3 Nov 2026.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "terms_verified": true
+  },
+  {
+   "id": "cand-gdacs",
+   "name": "GDACS disaster alerts",
+   "owner": "UN OCHA and European Commission JRC",
+   "category": "Candidates",
+   "feeds": [],
+   "url": "https://www.gdacs.org/",
+   "access": "open",
+   "secret": null,
+   "licence": "unverified (the terms page holds a disclaimer only)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "candidate",
+   "gap_note": "Not collected. Terms page read on 3 Nov 2026 states no licence; reuse terms unverified.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "terms_verified": false
+  },
+  {
+   "id": "cand-eonet",
+   "name": "NASA EONET natural events",
+   "owner": "NASA Goddard (EONET)",
+   "category": "Candidates",
+   "feeds": [],
+   "url": "https://eonet.gsfc.nasa.gov/",
+   "access": "open",
+   "secret": null,
+   "licence": "unverified (NASA open data usually unrestricted; not stated on the EONET page)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "candidate",
+   "gap_note": "Not collected. The EONET about page states no licence.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "terms_verified": false
+  },
+  {
+   "id": "cand-cloudflare-radar",
+   "name": "Cloudflare Radar",
+   "owner": "Cloudflare",
+   "category": "Candidates",
+   "feeds": [],
+   "url": "https://radar.cloudflare.com/",
+   "access": "key",
+   "secret": {
+    "name": "CLOUDFLARE_RADAR_TOKEN",
+    "where": "none"
+   },
+   "licence": "unverified (the about page answered HTTP 403 to this review)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "candidate",
+   "gap_note": "Not collected. API token required; licence unverified.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "terms_verified": false
+  },
+  {
+   "id": "cand-ooni",
+   "name": "OONI network measurements",
+   "owner": "Open Observatory of Network Interference",
+   "category": "Candidates",
+   "feeds": [],
+   "url": "https://ooni.org/data/",
+   "access": "open",
+   "secret": null,
+   "licence": "Creative Commons (version not stated on the data page)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "candidate",
+   "gap_note": "Not collected. The data page says content is available under a Creative Commons license; the exact version is unverified.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "terms_verified": false
+  },
+  {
+   "id": "cand-ripestat",
+   "name": "RIPEstat Data API",
+   "owner": "RIPE NCC",
+   "category": "Candidates",
+   "feeds": [],
+   "url": "https://stat.ripe.net/",
+   "access": "open",
+   "secret": null,
+   "licence": "unverified (terms page answered HTTP 404)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "candidate",
+   "gap_note": "Not collected.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "terms_verified": false
+  },
+  {
+   "id": "cand-aisstream",
+   "name": "AISStream",
+   "owner": "aisstream.io",
+   "category": "Candidates",
+   "feeds": [],
+   "url": "https://aisstream.io/",
+   "access": "key",
+   "secret": {
+    "name": "AISSTREAM_API_KEY",
+    "where": "none"
+   },
+   "licence": "unverified licence; free with an API key (stated on aisstream.io)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "candidate",
+   "gap_note": "Not collected. WebSocket stream; a persistent connection does not fit a 15-minute scheduled collector.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "terms_verified": false
+  },
+  {
+   "id": "cand-gfw",
+   "name": "Global Fishing Watch APIs",
+   "owner": "Global Fishing Watch",
+   "category": "Candidates",
+   "feeds": [],
+   "url": "https://globalfishingwatch.org/our-apis/",
+   "access": "key",
+   "secret": {
+    "name": "GFW_API_TOKEN",
+    "where": "none"
+   },
+   "licence": "unverified (expected non-commercial; terms not in the page text)",
+   "attribution": "",
+   "commercial_use": "unverified (non-commercial expected)",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "candidate",
+   "gap_note": "Not collected. API token required.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "terms_verified": false
+  },
+  {
+   "id": "cand-reliefweb",
+   "name": "ReliefWeb API",
+   "owner": "UN OCHA",
+   "category": "Candidates",
+   "feeds": [],
+   "url": "https://apidoc.reliefweb.int/",
+   "access": "registration",
+   "secret": null,
+   "licence": "unverified content licence; every request needs a pre-approved appname (stated in the API docs)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "candidate",
+   "gap_note": "Not collected. Needs an approved appname.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "terms_verified": false
+  },
+  {
+   "id": "cand-acled",
+   "name": "ACLED conflict events",
+   "owner": "ACLED",
+   "category": "Candidates",
+   "feeds": [],
+   "url": "https://acleddata.com/",
+   "access": "registration",
+   "secret": null,
+   "licence": "ACLED End User License Agreement, Content Usage Terms and Attribution Policy (named on the terms page; contents unverified)",
+   "attribution": "",
+   "commercial_use": "unverified",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "candidate",
+   "gap_note": "Not collected. Registration and EULA; cited in items only through other outlets.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "terms_verified": false
+  },
+  {
+   "id": "cand-ucdp",
+   "name": "UCDP datasets and API",
+   "owner": "Uppsala Conflict Data Program",
+   "category": "Candidates",
+   "feeds": [],
+   "url": "https://ucdp.uu.se/downloads/",
+   "access": "open",
+   "secret": null,
+   "licence": "CC BY 4.0 (cite the dataset publications)",
+   "attribution": "Cite the relevant UCDP publications",
+   "commercial_use": "Allowed under CC BY 4.0",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "candidate",
+   "gap_note": "Not collected. Licence verified on the downloads page on 3 Nov 2026.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03",
+   "terms_verified": true
+  },
+  {
+   "id": "plan-otx",
+   "name": "AlienVault OTX",
+   "owner": "LevelBlue (AT&T Cybersecurity)",
+   "category": "Not implemented",
+   "feeds": [],
+   "url": "https://otx.alienvault.com/",
+   "access": "open",
+   "secret": null,
+   "licence": "unverified (not reviewed)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "not_implemented",
+   "gap_note": "No code reads it.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "plan-opensky",
+   "name": "OpenSky Network",
+   "owner": "OpenSky Network",
+   "category": "Not implemented",
+   "feeds": [],
+   "url": "https://opensky-network.org/",
+   "access": "open",
+   "secret": null,
+   "licence": "unverified (not reviewed)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "not_implemented",
+   "gap_note": "No code reads it.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "plan-notam",
+   "name": "NOTAM feeds",
+   "owner": "Aviation authorities (FAA and others)",
+   "category": "Not implemented",
+   "feeds": [],
+   "url": "https://notams.aim.faa.gov/",
+   "access": "open",
+   "secret": null,
+   "licence": "unverified (not reviewed)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "not_implemented",
+   "gap_note": "No code reads them.",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "plan-gpsjam",
+   "name": "GPSJam",
+   "owner": "John Wiseman",
+   "category": "Not implemented",
+   "feeds": [],
+   "url": "https://gpsjam.org/",
+   "access": "open",
+   "secret": null,
+   "licence": "unverified (not reviewed)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "not_implemented",
+   "gap_note": "No code reads it; GNSS interference is read from NGA warnings (a known gap).",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "plan-state-advisories",
+   "name": "U.S. State Department travel advisories",
+   "owner": "U.S. Department of State",
+   "category": "Not implemented",
+   "feeds": [],
+   "url": "https://travel.state.gov/",
+   "access": "open",
+   "secret": null,
+   "licence": "unverified (not reviewed)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "",
+   "health_feed": null,
+   "jobs": [],
+   "status": "not_implemented",
+   "gap_note": "Not collected as a feed; State Department statements are cited as items (S-STATE).",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-03"
+  },
+  {
+   "id": "source-network",
+   "name": "KTI source network (863 feeds)",
+   "owner": "Each publisher; registry by KTI",
+   "category": "Reports and blogs",
+   "feeds": [
+    "live_sources",
+    "live_triage",
+    "page:sources",
+    "page:search"
+   ],
+   "url": "https://github.com/skilfoy/kti-dashboard/blob/main/data/feeds.json",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles, summaries and links belong to their publishers; the registry is the project's own",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "tier 1 every 20 minutes, tier 2 hourly, tier 3 every four hours",
+   "health_feed": null,
+   "jobs": [
+    "sources",
+    "triage"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-17",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "list-cybersecurityrss",
+   "name": "CyberSecurityRSS feed list",
+   "owner": "zer0yu",
+   "category": "Reports and blogs",
+   "feeds": [
+    "live_sources"
+   ],
+   "url": "https://github.com/zer0yu/CyberSecurityRSS",
+   "access": "open",
+   "secret": null,
+   "licence": "List: see repository; items belong to their publishers",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "registry rebuilt by pipeline/feeds_build.py",
+   "health_feed": null,
+   "jobs": [
+    "sources"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "list-awesome-threat-intel-rss",
+   "name": "awesome-threat-intel-rss feed list",
+   "owner": "thehappydinoa",
+   "category": "Reports and blogs",
+   "feeds": [
+    "live_sources"
+   ],
+   "url": "https://github.com/thehappydinoa/awesome-threat-intel-rss",
+   "access": "open",
+   "secret": null,
+   "licence": "List CC0 1.0; items belong to their publishers",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "registry rebuilt by pipeline/feeds_build.py",
+   "health_feed": null,
+   "jobs": [
+    "sources"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "list-awesome-rss-feeds",
+   "name": "awesome-rss-feeds (national news by country)",
+   "owner": "plenaryapp",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_sources"
+   ],
+   "url": "https://github.com/plenaryapp/awesome-rss-feeds",
+   "access": "open",
+   "secret": null,
+   "licence": "List Apache 2.0; items belong to their publishers",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "registry rebuilt by pipeline/feeds_build.py",
+   "health_feed": null,
+   "jobs": [
+    "sources"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "google-news-rss",
+   "name": "Google News RSS (query and site: feeds)",
+   "owner": "Google",
+   "category": "Geopolitics",
+   "feeds": [
+    "live_sources",
+    "page:search"
+   ],
+   "url": "https://news.google.com/rss",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles and links as Google syndicates them; each article belongs to its publisher",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "tier 1, every 20 minutes",
+   "health_feed": null,
+   "jobs": [
+    "sources",
+    "reports"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "agentic-reports",
+   "name": "Agentic reports (OpenRouter free reasoning models; Bing News, Google News and DuckDuckGo search)",
+   "owner": "OpenRouter and the model providers; search by Microsoft, Google and DuckDuckGo",
+   "category": "Platform",
+   "feeds": [
+    "page:search"
+   ],
+   "url": "https://openrouter.ai/models?max_price=0",
+   "access": "key",
+   "secret": {
+    "name": "OPENROUTER_API_KEY",
+    "where": "neon_function_variable"
+   },
+   "licence": "Machine-written; each report cites its sources, which belong to their publishers",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "on request",
+   "health_feed": null,
+   "jobs": [
+    "reports"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-03",
+   "reviewed": "2026-11-17"
+  },
+  {
+   "id": "oracle-a1-launcher",
+   "name": "Oracle Cloud Always Free A1 server launcher (database host)",
+   "owner": "Oracle (KilfoyCyber tenancy)",
+   "category": "Platform",
+   "feeds": [],
+   "url": "https://docs.oracle.com/en-us/iaas/Content/FreeTier/resourceref.htm",
+   "access": "key",
+   "secret": {
+    "name": "OCI_LAUNCHER_KEY",
+    "where": "none"
+   },
+   "licence": "Operator infrastructure; no data is collected",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every 15 minutes until launched, then idle",
+   "health_feed": null,
+   "jobs": [
+    "ocia1"
+   ],
+   "status": "live",
+   "gap_note": "Chicago A1 capacity was exhausted on 18 November 2026; the job retries until a launch succeeds. Its signing key is generated by the job and kept in the Neon bucket (secrets/oci-launcher.pem), so no variable holds it.",
+   "source_ids": [],
+   "added": "2026-11-18",
+   "reviewed": "2026-11-18"
+  }
+ ]
+}
