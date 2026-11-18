@@ -313,9 +313,46 @@ export async function triageBatch(items, cap, { retry = true, reserve = 0 } = {}
   }
   return { labels: new Map(), rejects: { no_usable_answer: 1 }, missing: items.length, calls };
 }
-export async function triageDoc(extra = {}) {
-  const all = await sql(`SELECT link, kind, source, title, published, relevance, vector, theater, actors, cves, why, model, prompt_v, at, cluster, verify, verify_model FROM ti.triage
-    WHERE COALESCE(published, at) > now() - make_interval(hours => $1) AND relevance >= 1 ORDER BY relevance DESC, COALESCE(published, at) DESC`, [TRIAGE.WINDOW_H]);
+// The window's triage rows (3.0.4). Every byte a query returns counts against the Free plan's 5 GB of monthly Postgres
+// transfer, and the two full reads of the 72-hour window (the stored stories the new titles join, then the published
+// list) cost about 1.4 MB an hour, more than any other job. Rows are written once by this job and changed afterwards only
+// by the verifier, so the window is kept as a gzipped mirror in the bucket (bucket reads are not Postgres transfer): a
+// run reads the rows labelled since the mirror was written and the verified rows, overlays them, drops rows that left
+// the window, and writes the mirror back. A mirror older than MIRROR_FULL_MS, of another version, unreadable, or whose
+// row count differs from the table's count for the window is replaced by a full read.
+const MIRROR_KEY = 'mirror/triage-window.json.gz', MIRROR_FULL_MS = 6 * 3600e3, MIRROR_V = 1;
+const TRIAGE_COLS = 'link, kind, source, title, published, relevance, vector, theater, actors, cves, why, model, prompt_v, at, cluster, verify, verify_model';
+export async function triageWindow() {
+  const cut = Date.now() - TRIAGE.WINDOW_H * 3600e3, inWin = (r) => Date.parse(r.published || r.at) > cut;
+  let m = null;
+  try { const o = await s3Get(MIRROR_KEY); if (o) m = JSON.parse(gunzipSync(o.buf).toString('utf8')); } catch { m = null; }
+  let rows, mode;
+  if (m && m.v === MIRROR_V && Array.isArray(m.rows) && m.max_at && Date.now() - Date.parse(m.full_at) < MIRROR_FULL_MS) {
+    // Two minutes of overlap covers a row whose transaction began before the mirror's newest row and committed after it.
+    const [fresh, ver, [cnt]] = await sqlTx([
+      [`SELECT ${TRIAGE_COLS} FROM ti.triage WHERE at > $1::timestamptz - interval '2 minutes'`, [m.max_at]],
+      [`SELECT link, relevance, verify, verify_model FROM ti.triage WHERE verify IS NOT NULL AND COALESCE(published, at) > now() - make_interval(hours => $1)`, [TRIAGE.WINDOW_H]],
+      [`SELECT count(*)::int AS n FROM ti.triage WHERE COALESCE(published, at) > now() - make_interval(hours => $1)`, [TRIAGE.WINDOW_H]],
+    ]);
+    const by = new Map(m.rows.map((r) => [r.link, r]));
+    for (const r of fresh) by.set(r.link, r);
+    for (const v of ver) { const r = by.get(v.link); if (r) Object.assign(r, v); }
+    rows = [...by.values()].filter(inWin); mode = { mode: 'mirror', fresh: fresh.length, verified: ver.length };
+    // A row deleted inside the window (by hand: the scheduled delete reaches only rows a month old) leaves the counts
+    // apart, and the window is read in full.
+    if (rows.length !== cnt.n) m = null;
+  }
+  if (!m || !rows) {
+    rows = await sql(`SELECT ${TRIAGE_COLS} FROM ti.triage WHERE COALESCE(published, at) > now() - make_interval(hours => $1)`, [TRIAGE.WINDOW_H]);
+    m = { full_at: new Date().toISOString() }; mode = { mode: 'full', n: rows.length };
+  }
+  const max_at = rows.reduce((a, r) => (r.at > a ? r.at : a), m.max_at || '1970-01-01T00:00:00.000Z');
+  try { await s3Put(MIRROR_KEY, gzipSync(Buffer.from(JSON.stringify({ v: MIRROR_V, full_at: m.full_at, max_at, rows })), { level: 6 }), 'application/gzip'); } catch { /* the next run reads in full */ }
+  return { rows, ...mode };
+}
+const pubOrAt = (r) => Date.parse(r.published || r.at) || 0;
+export async function triageDoc(extra = {}, win = null) {
+  const all = (win || (await triageWindow())).rows.filter((r) => r.relevance >= 1).sort((a, b) => b.relevance - a.relevance || pubOrAt(b) - pubOrAt(a));
   // One row per story: the representative, with the other publishers that carried it. KEV marks come from the catalog
   // the psirt job last read.
   const kev = new Set(((await kvGet('psirt:kev')) || {}).ids || []);
@@ -392,8 +429,7 @@ export async function jobTriage() {
   const tier = await triageCap();
   // A title that is the same story as one already labelled in the window takes that story's label and joins it, with no
   // request: hourly feeds carry a story for hours after its first title was labelled.
-  const stored = (await sql(`SELECT link, title, cves, relevance, vector, theater, actors, why, model FROM ti.triage
-    WHERE COALESCE(published, at) > now() - make_interval(hours => $1) AND (cluster IS NULL OR cluster = link)`, [TRIAGE.WINDOW_H]))
+  const stored = (await triageWindow()).rows.filter((r) => !r.cluster || r.cluster === r.link)
     .map((r) => ({ ...r, words: titleWords(r.title), cvs: new Set(Array.isArray(r.cves) ? r.cves : []) }));
   const joined = [], fresh = [];
   for (const c of clusterTitles(pool_)) {

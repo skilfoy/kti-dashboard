@@ -108,3 +108,6 @@ CREATE TABLE IF NOT EXISTS ti.report (id text PRIMARY KEY, q text NOT NULL, type
   body text, sources jsonb, model text, corpus jsonb, error text, created_at timestamptz NOT NULL DEFAULT now(), started_at timestamptz, done_at timestamptz);
 CREATE INDEX IF NOT EXISTS report_created ON ti.report (created_at);
 INSERT INTO ti.lease (job) VALUES ('sources'), ('reports') ON CONFLICT DO NOTHING;
+-- Added 2026-11-18 (collector 2026-11-18.1): statement statistics, to rank the collector's reads by the Postgres
+-- transfer they cost (Free plan: 5 GB a month). Created by the database owner.
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;

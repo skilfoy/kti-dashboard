@@ -109,7 +109,7 @@
       drawTimeline(res); drawAdv(res);
       const cats = Object.entries(res.by_category || {}).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${v} ${CATS[k] || k}`).join(', ');
       $('search-sum').textContent = res.total
-        ? `${res.total} collected entries from ${res.publishers} publishers in the last ${res.days} days, first seen ${day(res.first_seen)}, latest ${ago(res.last_seen)} (${cats}). ${auth && auth.rows.length ? auth.rows.length + ' matches in the platform\'s own analysis.' : ''}`
+        ? `${res.relaxed ? 'No entry carries every word; closest matches on the distinctive words. ' : ''}${res.total} collected entries from ${res.publishers} publishers in the last ${res.days} days, first seen ${day(res.first_seen)}, latest ${ago(res.last_seen)} (${cats}). ${auth && auth.rows.length ? auth.rows.length + ' matches in the platform\'s own analysis.' : ''}`
         : `Nothing collected in the last ${res.days} days matches. ${auth && auth.rows.length ? auth.rows.length + ' matches in the platform\'s own analysis.' : ''} A generated report also searches the live web and news.`;
     }
   };
@@ -166,7 +166,7 @@
     $('report-title').textContent = `${typeName(r.type)}: ${r.q}`;
     const c = TI.obj(r.corpus) || {};
     const meta = [`Report ${r.id}`, 'requested ' + day(r.created_at)];
-    if (r.status === 'done') meta.push(`written by ${r.model} in ${Math.round((Date.parse(r.done_at) - Date.parse(r.started_at || r.created_at)) / 1000)} s`, `${c.cited || 0} sources cited from ${c.cited_publishers || 0} publishers; ${c.total || 0} platform entries from ${c.publishers || 0} publishers on the subject`);
+    if (r.status === 'done') meta.push(`written by ${r.model} in ${Math.round((Date.parse(r.done_at) - Date.parse(r.started_at || r.created_at)) / 1000)} s`, `${c.cited || 0} sources cited from ${c.cited_publishers || 0} publishers${c.further ? `, ${c.further} further publishers listed` : ''}; ${c.total || 0} platform entries from ${c.publishers || 0} publishers on the subject`);
     else if (r.status === 'failed') meta.push('failed: ' + (r.error || 'unknown error') + '. Use Retry to queue it again; the free models are sometimes saturated');
     else meta.push(r.status === 'queued' ? 'queued' : 'in progress');
     if (r.prompt) meta.push('direction: ' + r.prompt);
@@ -178,7 +178,7 @@
     if (rb) rb.hidden = r.status !== 'failed';
     const src = TI.list(r.sources) || [];
     $('report-sources-h').hidden = !src.length;
-    $('report-sources').innerHTML = src.map((s) => `<li id="rsrc-${s.n}" value="${s.n}"><a href="${esc(safeUrl(s.url_resolved || s.url))}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a> <span class="ti-dim">${esc(s.publisher || '')}${s.published ? ' · ' + esc(day(s.published)) : ''} · ${esc(s.via || '')}</span></li>`).join('');
+    $('report-sources').innerHTML = src.map((s) => `<li id="rsrc-${s.n}" value="${s.n}"><a href="${esc(safeUrl(s.url_resolved || s.url))}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a> <span class="ti-dim">${esc(s.publisher || '')}${s.published ? ' · ' + esc(day(s.published)) : ''} · ${esc(s.role === 'further' ? 'further reporting' : String(s.via || '').replace(/^corpus(:subject)?$/, 'platform'))}</span></li>`).join('');
     state.report = r;
   };
   const openReport = async (id) => {
