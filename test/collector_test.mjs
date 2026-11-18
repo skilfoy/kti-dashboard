@@ -555,6 +555,16 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(t2.ok && t2.candidates === 2 && t2.labelled === 2 && llm.length === 2 && llm[0].structured && !llm[1].structured, 'plain retry after a structured refusal ' + JSON.stringify({ c: t2.candidates, l: t2.labelled }));
   const t3 = await M.runJob('triage');
   ok(t3.ok && t3.candidates === 0 && llm.length === 2, 'nothing new: no request');
+  // The window mirror: the run wrote it; the next read takes it with the rows labelled since, and the published list it
+  // builds is the one a full read builds.
+  const winN = (await db.query(`SELECT count(*)::int AS n FROM ti.triage WHERE COALESCE(published, at) > now() - interval '72 hours'`)).rows[0].n;
+  const w1 = await M.triageWindow();
+  const docMirror = await M.triageDoc({}, w1);
+  bucket.delete('ti-docs/mirror/triage-window.json.gz');
+  const w2 = await M.triageWindow(), docFull = await M.triageDoc({}, w2);
+  const strip = (d) => JSON.stringify(d.rows);
+  ok(w1.mode === 'mirror' && w1.rows.length === winN && w2.mode === 'full' && strip(docMirror) === strip(docFull) && bucket.has('ti-docs/mirror/triage-window.json.gz'),
+    'the triage window comes from the bucket mirror plus new rows, and gives the same list as a full read ' + JSON.stringify({ m: w1.mode, n: w1.rows.length, winN, f: w2.mode }));
   // Budget: a spent day stops requests; a 429 stops the run without failing it.
   await db.query(`UPDATE ti.kv SET v = jsonb_set(v, '{used}', '45') WHERE k = 'triage:budget'`);
   await db.query(`DELETE FROM ti.triage WHERE link LIKE '%fortinet%'`);
@@ -748,6 +758,9 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(q1.total === 1 && q1.hits[0].relevance === 3 && q1.hits[0].vector === 'Supply chain & third parties' && /«/.test(q1.hits[0].snippet) && q2.total === 1 && q3.total === 1 && q4.total === 0 && q1.by_day.length === 1,
     'search finds whole words, prefixes and phrases, applies filters, and carries the triage label ' + JSON.stringify({ q1: q1.total, q2: q2.total, q3: q3.total, q4: q4.total }));
   ok((await M.search({ q: 'x' })).total === 0, 'a one-character query returns nothing');
+  const q5 = await M.search({ q: 'Optimizely security incident November 2026 malicious code' }), q6 = await M.search({ q: 'Optimizely security incident November 2026 malicious code', relax: false });
+  ok(q5.relaxed === true && q5.total === 1 && q5.hits[0].link === 'https://direct.example/a1' && q6.total === 0 && q1.relaxed === false,
+    'a long query with no entry carrying every word falls back to its distinctive words, and says so ' + JSON.stringify({ q5: q5.total, r: q5.relaxed, q6: q6.total }));
   // Agentic report: a tool round (web search), then the final answer; an invented citation is dropped.
   process.env.OPENROUTER_API_KEY = 'sk-or-test';
   await db.query(`DELETE FROM ti.kv WHERE k IN ('report:models', 'report:budget')`);
@@ -773,9 +786,19 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const tr = await trig.json(), rep = await M.getReport(st.id);
   const src = rep.sources || [];
   ok(trig.status === 200 && tr.ok && rep.status === 'done' && rep.model === 'test/big:free' && calls.length === 4 && calls[1].tools.length === 3 && !calls[3].tools && /Revise the report/.test(calls[3].messages.slice(-1)[0].content) && (rep.steps || []).some((x) => /trying it once more/.test(x.text))
-    && !/\[99\]/.test(rep.body) && src.length === 2 && src.some((x) => x.url === 'https://analysis.example/optimizely') && src.some((x) => x.via === 'corpus'),
+    && !/\[99\]/.test(rep.body) && src.length === 2 && src.some((x) => x.url === 'https://analysis.example/optimizely') && src.some((x) => x.via === 'corpus:subject'),
     'the upload trigger runs the report: a free model with tools, web search through Bing News with the publisher link unwrapped, an invented citation dropped ' + JSON.stringify({ tr, status: rep.status, err: rep.error, src, calls: calls.length }));
   ok((await M.getReport('nope')) === null && (await M.listReports()).some((r) => r.id === st.id), 'reports are listed and ids are checked');
+  // Breadth: entries on the subject from publishers the report does not cite are listed after it, marked as such.
+  await db.query(`INSERT INTO ti.item (link, fp, feed, source, host, title, summary, published, category, region, lang) VALUES
+    ('https://other1.example/o', 'fp-o1', 'f1', 'Other One', 'other1.example', 'Optimizely customers urged to check project code', null, now(), 'cyber-news', 'global', 'en'),
+    ('https://other2.example/o', 'fp-o2', 'f1', 'Other Two', 'other2.example', 'Optimizely confirms account-signup flaw', null, now(), 'cyber-news', 'global', 'en') ON CONFLICT DO NOTHING`);
+  const st2 = await M.startReport({ q: 'Optimizely', type: 'summary', ip: 'abc' });
+  const r2 = await M.runReport(st2.id), rep2 = await M.getReport(st2.id), src2 = rep2.sources || [];
+  ok(r2.ok && r2.further === 2 && /## Further reporting in the collection/.test(rep2.body) && src2.filter((s) => s.role === 'further').length === 2 && rep2.corpus.further === 2 && rep2.corpus.cited === src2.filter((s) => s.role !== 'further').length,
+    'uncited entries on the subject from other publishers are listed as further reporting ' + JSON.stringify({ r2, further: src2.filter((s) => s.role === 'further').map((s) => s.publisher) }));
+  const pb = Buffer.concat([Buffer.from([0x08, 0x13, 0x22, 21]), Buffer.from('https://example.com/a'), Buffer.from([0xd2, 0x01, 0x00])]).toString('base64url');
+  ok(M.gnewsIdUrl(pb) === 'https://example.com/a' && M.gnewsIdUrl('CBMiAU_yqLxyz') === null, 'an older Google News id names the publisher link; a current one is left to the article endpoint');
   for (let k = 0; k < 6; k++) await M.startReport({ q: 'topic ' + k, type: 'exec', ip: 'flood' });
   const lim = await M.startReport({ q: 'topic 9', type: 'exec', ip: 'flood' });
   ok(lim.status === 429 && /an hour/.test(lim.error), 'reports are limited per address');

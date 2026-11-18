@@ -156,29 +156,55 @@ export async function sourcesDoc(reg) {
 // first, with each hit's triage label and the publishers that carried the same story. Query syntax is web-style
 // ("quoted phrase", -exclude, OR); a word that the index does not hold as a whole word is matched as a prefix, then by
 // substring of the title.
-export async function search({ q = '', days = 30, category = '', region = '', limit = 50, offset = 0 } = {}) {
+export async function search({ q = '', days = 30, category = '', region = '', limit = 50, offset = 0, relax = true } = {}) {
   q = String(q || '').trim().slice(0, 200);
   if (q.length < 2) return { q, hits: [], total: 0 };
   days = Math.max(1, Math.min(45, +days || 30)); limit = Math.max(1, Math.min(100, +limit || 50)); offset = Math.max(0, Math.min(1000, +offset || 0));
   const words = q.replace(/["()]/g, ' ').split(/\s+/).filter((w) => w && !/^(or|and|-.*)$/i.test(w));
-  const prefix = words.map((w) => w.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')).filter(Boolean).map((w) => w + ':*').join(' & ');
+  const lex = words.map((w) => w.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')).filter(Boolean);
+  const prefix = lex.map((w) => w + ':*').join(' & ');
   const like = '%' + words.join('%').replace(/[%_\\]/g, '') + '%';
-  const params = [q, prefix || 'zzzz', days, category || null, region || null, like];
-  const where = `i.published > now() - make_interval(days => $3) AND ($4::text IS NULL OR i.category = $4) AND ($5::text IS NULL OR i.region = $5)
-    AND (i.tsv @@ websearch_to_tsquery('simple', $1) OR i.tsv @@ to_tsquery('simple', $2) OR i.title ILIKE $6)`;
-  const [hits, facets, adv] = await sqlTx([
-    [`SELECT i.link, i.title, i.source, i.host, i.published, i.category, i.region, i.lang, ts_headline('simple', coalesce(i.summary, ''), websearch_to_tsquery('simple', $1), 'MaxWords=40, MinWords=15, StartSel=«, StopSel=»') AS snippet,
-        t.relevance, t.vector, t.theater, t.actors, t.why, t.verify, coalesce(t.cluster, t.link) AS story,
-        ts_rank(i.tsv, websearch_to_tsquery('simple', $1)) + CASE WHEN i.title ILIKE $6 THEN 0.5 ELSE 0 END AS rank
-      FROM ti.item i LEFT JOIN ti.triage t ON t.link = i.link WHERE ${where}
-      ORDER BY date_trunc('day', i.published) DESC, rank DESC, i.published DESC LIMIT ${limit} OFFSET ${offset}`, params],
-    [`SELECT count(*)::int AS total, count(DISTINCT i.host)::int AS publishers, min(i.published) AS first_seen, max(i.published) AS last_seen FROM ti.item i WHERE ${where}`, params],
-    [`SELECT a.link, a.title, a.feed AS source, coalesce(a.published, a.seen_at) AS published, a.cves FROM ti.advisory a
-      WHERE coalesce(a.published, a.seen_at) > now() - make_interval(days => $2) AND (a.title ILIKE $1 OR a.cves::text ILIKE $1) ORDER BY 4 DESC LIMIT 20`, [like, days]],
-  ]);
-  const cats = await sql(`SELECT i.category, count(*)::int AS n FROM ti.item i WHERE ${where} GROUP BY 1 ORDER BY 2 DESC`, params);
-  const days_ = await sql(`SELECT to_char(date_trunc('day', i.published), 'YYYY-MM-DD') AS day, count(*)::int AS n, count(DISTINCT i.host)::int AS publishers FROM ti.item i WHERE ${where} GROUP BY 1 ORDER BY 1`, params);
-  const f = facets[0] || {};
-  return { q, days, total: f.total || 0, publishers: f.publishers || 0, first_seen: f.first_seen || null, last_seen: f.last_seen || null,
-    by_category: Object.fromEntries(cats.map((c) => [c.category, c.n])), by_day: days_, advisories: adv, hits, limit, offset };
+  // Strict: every word (web syntax, then as prefixes, then the title as a substring). Relaxed (3.0.4), used only when a
+  // query of three or more words matches nothing strictly, so a long agent query ("Optimizely security incident November
+  // 2026 malicious code supply chain attack" found nothing on 18 November) still finds the reporting that names the
+  // subject: see below.
+  const strict = `(i.tsv @@ websearch_to_tsquery('simple', $1) OR i.tsv @@ to_tsquery('simple', $2) OR i.title ILIKE $6)`;
+  const anyWords = [...new Set(lex.filter((w) => w.length >= 4 && !/^\d+$/.test(w)))].map((w) => w + ':*').join(' | ');
+  const run = async (match, rankExpr, order, tq = '') => {
+    const params = [q, prefix || 'zzzz', days, category || null, region || null, like, tq || 'zzzz'];
+    // Every parameter is named once in the filter, so each statement can type all seven whichever match it uses.
+    const where = `i.published > now() - make_interval(days => $3) AND ($4::text IS NULL OR i.category = $4) AND ($5::text IS NULL OR i.region = $5)
+      AND coalesce($1::text, $2::text, $6::text, $7::text, '') IS NOT NULL AND ${match}`;
+    const [hits, facets, cats, days_] = await sqlTx([
+      [`SELECT i.link, i.title, i.source, i.host, i.published, i.category, i.region, i.lang, ts_headline('simple', coalesce(i.summary, ''), ${rankExpr.q}, 'MaxWords=40, MinWords=15, StartSel=«, StopSel=»') AS snippet,
+          t.relevance, t.vector, t.theater, t.actors, t.why, t.verify, coalesce(t.cluster, t.link) AS story, ${rankExpr.rank} AS rank
+        FROM ti.item i LEFT JOIN ti.triage t ON t.link = i.link WHERE ${where}
+        ORDER BY ${order} LIMIT ${limit} OFFSET ${offset}`, params],
+      [`SELECT count(*)::int AS total, count(DISTINCT i.host)::int AS publishers, min(i.published) AS first_seen, max(i.published) AS last_seen FROM ti.item i WHERE ${where}`, params],
+      [`SELECT i.category, count(*)::int AS n FROM ti.item i WHERE ${where} GROUP BY 1 ORDER BY 2 DESC`, params],
+      [`SELECT to_char(date_trunc('day', i.published), 'YYYY-MM-DD') AS day, count(*)::int AS n, count(DISTINCT i.host)::int AS publishers FROM ti.item i WHERE ${where} GROUP BY 1 ORDER BY 1`, params],
+    ]);
+    return { hits, f: facets[0] || {}, cats, days_ };
+  };
+  let r = await run(strict, { q: `websearch_to_tsquery('simple', $1)`, rank: `ts_rank(i.tsv, websearch_to_tsquery('simple', $1)) + CASE WHEN i.title ILIKE $6 THEN 0.5 ELSE 0 END` },
+    `date_trunc('day', i.published) DESC, rank DESC, i.published DESC`), relaxed = false;
+  if (relax && !r.f.total && lex.length >= 3 && anyWords) {
+    // The distinctive words carry the subject: those that occur in at most 3 percent of the window's entries, all of them
+    // required, then any of them; a query with no distinctive word falls back to any of its words.
+    const terms = [...new Set(lex.filter((w) => w.length >= 4 && !/^\d+$/.test(w)))].slice(0, 10);
+    const df = await sql(`SELECT w, (SELECT count(*)::int FROM ti.item i WHERE i.published > now() - make_interval(days => $2) AND i.tsv @@ to_tsquery('simple', w || ':*')) AS n,
+        (SELECT count(*)::int FROM ti.item i WHERE i.published > now() - make_interval(days => $2)) AS of FROM jsonb_array_elements_text($1::jsonb) AS w`, [terms, days]);
+    const rare = df.filter((d) => d.n > 0 && d.n <= Math.max(50, 0.03 * d.of)).sort((a, b) => a.n - b.n).map((d) => d.w + ':*');
+    const tries = rare.length ? [rare.join(' & '), rare.join(' | ')] : [anyWords];
+    const rq = { q: `to_tsquery('simple', $7)`, rank: `ts_rank_cd(i.tsv, to_tsquery('simple', $7))` };
+    for (const tq of tries) {
+      r = await run(`i.tsv @@ to_tsquery('simple', $7)`, rq, `rank DESC, i.published DESC`, tq); relaxed = true;
+      if (r.f.total) break;
+    }
+  }
+  const [adv] = await sqlTx([[`SELECT a.link, a.title, a.feed AS source, coalesce(a.published, a.seen_at) AS published, a.cves FROM ti.advisory a
+      WHERE coalesce(a.published, a.seen_at) > now() - make_interval(days => $2) AND (a.title ILIKE $1 OR a.cves::text ILIKE $1) ORDER BY 4 DESC LIMIT 20`, [like, days]]]);
+  const f = r.f;
+  return { q, days, relaxed, total: f.total || 0, publishers: f.publishers || 0, first_seen: f.first_seen || null, last_seen: f.last_seen || null,
+    by_category: Object.fromEntries(r.cats.map((c) => [c.category, c.n])), by_day: r.days_, advisories: adv, hits: r.hits, limit, offset };
 }

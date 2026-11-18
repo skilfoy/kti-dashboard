@@ -16,7 +16,7 @@ export const REPORT = { ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions
   PREFER: ['nvidia/nemotron-3-ultra-550b-a55b:free', 'inclusionai/ling-3.2-flash:free', 'particle-ai/particle-1:free', 'baidu/ernie-5.5-flash-preview:free',
     'nvidia/nemotron-3.5-super-vl:free', 'thinkingmachines/inkling-2-small:free', 'dots-studio/dots-3-note-preview:free'],
   MIN_CONTEXT: 200000, ROUNDS: 8, BUDGET_MS: 540000, CALL_MS: 150000, FINAL_MS: 240000, MAX_TOKENS: 16000, DAILY_CAP: 240, PER_IP_HOUR: 6, PER_DAY: 150,
-  CORPUS_HITS: 40, PAGE_CHARS: 7000, CONTEXT_CHARS: 90000 };
+  CORPUS_HITS: 40, FURTHER: 15, PAGE_CHARS: 7000, CONTEXT_CHARS: 90000 };
 // The working context is kept under CONTEXT_CHARS: tool results older than the last two are cut to their first 1,200
 // characters (the numbered source lines and the opening of a page survive). A model that misses its deadline gets one more
 // try on a context cut to half that size before the conversation passes to the next model; once two models have failed,
@@ -151,12 +151,51 @@ export function pageText(html) {
 }
 // A Google News article link redirects through a script; the publisher's own address is found by searching Bing News for
 // the exact title and taking the result whose title matches.
+// A Google News article link names the publisher's URL inside its id. Older ids carry it in the base64 protobuf;
+// current ids (CBMi... with an AU_yqL payload) are resolved by Google News's own article endpoint, which the article page
+// signs. Either way no search is spent; Bing News by title is the fallback (3.0.4: on 18 November four of four Google
+// News links in a summary report went unread because Bing had no exact-title match).
+export function gnewsIdUrl(id) {
+  try {
+    const raw = Buffer.from(String(id).replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('latin1');
+    const m = raw.match(/https?:\/\/[\x21-\x7e]+/);
+    if (m && !/^https?:\/\/news\.google\./.test(m[0]) && !/AU_yqL/.test(raw)) return m[0].replace(/[\x00-\x20\x7f-\xff].*$/, '');
+  } catch { /* not base64 */ }
+  return null;
+}
+export async function gnewsDecode(url) {
+  const id = (String(url).match(/\/(?:rss\/)?articles\/([A-Za-z0-9_-]+)/) || [])[1];
+  if (!id) return null;
+  const direct = gnewsIdUrl(id);
+  if (direct) return direct;
+  const pg = await get('https://news.google.com/articles/' + id, { timeout: 12000, headers: { accept: 'text/html' } });
+  const sg = (String(pg.text || '').match(/data-n-a-sg="([^"]+)"/) || [])[1], ts = (String(pg.text || '').match(/data-n-a-ts="([^"]+)"/) || [])[1];
+  if (!pg.ok || !sg || !ts) return null;
+  const inner = JSON.stringify(['garturlreq', [['X', 'X', ['X', 'X'], null, null, 1, 1, 'US:en', null, 1, null, null, null, null, null, 0, 1], 'X', 'X', 1, [1, 1, 1], 1, 1, null, 0, 0, null, 0], id, +ts, sg]);
+  const r = await get('https://news.google.com/_/DotsSplashUi/data/batchexecute', { method: 'POST', timeout: 12000,
+    headers: { 'content-type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body: 'f.req=' + encodeURIComponent(JSON.stringify([[['Fbv4je', inner, null, 'generic']]])) });
+  if (!r.ok) return null;
+  try {
+    for (const line of String(r.text).split('\n')) {
+      if (!line.startsWith('[[')) continue;
+      for (const e of JSON.parse(line)) if (e[0] === 'wrb.fr' && e[1] === 'Fbv4je' && e[2]) { const u = JSON.parse(e[2])[1]; if (/^https?:\/\//.test(u)) return u; }
+    }
+  } catch { /* unexpected shape */ }
+  return null;
+}
 export async function resolveNewsLink(url, title) {
-  if (!/news\.google\.com$/.test(hostOf(url)) || !title) return url;
-  const r = await get('https://www.bing.com/news/search?' + new URLSearchParams({ q: '"' + String(title).slice(0, 150) + '"', format: 'rss' }), { timeout: 12000, headers: { accept: 'application/rss+xml' } });
+  if (!/news\.google\.com$/.test(hostOf(url))) return url;
+  const d = await gnewsDecode(url);
+  if (d) return d;
+  if (!title) return url;
   const norm = (t) => String(t || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-  const want = norm(title), hit = r.ok ? rssItems(r.text).find((x) => { const n = norm(x.title); return n && (n === want || n.startsWith(want.slice(0, 60)) || want.startsWith(n.slice(0, 60))); }) : null;
-  return hit ? bingTarget(hit.url) : url;
+  const want = norm(title);
+  for (const q of ['"' + String(title).slice(0, 150) + '"', String(title).slice(0, 150)]) {
+    const r = await get('https://www.bing.com/news/search?' + new URLSearchParams({ q, format: 'rss' }), { timeout: 12000, headers: { accept: 'application/rss+xml' } });
+    const hit = r.ok ? rssItems(r.text).find((x) => { const n = norm(x.title); return n && (n === want || n.startsWith(want.slice(0, 50)) || want.startsWith(n.slice(0, 50))); }) : null;
+    if (hit) return bingTarget(hit.url);
+  }
+  return url;
 }
 export async function fetchPage(url, title) {
   if (!/^https?:\/\//.test(String(url || ''))) return { ok: false, error: 'not a web address' };
@@ -196,7 +235,7 @@ export async function runReport(id) {
   try {
     await step(id, 'Searching the platform\'s collected reporting');
     const c = await search({ q: r.q, days: 45, limit: REPORT.CORPUS_HITS });
-    for (const h of c.hits) addSrc({ title: h.title, url: h.link, publisher: h.source || h.host, published: h.published, snippet: String(h.snippet || '').replace(/[«»]/g, '') }, 'corpus');
+    for (const h of c.hits) addSrc({ title: h.title, url: h.link, publisher: h.source || h.host, published: h.published, snippet: String(h.snippet || '').replace(/[«»]/g, '') }, c.relaxed ? 'corpus' : 'corpus:subject');
     for (const a of c.advisories || []) addSrc({ title: a.title, url: a.link, publisher: a.source, published: a.published }, 'advisory');
     const corpus = { total: c.total, publishers: c.publishers, first_seen: c.first_seen, last_seen: c.last_seen, by_category: c.by_category, by_day: c.by_day };
     await sql(`UPDATE ti.report SET corpus = $2::jsonb WHERE id = $1`, [id, corpus]);
@@ -263,20 +302,38 @@ Starting sources:\n${sources.length ? sources.map(fmtSrc).join('\n') : '(none: t
     const want = Math.min(8, sources.length);
     if (citedIn(final).size < want && Date.now() - t0 < REPORT.BUDGET_MS && model && (await reportBudget())) {
       await step(id, `Draft cites ${citedIn(final).size} sources; asking for corroboration from more of the ${sources.length} sources seen`);
-      messages.push({ role: 'assistant', content: final }, { role: 'user', content: `Revise the report. It cites ${citedIn(final).size} distinct sources; corroborate each key fact with every listed source that carries it, citing at least ${want} distinct sources from as many independent publishers as the list allows. Keep the structure, change no fact the sources do not support, and return the full revised report only.` });
+      const have = citedIn(final), pubsCited = new Set(sources.filter((s) => have.has(s.n)).map((s) => (s.publisher || hostOf(s.url)).toLowerCase()));
+      const offer = sources.filter((s) => !have.has(s.n) && !pubsCited.has((s.publisher || hostOf(s.url)).toLowerCase())).slice(0, 30);
+      messages.push({ role: 'assistant', content: final }, { role: 'user', content: `Revise the report. It cites ${have.size} distinct sources; corroborate each key fact with every listed source that carries it, citing at least ${want} distinct sources from as many independent publishers as the list allows. These sources from publishers the draft does not cite came from searches on this subject:\n${offer.map((s) => `[${s.n}] ${s.publisher || hostOf(s.url)}: ${s.title}`).join('\n')}\nAdd a citation only where the source's title or text carries the fact. Keep the structure, change no fact the sources do not support, and return the full revised report only.` });
       trimContext(messages, REPORT.CONTEXT_CHARS);
       const v = await orChat(model, messages, null, REPORT.FINAL_MS);
       if (v.ok && v.msg.content && citedIn(v.msg.content).size > citedIn(final).size) final = String(v.msg.content).trim();
     }
     // Citations to numbers that were never given are dropped; the source list holds the cited sources in order.
     const cited = new Set([...final.matchAll(/\[(\d{1,3})\]/g)].map((m) => +m[1]).filter((n) => n >= 1 && n <= sources.length));
-    const body = final.replace(/\[(\d{1,3})\]/g, (m, n) => (cited.has(+n) ? m : ''));
+    let body = final.replace(/\[(\d{1,3})\]/g, (m, n) => (cited.has(+n) ? m : ''));
+    // Breadth of coverage (3.0.4): the platform's own entries that matched the subject itself, from publishers the report
+    // does not cite, are listed after it (up to FURTHER), so the reader sees who else carried the story. They are marked
+    // as coverage the model did not check fact by fact.
+    const citedPubs = new Set(sources.filter((s) => cited.has(s.n)).map((s) => (s.publisher || hostOf(s.url)).toLowerCase()));
+    const further = [];
+    for (const s of sources) {
+      if (further.length >= REPORT.FURTHER) break;
+      const p = (s.publisher || hostOf(s.url)).toLowerCase();
+      if (s.via === 'corpus:subject' && !cited.has(s.n) && p && !citedPubs.has(p)) { further.push(s); citedPubs.add(p); }
+    }
+    if (further.length) {
+      body += `\n\n## Further reporting in the collection\n\nOther publishers in the platform's collection carried this subject. These entries matched the subject search and are listed for breadth; the report above was not checked against each of them.\n\n`
+        + further.map((s) => `- [${s.n}] ${s.publisher || hostOf(s.url)}${s.published ? ', ' + String(s.published).slice(0, 10) : ''}: ${s.title}`).join('\n');
+      for (const s of further) { cited.add(s.n); s.role = 'further'; }
+    }
     const list = sources.filter((s) => cited.has(s.n)).map(({ snippet, ...s }) => s);
-    const pubs = new Set(list.map((s) => (s.publisher || hostOf(s.url)).toLowerCase()));
+    const pubs = new Set(list.filter((s) => s.role !== 'further').map((s) => (s.publisher || hostOf(s.url)).toLowerCase()));
+    const nCited = list.filter((s) => s.role !== 'further').length;
     await sql(`UPDATE ti.report SET status = 'done', body = $2, sources = $3::jsonb, model = $4, done_at = now(), corpus = corpus || $5::jsonb WHERE id = $1`,
-      [id, body, list, model, { cited: list.length, cited_publishers: pubs.size, seen: sources.length, rounds, ms: Date.now() - t0 }]);
-    await step(id, `Report written by ${model}: ${list.length} sources cited from ${pubs.size} publishers`);
-    return { id, ok: true, model, cited: list.length, rounds, ms: Date.now() - t0 };
+      [id, body, list, model, { cited: nCited, cited_publishers: pubs.size, further: further.length, seen: sources.length, rounds, ms: Date.now() - t0 }]);
+    await step(id, `Report written by ${model}: ${nCited} sources cited from ${pubs.size} publishers${further.length ? `, ${further.length} further publishers listed` : ''}`);
+    return { id, ok: true, model, cited: nCited, further: further.length, rounds, ms: Date.now() - t0 };
   } catch (e) {
     await sql(`UPDATE ti.report SET status = 'failed', error = $2, done_at = now() WHERE id = $1`, [id, String((e && e.message) || e).slice(0, 500)]);
     return { id, ok: false, error: String((e && e.message) || e) };
