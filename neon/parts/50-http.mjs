@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------- runner
 const JOBS = { gdelt: jobGdelt, infra: jobInfra, health: jobHealth, snap: jobSnap, ioda: jobIoda, retention: jobRetention, lists: jobLists, fires: jobFires,
-  maritime: jobMaritime, leaksites: jobLeaksites, ransompay: jobRansompay, unit42: jobUnit42, genioc: jobGenioc, lanesreg: jobLanesreg, blogs: jobBlogs, links: jobLinks, sec8k: jobSec8k };
+  maritime: jobMaritime, leaksites: jobLeaksites, ransompay: jobRansompay, unit42: jobUnit42, genioc: jobGenioc, lanesreg: jobLanesreg, blogs: jobBlogs, links: jobLinks, sec8k: jobSec8k, ocia1: jobOciA1 };
 const LEASE_S = { gdelt: 240, infra: 240, health: 120, snap: 120, ioda: 120, retention: 120, lists: 180, fires: 180, maritime: 120, leaksites: 120, ransompay: 240,
-  unit42: 180, genioc: 240, lanesreg: 120, blogs: 240, links: 180, sec8k: 120 };
+  unit42: 180, genioc: 240, lanesreg: 120, blogs: 240, links: 180, sec8k: 120, ocia1: 120 };
 // Submarine cables (37e-cables.mjs) on the lease row reserved for them since G26: weekly, Sundays at 05:19 UTC.
 JOBS.cables = jobCables;
 LEASE_S.cables = 180;
@@ -19,7 +19,7 @@ export async function runJob(job, opts = {}) {
   if (!fn) return { job, ok: false, error: 'unknown job' };
   if (!opts.keepCache) RUN_CACHE.clear();
   const holder = (opts.holder || 'run') + ':' + Math.random().toString(36).slice(2, 10);
-  const started = new Date();
+  const started = new Date(), io0 = { calls: DB_IO.calls, bytes: DB_IO.bytes };
   let lease;
   try {
     lease = await sql(`UPDATE ti.lease SET holder = $1, until = now() + make_interval(secs => $2) WHERE job = $3 AND (until < now() OR holder = $1) RETURNING job`, [holder, LEASE_S[job], job]);
@@ -30,6 +30,8 @@ export async function runJob(job, opts = {}) {
   // A job can finish its work yet fail the run (the blogs job holding a shrunken document): it keeps its detail.
   if (ok && result && result.run_failed) { ok = false; result.error = String(result.run_failed); delete result.run_failed; }
   const ms = Date.now() - started.getTime();
+  // Query results the job read (requests in flight on the same instance may add to it), for the transfer budget.
+  if (result && typeof result === 'object') result.db = { calls: DB_IO.calls - io0.calls, kb: Math.round((DB_IO.bytes - io0.bytes) / 1024) };
   try {
     await sqlTx([
       [`UPDATE ti.lease SET until = 'epoch' WHERE job = $1 AND holder = $2`, [job, holder]],
@@ -65,6 +67,8 @@ export function plan(at) {
     jobs.push('triageeval');
   }
   if (m >= 45) jobs.push('retention', 'fires', 'maritime', 'sources', 'triage');
+  // Until the Oracle A1 server is launched (37j-oci.mjs), every slot asks for one; afterwards the job returns at once.
+  jobs.push('ocia1');
   jobs.push('reports');
   return jobs;
 }

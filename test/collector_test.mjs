@@ -910,11 +910,26 @@ ok(!M.KNOWN_GAPS.greynoise && M.feedState({ feed: 'greynoise', ok: true, status:
   ok((await call('/status', { headers: { 'x-ti-key': 'k'.repeat(48) } })).status === 200, 'operator key accepted when configured');
   const t = await call('/', { method: 'POST', headers: { 'x-neon-trigger-invocation-id': 'abc', 'content-type': 'application/json' }, body: JSON.stringify({ version: 1, trigger: { type: 'schedule' }, data: { scheduled_at: '2026-10-17T18:15:00Z' } }) });
   const tj = await t.json();
-  ok(t.status === 200 && tj.jobs.map((j) => j.job).join() === 'gdelt,health,ioda,sources,lists,leaksites,links,triageeval,reports', 'trigger plan at :15 ' + tj.jobs.map((j) => j.job));
+  ok(t.status === 200 && tj.jobs.map((j) => j.job).join() === 'gdelt,health,ioda,sources,lists,leaksites,links,triageeval,ocia1,reports', 'trigger plan at :15 ' + tj.jobs.map((j) => j.job));
   const st = await (await call('/status', bearer(mint()))).json();
   ok(st.gdelt_files.files >= 288 && st.version === M.VERSION && st.runs.length > 0, 'status ' + JSON.stringify(st.gdelt_files));
-  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:34:00Z'))) === '["gdelt","infra","snap","sources","reports"]', 'sources in every slot, reports last');
-  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:00:00Z'))) === '["gdelt","infra","snap","sources","reports"]' && JSON.stringify(M.plan(new Date('2026-10-17T18:45:00Z'))) === '["gdelt","health","ioda","retention","fires","maritime","sources","triage","reports"]'
+  // Oracle A1 launcher: the key is made once and kept outside docs/, the job waits for its settings, and requests are
+  // signed the way Oracle verifies them.
+  const oa = await M.runJob('ocia1'), ob = await M.runJob('ocia1');
+  ok(oa.ok && oa.waiting === 'settings' && /BEGIN PUBLIC KEY/.test(oa.public_key) && /^([0-9a-f]{2}:){15}[0-9a-f]{2}$/.test(oa.fingerprint) && ob.fingerprint === oa.fingerprint
+    && bucket.has('ti-docs/secrets/oci-launcher.pem') && ![...bucket.keys()].some((k) => k.startsWith('ti-docs/docs/') && /oci/.test(k)), 'the launcher keeps one key, outside the served documents, and waits for settings ' + JSON.stringify({ w: oa.waiting, fp: oa.fingerprint }));
+  {
+    const { generateKeyPairSync, verify: cverify } = await import('node:crypto');
+    const kp = generateKeyPairSync('rsa', { modulusLength: 2048 });
+    const body = '{"a":1}', date = 'Thu, 05 Jan 2014 21:31:40 GMT';
+    const h = M.ociSignedHeaders({ method: 'POST', url: 'https://iaas.us-chicago-1.oraclecloud.com/20160918/instances?x=1', body, keyId: 't/u/f', priv: kp.privateKey, date });
+    const sig = /signature="([^"]+)"/.exec(h.authorization)[1];
+    const signing = ['(request-target): post /20160918/instances?x=1', `date: ${date}`, 'host: iaas.us-chicago-1.oraclecloud.com', `x-content-sha256: ${h['x-content-sha256']}`, 'content-type: application/json', 'content-length: 7'].join('\n');
+    ok(cverify('sha256', Buffer.from(signing), kp.publicKey, Buffer.from(sig, 'base64')) && /headers="\(request-target\) date host x-content-sha256 content-type content-length"/.test(h.authorization) && /keyId="t\/u\/f"/.test(h.authorization),
+      'Oracle request signature covers the target, date, host and body digest');
+  }
+  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:34:00Z'))) === '["gdelt","infra","snap","sources","ocia1","reports"]', 'sources in every slot, reports last');
+  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:00:00Z'))) === '["gdelt","infra","snap","sources","ocia1","reports"]' && JSON.stringify(M.plan(new Date('2026-10-17T18:45:00Z'))) === '["gdelt","health","ioda","retention","fires","maritime","sources","triage","ocia1","reports"]'
     && M.plan(new Date('2026-10-17T07:19:00Z')).includes('psirt') && !M.plan(new Date('2026-10-17T08:19:00Z')).includes('psirt') && M.plan(new Date('2026-10-17T08:19:00Z')).includes('triageeval') && !M.plan(new Date('2026-10-17T08:49:00Z')).includes('triageeval'), 'plan');
 }
 
