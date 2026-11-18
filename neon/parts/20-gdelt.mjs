@@ -95,7 +95,8 @@ export function gdeltStatus({ status, ok }, slot, priorAttempts, now = Date.now(
 // cells, events and flows are not kept that far back. reprocess re-reads the 72-hour window and overwrites its rows.
 export async function jobGdelt({ backfill = false, budgetMs = 40000, rebuild = false, historyDays = 0, reprocess = false } = {}) {
   const t0 = Date.now();
-  const G = await geo();
+  // The world atlas (229 KB from the bucket, which counts against the Neon plan's transfer) is read only when a file
+  // arrives to be parsed: on 18 November half the runs found no new file (3.2.1).
   const { latest } = await gdeltLatest();
   const span = W_HOURS + W_BASE;
   const hist = Math.max(0, Math.min(35, +historyDays || 0));
@@ -137,7 +138,7 @@ export async function jobGdelt({ backfill = false, budgetMs = 40000, rebuild = f
       return;
     }
     try {
-      const agg = aggregateSlot(firstEntry(r.buf).toString('utf8'), G);
+      const agg = aggregateSlot(firstEntry(r.buf).toString('utf8'), await geo());
       results.push({ slot, status: 'ok', recovered: !!re, recheck: !!re, ms: Date.now() - s0, ...agg, historyOnly });
     } catch (e) { results.push({ slot, status: 'failed', recheck: !!re, ms: Date.now() - s0, error: String(e.message || e) }); }
   });
