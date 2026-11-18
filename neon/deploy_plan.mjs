@@ -32,6 +32,9 @@ connection string into an issue, commit or report.
 2. Neon \`presign_storage_object\`: bucket \`ti-docs\`, key \`code/collector.mjs\`, operation upload, content type
    \`text/javascript\`.
 3. \`/api/admin?op=push&asset=code&u=<that URL, URL-encoded>\` on the operator side: the answer names sha256 \`${sha}\`.
+   Then the gzipped copy the loader reads first (since 3.2.0): presign \`code/collector.mjs.gz\` (content type
+   \`application/gzip\`) and \`/api/admin?op=push&asset=code&gz=1&u=<that URL>\`; its answer names the same sha256. A
+   stale gzipped copy costs a second read on every cold start (the loader falls through to the plain object).
 4. Straight after, Neon \`deploy_function\` for \`ti\`, environment only (no zip), \`environment\` set to
    \`{"TI_CODE_SHA256": "${sha}", "TI_CODE_SHA256_PREV": "<OLD from get_function>"}\` (Neon merges it into the existing
    variables).

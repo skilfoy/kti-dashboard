@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.2.0 (18 November 2026)
+
+- Transfer, storage side. Neon's transfer meter counts object storage reads as well as query results. The bucket's GET log for 07:08 to 17:24 UTC on 18 November held 86 MB, about three quarters of the meter's rise over those hours: the world atlas (28.7 MB, 38 reads at 756 KB), the code bundle (23.6 MB, 60 cold starts), the bundle's kept copy (14.9 MB, read back on every cold start to check it was there), the triage mirror (14.8 MB) and the triage evaluation set (2.6 MB). The 3.0.4 mirror had moved the triage window's reads from Postgres to the bucket at a third of the size, so it still saved transfer, though less than its note claimed.
+- The loader reads the bundle from a gzipped copy (`code/collector.mjs.gz`, 135 KB for 400 KB) when that copy holds the pinned source, and from the plain object otherwise; it keeps its fallback copy gzipped and checks for it with HEAD. Reference files (the atlas, the evaluation set, the link list, the source registry) are read from gzipped copies first (`refGet`; the atlas is 229 KB gzipped). The triage window's mirror is kept in memory by the instance that wrote it, so a triage run reads the object once instead of twice. `op=push` takes `gz=1` to upload a gzipped copy.
+- Transfer, Postgres side. Each run's `db` record put the triage evaluation first among query results (232 KB an hour) although the evaluation is complete and makes no request. A complete evaluation under the current prompt now returns on its stored summary and reads the gold set again once a day. The sources job (126 KB a run), infra (184 KB) and GDELT (92 KB) read what their work needs; they leave Neon with the database move.
+- Expected effect: bucket reads from about 8.6 MB an hour to about 2.5 MB, query results from about 2.4 MB an hour to about 2.1 MB, and the meter from about 11.5 MB an hour to about 5 MB. At that rate November ends near 4.4 GB of the 5 GB allowance.
+- Collector 2026-11-18.5; loader redeployed.
+
 ## 3.1.1 (18 November 2026)
 
 - Transfer accounting both ways: each run records the bytes it sent with its queries (`db.sent_kb`) beside the bytes it read (`db.kb`), to reconcile the jobs' share against Neon's meter.

@@ -40,7 +40,7 @@ export async function sourceRegistry(force = false) {
   const r = await get(ENV().TI_FEEDS_URL || 'https://intel.kilfoycyber.com/data/feeds.json', { as: 'json', timeout: 20000 });
   if (r.ok && r.json && Array.isArray(r.json.feeds) && r.json.feeds.length >= 50) doc = r.json;
   if (!doc) {
-    const o = await s3Get('ref/feeds.json');
+    const o = await refGet('ref/feeds.json');
     if (!o) throw new Error('the source registry is unreachable: site ' + (r.status || r.error) + ', and ref/feeds.json is missing from the bucket (push asset=feeds)');
     doc = JSON.parse(o.buf.toString('utf8'));
   }

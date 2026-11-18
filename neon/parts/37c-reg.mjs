@@ -232,7 +232,7 @@ export function linkStatus(r, url) {
 }
 export async function jobLinks(opts = {}) {
   const t0 = Date.now();
-  const ref = await s3Get('ref/links.json');
+  const ref = await refGet('ref/links.json');
   if (!ref) throw new Error('ref/links.json is missing from the bucket');
   const links = JSON.parse(ref.buf.toString('utf8'));
   const slot = new Date().getUTCHours();

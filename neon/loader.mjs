@@ -9,21 +9,28 @@
 // it; the failed request is answered by the previous bundle. Each answer carries x-ti-bundle (the first 12 hex digits
 // of the bundle that answered, with ";fallback" when it is the previous one). The pinned hashes in the function
 // environment stay the only authority: a bundle in the bucket runs only when its SHA-256 matches one of them.
+//
+// Transfer (3.2.0): bucket reads count against the Neon plan's monthly transfer, and a cold start used to read the
+// 400 KB bundle and then the 400 KB kept copy. Each bundle is read from its gzipped copy (<key>.gz, about a third of the
+// size) when one is there and its source matches the pinned hash, from the plain object otherwise; the kept copy is
+// written gzipped, and whether it is already there is asked with HEAD, so a cold start reads one gzipped bundle.
 import { createHash, createHmac } from 'node:crypto';
+import { gunzipSync, gzipSync } from 'node:zlib';
 import { writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const hm = (k, s) => createHmac('sha256', k).update(s).digest();
 const sha256 = (b) => createHash('sha256').update(b).digest('hex');
 
-// One SigV4-signed request to the branch bucket (path style). GET returns the Response; PUT sends body.
+// One SigV4-signed request to the branch bucket (path style). GET and HEAD return the Response; PUT sends body, as
+// application/gzip for a .gz key and text/javascript otherwise.
 export function s3request(E, method, key, body) {
   const ep = new URL(E.AWS_ENDPOINT_URL_S3), region = E.AWS_REGION || 'us-east-1';
   const path = '/' + (E.TI_BUCKET || 'ti-docs') + '/' + key;
   const d = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''), day = d.slice(0, 8);
   const buf = body == null ? Buffer.alloc(0) : Buffer.from(body);
   const payload = sha256(buf);
-  const ct = method === 'PUT' ? 'text/javascript' : null;
+  const ct = method === 'PUT' ? (key.endsWith('.gz') ? 'application/gzip' : 'text/javascript') : null;
   const signed = ct ? 'content-type;host;x-amz-content-sha256;x-amz-date' : 'host;x-amz-content-sha256;x-amz-date';
   const creq = [method, path, '', ...(ct ? ['content-type:' + ct] : []), 'host:' + ep.host, 'x-amz-content-sha256:' + payload, 'x-amz-date:' + d, '', signed, payload].join('\n');
   const scope = day + '/' + region + '/s3/aws4_request';
@@ -64,13 +71,23 @@ export function makeLoader({ env = process.env, s3 = (m, k, b) => s3request(env,
   const state = { cur: null, prev: null, pending: null, using: null, verified: false, reason: null, events: [] };
   const note = (msg) => { state.events.push({ at: new Date().toISOString(), msg }); if (state.events.length > 20) state.events.shift(); log.error('loader: ' + msg); };
 
+  // The gzipped copy first; a missing, unreadable or stale one (its source not the pinned hash) falls through to the
+  // plain object, which alone decides a refusal.
   async function fetchBundle(key, want) {
+    try {
+      const z = await s3('GET', key + '.gz');
+      if (z.ok) {
+        const src = gunzipSync(Buffer.from(await z.arrayBuffer())).toString('utf8');
+        if (sha256(src) === want) return { src, sha: want, via: key + '.gz', mod: await importSource(src, want) };
+        note(key + '.gz does not hold the pinned bundle; reading ' + key);
+      }
+    } catch (e) { note(key + '.gz unreadable (' + String((e && e.message) || e) + '); reading ' + key); }
     const r = await s3('GET', key);
     if (!r.ok) throw new Error(key + ': storage HTTP ' + r.status);
     const src = await r.text();
     const h = sha256(src);
     if (h !== want) throw new Error(key + ' hash ' + h + ' does not match the pinned ' + want);
-    return { src, sha: h, mod: await importSource(src, h) };
+    return { src, sha: h, via: key, mod: await importSource(src, h) };
   }
   async function loadPrev(why) {
     const want = E.TI_CODE_SHA256_PREV;
@@ -85,13 +102,14 @@ export function makeLoader({ env = process.env, s3 = (m, k, b) => s3request(env,
     try { state.cur = await fetchBundle('code/collector.mjs', E.TI_CODE_SHA256); state.using = 'cur'; return state.cur; }
     catch (e) { return loadPrev('current bundle refused: ' + String((e && e.message) || e)); }
   }
-  // After the current bundle's first good run, keep a copy under its hash for the next deploy's fallback.
+  // After the current bundle's first good run, keep a gzipped copy under its hash for the next deploy's fallback. A
+  // copy already there is found with HEAD (no body read); fetchBundle checks its hash whenever it is used.
   async function keep(b) {
     try {
-      const key = 'code/by-sha/' + b.sha + '.mjs';
-      const have = await s3('GET', key);
-      if (have.ok && sha256(await have.text()) === b.sha) return;
-      const put = await s3('PUT', key, b.src);
+      const key = 'code/by-sha/' + b.sha + '.mjs.gz';
+      const have = await s3('HEAD', key);
+      if (have.ok) return;
+      const put = await s3('PUT', key, gzipSync(Buffer.from(b.src), { level: 9 }));
       if (!put.ok) note('could not keep ' + key + ': storage HTTP ' + put.status);
     } catch (e) { note('could not keep the bundle copy: ' + String((e && e.message) || e)); }
   }
