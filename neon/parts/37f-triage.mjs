@@ -320,12 +320,20 @@ export async function triageBatch(items, cap, { retry = true, reserve = 0 } = {}
 // run reads the rows labelled since the mirror was written and the verified rows, overlays them, drops rows that left
 // the window, and writes the mirror back. A mirror older than MIRROR_FULL_MS, of another version, unreadable, or whose
 // row count differs from the table's count for the window is replaced by a full read.
+// The mirror last written by this instance is kept in memory as well (3.2.0): the triage job reads the window twice
+// (the stored stories before labelling, the published document after), and the second read, like any later run in a
+// warm instance, overlays the rows labelled since from memory instead of reading the 500 KB object again.
 const MIRROR_KEY = 'mirror/triage-window.json.gz', MIRROR_FULL_MS = 6 * 3600e3, MIRROR_V = 1;
+let MIRROR_MEM = null;
+export function resetMirrorMemory() { MIRROR_MEM = null; }
 const TRIAGE_COLS = 'link, kind, source, title, published, relevance, vector, theater, actors, cves, why, model, prompt_v, at, cluster, verify, verify_model';
 export async function triageWindow() {
   const cut = Date.now() - TRIAGE.WINDOW_H * 3600e3, inWin = (r) => Date.parse(r.published || r.at) > cut;
-  let m = null;
-  try { const o = await s3Get(MIRROR_KEY); if (o) m = JSON.parse(gunzipSync(o.buf).toString('utf8')); } catch { m = null; }
+  let m = null, from = 'bucket';
+  try {
+    if (MIRROR_MEM) { m = JSON.parse(gunzipSync(MIRROR_MEM).toString('utf8')); from = 'memory'; }
+    else { const o = await s3Get(MIRROR_KEY); if (o) m = JSON.parse(gunzipSync(o.buf).toString('utf8')); }
+  } catch { m = null; }
   let rows, mode;
   if (m && m.v === MIRROR_V && Array.isArray(m.rows) && m.max_at && Date.now() - Date.parse(m.full_at) < MIRROR_FULL_MS) {
     // Two minutes of overlap covers a row whose transaction began before the mirror's newest row and committed after it.
@@ -337,7 +345,7 @@ export async function triageWindow() {
     const by = new Map(m.rows.map((r) => [r.link, r]));
     for (const r of fresh) by.set(r.link, r);
     for (const v of ver) { const r = by.get(v.link); if (r) Object.assign(r, v); }
-    rows = [...by.values()].filter(inWin); mode = { mode: 'mirror', fresh: fresh.length, verified: ver.length };
+    rows = [...by.values()].filter(inWin); mode = { mode: 'mirror', from, fresh: fresh.length, verified: ver.length };
     // A row deleted inside the window (by hand: the scheduled delete reaches only rows a month old) leaves the counts
     // apart, and the window is read in full.
     if (rows.length !== cnt.n) m = null;
@@ -347,7 +355,9 @@ export async function triageWindow() {
     m = { full_at: new Date().toISOString() }; mode = { mode: 'full', n: rows.length };
   }
   const max_at = rows.reduce((a, r) => (r.at > a ? r.at : a), m.max_at || '1970-01-01T00:00:00.000Z');
-  try { await s3Put(MIRROR_KEY, gzipSync(Buffer.from(JSON.stringify({ v: MIRROR_V, full_at: m.full_at, max_at, rows })), { level: 6 }), 'application/gzip'); } catch { /* the next run reads in full */ }
+  const gz = gzipSync(Buffer.from(JSON.stringify({ v: MIRROR_V, full_at: m.full_at, max_at, rows })), { level: 6 });
+  MIRROR_MEM = gz;
+  try { await s3Put(MIRROR_KEY, gz, 'application/gzip'); } catch { /* the next run reads in full */ }
   return { rows, ...mode };
 }
 const pubOrAt = (r) => Date.parse(r.published || r.at) || 0;
@@ -524,7 +534,17 @@ export function triagePromoted(s) {
 export async function jobTriageeval(opts = {}) {
   const t0 = Date.now(), E = ENV();
   if (!(E.OPENROUTER_API_KEY || E.TI_TRIAGE_KEY)) return { held: 'OPENROUTER_API_KEY is not set in the function environment; no request made', ms: Date.now() - t0 };
-  const ref = await s3Get('ref/triage-gold.json');
+  // A complete evaluation under the current prompt has nothing to do. Until 3.2.0 such a run still read the gold set,
+  // the 750-item state and the triage window, and republished the triage document: about 230 KB of Postgres transfer an
+  // hour on 18 November, the largest of any job, for no request. It now returns on the stored summary, and checks the
+  // gold set's hash once a day (a changed gold set restarts the evaluation, as before).
+  if (!opts.reset) {
+    const prior = await kvGet('triage:eval');
+    if (prior && prior.complete && prior.prompt_version === TRIAGE.PROMPT_V && prior.gold_sha && Date.now() - (Date.parse(prior.gold_checked_at) || 0) < 86400e3) {
+      return { held: 'evaluation complete under prompt ' + TRIAGE.PROMPT_V + '; gold set checked ' + prior.gold_checked_at, scored: prior.items, ms: Date.now() - t0 };
+    }
+  }
+  const ref = await refGet('ref/triage-gold.json');
   if (!ref) throw new Error('ref/triage-gold.json is missing from the bucket (push asset=gold)');
   const gold = JSON.parse(ref.buf.toString('utf8'));
   let st = (await kvGet('triage:eval:state')) || {};
@@ -550,7 +570,7 @@ export async function jobTriageeval(opts = {}) {
   const score = triageScore(st.done);
   const givenUp = Object.values(st.tries).filter((n) => n >= TRIAGE.EVAL_TRIES).length;
   const summary = score && { ...score, gold_items: gold.items.length, unanswered: givenUp, last_calls: st.last_calls || [], complete: Object.keys(st.done).length + givenUp >= gold.items.length, promoted: triagePromoted(score), thresholds: TRIAGE_PROMOTE, rejects: st.rejects, models: st.models,
-    prompt_version: TRIAGE.PROMPT_V, started: st.started, at: new Date().toISOString() };
+    prompt_version: TRIAGE.PROMPT_V, gold_sha: gold.sha, gold_checked_at: new Date().toISOString(), started: st.started, at: new Date().toISOString() };
   if (summary) await kvPut('triage:eval', summary);
   return { scored: Object.keys(st.done).length, of: gold.items.length, stop, calls: calls.length, eval: summary, published: await putDoc('triage', await triageDoc()), ms: Date.now() - t0 };
 }

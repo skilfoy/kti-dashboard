@@ -558,13 +558,22 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   // The window mirror: the run wrote it; the next read takes it with the rows labelled since, and the published list it
   // builds is the one a full read builds.
   const winN = (await db.query(`SELECT count(*)::int AS n FROM ti.triage WHERE COALESCE(published, at) > now() - interval '72 hours'`)).rows[0].n;
+  const w0 = await M.triageWindow();
+  M.resetMirrorMemory();
   const w1 = await M.triageWindow();
   const docMirror = await M.triageDoc({}, w1);
   bucket.delete('ti-docs/mirror/triage-window.json.gz');
+  M.resetMirrorMemory();
   const w2 = await M.triageWindow(), docFull = await M.triageDoc({}, w2);
   const strip = (d) => JSON.stringify(d.rows);
-  ok(w1.mode === 'mirror' && w1.rows.length === winN && w2.mode === 'full' && strip(docMirror) === strip(docFull) && bucket.has('ti-docs/mirror/triage-window.json.gz'),
+  ok(w0.mode === 'mirror' && w0.from === 'memory' && w0.rows.length === winN, 'a warm instance overlays its own mirror from memory ' + JSON.stringify({ m: w0.mode, from: w0.from }));
+  ok(w1.mode === 'mirror' && w1.from === 'bucket' && w1.rows.length === winN && w2.mode === 'full' && strip(docMirror) === strip(docFull) && bucket.has('ti-docs/mirror/triage-window.json.gz'),
     'the triage window comes from the bucket mirror plus new rows, and gives the same list as a full read ' + JSON.stringify({ m: w1.mode, n: w1.rows.length, winN, f: w2.mode }));
+  // Reference files: the gzipped copy is read first, the plain object when it is missing.
+  bucket.set('ti-docs/ref/refgz-test.json.gz', zlib.gzipSync(Buffer.from('{"a":1}')));
+  bucket.set('ti-docs/ref/refplain-test.json', Buffer.from('{"b":2}'));
+  const rz = await M.refGet('ref/refgz-test.json'), rp = await M.refGet('ref/refplain-test.json');
+  ok(rz.gz && JSON.parse(rz.buf.toString()).a === 1 && !rp.gz && JSON.parse(rp.buf.toString()).b === 2 && (await M.refGet('ref/none.json')) === null, 'refGet prefers the gzipped copy');
   // Budget: a spent day stops requests; a 429 stops the run without failing it.
   await db.query(`UPDATE ti.kv SET v = jsonb_set(v, '{used}', '45') WHERE k = 'triage:budget'`);
   await db.query(`DELETE FROM ti.triage WHERE link LIKE '%fortinet%'`);
@@ -642,6 +651,18 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const e4 = await M.runJob('triageeval', { batches: 1 });
   ok(e3.ok && e3.scored === 75 && /finish_reason error/.test(e3.eval.last_calls[0].error) && e4.scored === 100 && e4.eval.unanswered === 0, 'an unanswered evaluation batch does not hold the replay ' + JSON.stringify([e3.scored, e4.scored]));
   EXTRA = prevExtra;
+  // A complete evaluation returns on its summary without reading the gold set; past a day, or with reset, it reads again.
+  const sumNow = await M.kvGet('triage:eval');
+  ok(sumNow.gold_sha === gold.sha && sumNow.gold_checked_at, 'the summary records the gold set it scored');
+  await M.kvPut('triage:eval', { ...sumNow, complete: true });
+  bucket.delete('ti-docs/ref/triage-gold.json'); llm = [];
+  const e5 = await M.runJob('triageeval', { batches: 1 });
+  ok(e5.ok && /evaluation complete/.test(e5.held) && !llm.length, 'a complete evaluation reads nothing and makes no request ' + JSON.stringify(e5.held));
+  await M.kvPut('triage:eval', { ...sumNow, complete: true, gold_checked_at: new Date(Date.now() - 25 * 3600e3).toISOString() });
+  const e6 = await M.runJob('triageeval', { batches: 1 });
+  ok(!e6.ok && /triage-gold\.json is missing/.test(e6.error), 'past a day the gold set is read again ' + JSON.stringify(e6.error));
+  bucket.set('ti-docs/ref/triage-gold.json', goldBuf);
+  await M.kvPut('triage:eval', sumNow);
   const s = M.triageScore({ a: { g_theater: 'T-UKR', g_vector: 'DDoS', p_theater: 'T-UKR', p_vector: 'DDoS' }, b: { g_theater: 'T-GLB', g_vector: null, p_theater: 'T-UKR', p_vector: 'Fraud' } });
   ok(s.theater_accuracy === 0.5 && s.vector_accuracy === 1 && s.vector_false_positive_rate === 1 && !M.triagePromoted(s)
     && M.triagePromoted({ items: 400, theater_accuracy: 0.85, vector_accuracy: 0.75, vector_false_positive_rate: 0.1 }), 'scoring and promotion thresholds');

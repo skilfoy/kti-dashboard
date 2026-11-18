@@ -27,7 +27,7 @@ import { createHash, createHmac, createPrivateKey, createPublicKey, generateKeyP
 import { request as httpsRequest } from 'node:https';
 import { gzipSync, gunzipSync, inflateRawSync } from 'node:zlib';
 
-export const VERSION = '2026-11-18.4';
+export const VERSION = '2026-11-18.5';
 const UA = 'threat-feeds-collector/1.0 (+https://github.com/skilfoy; OSINT dashboard collector)';
 const ENV = () => process.env;
 const BUCKET = () => ENV().TI_BUCKET || 'ti-docs';
@@ -177,6 +177,13 @@ export async function s3Put(key, buf, contentType) {
   const r = await s3('PUT', key, { body: buf, contentType });
   if (!r.ok) throw new Error(`storage PUT ${key}: HTTP ${r.status} ${(await r.text()).slice(0, 200)}`);
 }
+// Reference files (ref/*): the gzipped copy <key>.gz (pushed with op=push&gz=1) first, the plain object when it is missing.
+// Bucket reads count against the Neon plan's monthly transfer; the world atlas alone was a third of it (756 KB a read).
+export async function refGet(key) {
+  const z = await s3Get(key + '.gz');
+  if (z) return { ...z, buf: gunzipSync(z.buf), gz: true };
+  return s3Get(key);
+}
 // Documents: gzipped JSON at docs/<name>.json.gz.
 export async function putDoc(name, obj) {
   const raw = Buffer.from(JSON.stringify(obj));
@@ -224,7 +231,7 @@ export function buildGeo(topo, num2iso) {
 }
 async function geo() {
   if (GEO) return GEO;
-  const [a, n] = await Promise.all([s3Get('ref/countries-50m.json'), s3Get('ref/num2iso.json')]);
+  const [a, n] = await Promise.all([refGet('ref/countries-50m.json'), refGet('ref/num2iso.json')]);
   if (!a || !n) throw new Error('reference geography missing from the bucket (ref/countries-50m.json, ref/num2iso.json)');
   GEO = buildGeo(JSON.parse(a.buf.toString('utf8')), JSON.parse(n.buf.toString('utf8')));
   return GEO;
