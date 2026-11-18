@@ -19,7 +19,7 @@ export async function runJob(job, opts = {}) {
   if (!fn) return { job, ok: false, error: 'unknown job' };
   if (!opts.keepCache) RUN_CACHE.clear();
   const holder = (opts.holder || 'run') + ':' + Math.random().toString(36).slice(2, 10);
-  const started = new Date(), io0 = { calls: DB_IO.calls, bytes: DB_IO.bytes };
+  const started = new Date(), io0 = { calls: DB_IO.calls, bytes: DB_IO.bytes, sent: DB_IO.sent };
   let lease;
   try {
     lease = await sql(`UPDATE ti.lease SET holder = $1, until = now() + make_interval(secs => $2) WHERE job = $3 AND (until < now() OR holder = $1) RETURNING job`, [holder, LEASE_S[job], job]);
@@ -31,7 +31,7 @@ export async function runJob(job, opts = {}) {
   if (ok && result && result.run_failed) { ok = false; result.error = String(result.run_failed); delete result.run_failed; }
   const ms = Date.now() - started.getTime();
   // Query results the job read (requests in flight on the same instance may add to it), for the transfer budget.
-  if (result && typeof result === 'object') result.db = { calls: DB_IO.calls - io0.calls, kb: Math.round((DB_IO.bytes - io0.bytes) / 1024) };
+  if (result && typeof result === 'object') result.db = { calls: DB_IO.calls - io0.calls, kb: Math.round((DB_IO.bytes - io0.bytes) / 1024), sent_kb: Math.round((DB_IO.sent - io0.sent) / 1024) };
   try {
     await sqlTx([
       [`UPDATE ti.lease SET until = 'epoch' WHERE job = $1 AND holder = $2`, [job, holder]],

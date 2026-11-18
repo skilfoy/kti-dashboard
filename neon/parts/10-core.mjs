@@ -27,7 +27,7 @@ import { createHash, createHmac, createPrivateKey, createPublicKey, generateKeyP
 import { request as httpsRequest } from 'node:https';
 import { gzipSync, gunzipSync, inflateRawSync } from 'node:zlib';
 
-export const VERSION = '2026-11-18.3';
+export const VERSION = '2026-11-18.4';
 const UA = 'threat-feeds-collector/1.0 (+https://github.com/skilfoy; OSINT dashboard collector)';
 const ENV = () => process.env;
 const BUCKET = () => ENV().TI_BUCKET || 'ti-docs';
@@ -107,7 +107,7 @@ function sqlTarget() {
 const isoTs = (v) => { const d = new Date(String(v).replace(' ', 'T').replace(/([+-]\d\d)$/, '$1:00')); return isNaN(d) ? v : d.toISOString(); };
 const PARSE = { 16: (v) => v === 't' || v === 'true', 20: Number, 21: Number, 23: Number, 26: Number, 700: Number, 701: Number, 1700: Number, 114: JSON.parse, 3802: JSON.parse, 1184: isoTs, 1114: isoTs };
 // Bytes of query results read this instance (response text), for the transfer budget; runJob records a job's share.
-export const DB_IO = { calls: 0, bytes: 0 };
+export const DB_IO = { calls: 0, bytes: 0, sent: 0 };
 function rowsOf(res) {
   const names = res.fields.map((f) => f.name);
   const ps = res.fields.map((f) => PARSE[f.dataTypeID] || ((v) => v));
@@ -116,7 +116,9 @@ function rowsOf(res) {
 const prep = (p) => (p == null ? null : p instanceof Date ? p.toISOString() : typeof p === 'object' ? JSON.stringify(p) : String(p));
 async function sqlPost(body) {
   const { url, headers } = sqlTarget();
-  const r = await fetchT(url, { method: 'POST', timeout: 40000, body: JSON.stringify(body),
+  const payload = JSON.stringify(body);
+  DB_IO.sent += payload.length;
+  const r = await fetchT(url, { method: 'POST', timeout: 40000, body: payload,
     headers: { ...headers, 'Neon-Raw-Text-Output': 'true', 'Neon-Array-Mode': 'true', 'content-type': 'application/json' } });
   const text = await r.text();
   DB_IO.calls++; DB_IO.bytes += text.length;

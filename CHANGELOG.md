@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.1.1 (18 November 2026)
+
+- Transfer accounting both ways: each run records the bytes it sent with its queries (`db.sent_kb`) beside the bytes it read (`db.kb`), to reconcile the jobs' share against Neon's meter.
+- The A1 launcher shows its public key again whenever Oracle rejects its signature, so a lost or replaced key can be registered without a redeploy.
+- Collector 2026-11-18.4.
+
 ## 3.1.0 (18 November 2026)
 
 - Database on Oracle Cloud, groundwork. Neon transfer kept running at about 11 MB an hour after 3.0.4 and 3.0.5, which reaches the Free plan's 5 GB around 25 to 27 November. The database moves to an Always Free Oracle Ampere A1 server (10 TB of outbound transfer a month). `ops/oracle/` holds the server bootstrap (Postgres 17 on the local socket, SearXNG, Caddy with automatic HTTPS, nightly dumps, host hardening), the SQL gateway that answers Neon's SQL-over-HTTP contract so the collector changes only its URL and credential (tested with the collector's client against Postgres: types, JSON, transactions, rollback on error), and the migration tool.
