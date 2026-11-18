@@ -759,6 +759,8 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
     'search finds whole words, prefixes and phrases, applies filters, and carries the triage label ' + JSON.stringify({ q1: q1.total, q2: q2.total, q3: q3.total, q4: q4.total }));
   ok((await M.search({ q: 'x' })).total === 0, 'a one-character query returns nothing');
   const q5 = await M.search({ q: 'Optimizely security incident November 2026 malicious code' }), q6 = await M.search({ q: 'Optimizely security incident November 2026 malicious code', relax: false });
+  const q7 = await M.search({ q: 'Optimizely skimmer', broaden: true }), q8 = await M.search({ q: 'Optimizely skimmer' });
+  ok(q7.broadened === false && q7.relaxed === true && q7.total === 1 && q8.total === 0, 'a report subject with no strict entry takes the distinctive-word entries; the page search does not broaden a two-word query ' + JSON.stringify({ q7: q7.total, b: q7.broadened, r: q7.relaxed, q8: q8.total }));
   ok(q5.relaxed === true && q5.total === 1 && q5.hits[0].link === 'https://direct.example/a1' && q6.total === 0 && q1.relaxed === false,
     'a long query with no entry carrying every word falls back to its distinctive words, and says so ' + JSON.stringify({ q5: q5.total, r: q5.relaxed, q6: q6.total }));
   // Agentic report: a tool round (web search), then the final answer; an invented citation is dropped.
@@ -798,6 +800,8 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(r2.ok && r2.further === 2 && /## Further reporting in the collection/.test(rep2.body) && src2.filter((s) => s.role === 'further').length === 2 && rep2.corpus.further === 2 && rep2.corpus.cited === src2.filter((s) => s.role !== 'further').length,
     'uncited entries on the subject from other publishers are listed as further reporting ' + JSON.stringify({ r2, further: src2.filter((s) => s.role === 'further').map((s) => s.publisher) }));
   const pb = Buffer.concat([Buffer.from([0x08, 0x13, 0x22, 21]), Buffer.from('https://example.com/a'), Buffer.from([0xd2, 0x01, 0x00])]).toString('base64url');
+  const q9 = await M.search({ q: 'Optimizely confirms', broaden: true });
+  ok(q9.broadened === true && q9.strict === 1 && q9.total === 3 && q9.hits[0].title === 'Optimizely confirms account-signup flaw', 'broadening keeps the strict entries first and takes the name over a rarer common word ' + JSON.stringify({ b: q9.broadened, s: q9.strict, t: q9.total }));
   ok(M.gnewsIdUrl(pb) === 'https://example.com/a' && M.gnewsIdUrl('CBMiAU_yqLxyz') === null, 'an older Google News id names the publisher link; a current one is left to the article endpoint');
   for (let k = 0; k < 6; k++) await M.startReport({ q: 'topic ' + k, type: 'exec', ip: 'flood' });
   const lim = await M.startReport({ q: 'topic 9', type: 'exec', ip: 'flood' });
