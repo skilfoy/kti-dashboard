@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.5 (18 November 2026)
+
+- Search fallback, second pass. Live, the 3.0.4 fallback for "Optimizely security incident November 2026 malicious code supply chain attack" matched 1,672 entries and ranked generic supply chain stories first, because every word under the 3 percent line counted alike. The fallback now requires the rarest name in the query (a capitalised word: Optimizely, Bybit), or the rarest word when the query names none, and ranks entries that also carry the other distinctive words first: 114 Optimizely entries.
+- Report breadth. A report subject of two or more words with fewer than 15 entries that carry every word ("Optimizely breach": 6) adds the entries that carry its name after them, so the evidence and the further-reporting list reach the subject's full coverage (114 entries). Live on 3.0.4, Google News links resolved through the article endpoint: four of five pages read where none had been.
+- Collector 2026-11-18.2.
+
 ## 3.0.4 (18 November 2026)
 
 - Postgres transfer. The Free plan allows 5 GB a month of data returned through the Neon proxy and suspends compute past it; on 18 November the project had used 2.97 GB with 13 days left. pg_stat_statements (now enabled) put the triage window first: two full reads of the 72-hour window an hour (the stored stories new titles join, then the published list), about 1.4 MB, and the hourly evaluation run read it again. The window now lives as a gzipped mirror in the bucket; a run reads only the rows labelled since, the verified rows and a count, and falls back to a full read every six hours, on a count mismatch, or when the mirror is missing. The fires job returned all 9,400 prior cells to judge novelty; it now returns only the prior cells today's detections touch. Search runs its four statements in one round trip.

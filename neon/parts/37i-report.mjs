@@ -234,8 +234,10 @@ export async function runReport(id) {
   const addSrc = (x, via) => { const u = String(x.url || ''); if (!u) return null; if (byUrl.has(u)) return byUrl.get(u); const s = { n: sources.length + 1, title: String(x.title || u).slice(0, 220), url: u, publisher: x.publisher || x.source || (/news\.google\.com$/.test(hostOf(u)) ? '' : hostOf(u)), published: x.published || null, snippet: x.snippet || x.summary || '', via }; sources.push(s); byUrl.set(u, s); return s; };
   try {
     await step(id, 'Searching the platform\'s collected reporting');
-    const c = await search({ q: r.q, days: 45, limit: REPORT.CORPUS_HITS });
-    for (const h of c.hits) addSrc({ title: h.title, url: h.link, publisher: h.source || h.host, published: h.published, snippet: String(h.snippet || '').replace(/[«»]/g, '') }, c.relaxed ? 'corpus' : 'corpus:subject');
+    const c = await search({ q: r.q, days: 45, limit: REPORT.CORPUS_HITS, broaden: true });
+    // Entries that carry every word of the subject, then (when those are few) entries that carry its distinctive word.
+    c.hits.forEach((h, k) => addSrc({ title: h.title, url: h.link, publisher: h.source || h.host, published: h.published, snippet: String(h.snippet || '').replace(/[«»]/g, '') },
+      c.relaxed ? 'corpus' : c.broadened && k >= c.strict ? 'corpus:related' : 'corpus:subject'));
     for (const a of c.advisories || []) addSrc({ title: a.title, url: a.link, publisher: a.source, published: a.published }, 'advisory');
     const corpus = { total: c.total, publishers: c.publishers, first_seen: c.first_seen, last_seen: c.last_seen, by_category: c.by_category, by_day: c.by_day };
     await sql(`UPDATE ti.report SET corpus = $2::jsonb WHERE id = $1`, [id, corpus]);
@@ -320,7 +322,7 @@ Starting sources:\n${sources.length ? sources.map(fmtSrc).join('\n') : '(none: t
     for (const s of sources) {
       if (further.length >= REPORT.FURTHER) break;
       const p = (s.publisher || hostOf(s.url)).toLowerCase();
-      if (s.via === 'corpus:subject' && !cited.has(s.n) && p && !citedPubs.has(p)) { further.push(s); citedPubs.add(p); }
+      if ((s.via === 'corpus:subject' || s.via === 'corpus:related') && !cited.has(s.n) && p && !citedPubs.has(p)) { further.push(s); citedPubs.add(p); }
     }
     if (further.length) {
       body += `\n\n## Further reporting in the collection\n\nOther publishers in the platform's collection carried this subject. These entries matched the subject search and are listed for breadth; the report above was not checked against each of them.\n\n`

@@ -156,7 +156,7 @@ export async function sourcesDoc(reg) {
 // first, with each hit's triage label and the publishers that carried the same story. Query syntax is web-style
 // ("quoted phrase", -exclude, OR); a word that the index does not hold as a whole word is matched as a prefix, then by
 // substring of the title.
-export async function search({ q = '', days = 30, category = '', region = '', limit = 50, offset = 0, relax = true } = {}) {
+export async function search({ q = '', days = 30, category = '', region = '', limit = 50, offset = 0, relax = true, broaden = false } = {}) {
   q = String(q || '').trim().slice(0, 200);
   if (q.length < 2) return { q, hits: [], total: 0 };
   days = Math.max(1, Math.min(45, +days || 30)); limit = Math.max(1, Math.min(100, +limit || 50)); offset = Math.max(0, Math.min(1000, +offset || 0));
@@ -188,23 +188,33 @@ export async function search({ q = '', days = 30, category = '', region = '', li
   };
   let r = await run(strict, { q: `websearch_to_tsquery('simple', $1)`, rank: `ts_rank(i.tsv, websearch_to_tsquery('simple', $1)) + CASE WHEN i.title ILIKE $6 THEN 0.5 ELSE 0 END` },
     `date_trunc('day', i.published) DESC, rank DESC, i.published DESC`), relaxed = false;
-  if (relax && !r.f.total && lex.length >= 3 && anyWords) {
-    // The distinctive words carry the subject: those that occur in at most 3 percent of the window's entries, all of them
-    // required, then any of them; a query with no distinctive word falls back to any of its words.
+  // Broaden (reports, 3.0.5): a subject of two or more words with fewer than BROADEN strict entries ("Optimizely breach":
+  // 6, against 114 on "Optimizely") adds the distinctive-word entries after the strict ones.
+  const BROADEN = 15, wantRelax = (relax && !r.f.total && lex.length >= 3) || (broaden && lex.length >= 2 && (r.f.total || 0) < BROADEN);
+  let broadened = false;
+  if (wantRelax && anyWords) {
+    // The distinctive words carry the subject: those in at most 3 percent of the window's entries. The rarest name (or,
+    // without one, the rarest word) is required and the others rank the entries that also carry them first, so the subject keeps its full breadth (18
+    // November: "Optimizely ... malicious code supply chain attack"; an any-word match had ranked generic supply chain
+    // stories above the 108 Optimizely entries). A query with no distinctive word falls back to any of its words.
     const terms = [...new Set(lex.filter((w) => w.length >= 4 && !/^\d+$/.test(w)))].slice(0, 10);
     const df = await sql(`SELECT w, (SELECT count(*)::int FROM ti.item i WHERE i.published > now() - make_interval(days => $2) AND i.tsv @@ to_tsquery('simple', w || ':*')) AS n,
         (SELECT count(*)::int FROM ti.item i WHERE i.published > now() - make_interval(days => $2)) AS of FROM jsonb_array_elements_text($1::jsonb) AS w`, [terms, days]);
-    const rare = df.filter((d) => d.n > 0 && d.n <= Math.max(50, 0.03 * d.of)).sort((a, b) => a.n - b.n).map((d) => d.w + ':*');
-    const tries = rare.length ? [rare.join(' & '), rare.join(' | ')] : [anyWords];
-    const rq = { q: `to_tsquery('simple', $7)`, rank: `ts_rank_cd(i.tsv, to_tsquery('simple', $7))` };
-    for (const tq of tries) {
-      r = await run(`i.tsv @@ to_tsquery('simple', $7)`, rq, `rank DESC, i.published DESC`, tq); relaxed = true;
-      if (r.f.total) break;
-    }
+    // A capitalised word (a name: Optimizely, Bybit, Salt Typhoon) is the subject before a rarer common word ("skimmer").
+    const proper = new Set(words.filter((w) => /^\p{Lu}/u.test(w)).map((w) => w.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')));
+    const rareD = df.filter((d) => d.n > 0 && d.n <= Math.max(50, 0.03 * d.of)).sort((a, b) => (proper.has(b.w) - proper.has(a.w)) || a.n - b.n);
+    const rare = rareD.map((d) => d.w + ':*');
+    const tries = rare.length ? [`${rare[0]} & (${rare.join(' | ')})`] : [anyWords];
+    const rq = { q: `to_tsquery('simple', $7)`, rank: `ts_rank(i.tsv, to_tsquery('simple', $7))` };
+    const r2 = await run(`i.tsv @@ to_tsquery('simple', $7)`, rq, `rank DESC, i.published DESC`, tries[0]);
+    if (r.f.total && r2.f.total > r.f.total) {
+      const seen = new Set(r.hits.map((h) => h.link));
+      r = { ...r2, hits: [...r.hits, ...r2.hits.filter((h) => !seen.has(h.link))].slice(0, limit), strict: r.hits.length }; broadened = true;
+    } else if (!r.f.total && r2.f.total) { r = r2; relaxed = true; }
   }
   const [adv] = await sqlTx([[`SELECT a.link, a.title, a.feed AS source, coalesce(a.published, a.seen_at) AS published, a.cves FROM ti.advisory a
       WHERE coalesce(a.published, a.seen_at) > now() - make_interval(days => $2) AND (a.title ILIKE $1 OR a.cves::text ILIKE $1) ORDER BY 4 DESC LIMIT 20`, [like, days]]]);
   const f = r.f;
-  return { q, days, relaxed, total: f.total || 0, publishers: f.publishers || 0, first_seen: f.first_seen || null, last_seen: f.last_seen || null,
+  return { q, days, relaxed, broadened, strict: broadened ? r.strict : undefined, total: f.total || 0, publishers: f.publishers || 0, first_seen: f.first_seen || null, last_seen: f.last_seen || null,
     by_category: Object.fromEntries(r.cats.map((c) => [c.category, c.n])), by_day: r.days_, advisories: adv, hits: r.hits, limit, offset };
 }
