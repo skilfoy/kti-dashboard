@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.1.0 (18 November 2026)
+
+- Database on Oracle Cloud, groundwork. Neon transfer kept running at about 11 MB an hour after 3.0.4 and 3.0.5, which reaches the Free plan's 5 GB around 25 to 27 November. The database moves to an Always Free Oracle Ampere A1 server (10 TB of outbound transfer a month). `ops/oracle/` holds the server bootstrap (Postgres 17 on the local socket, SearXNG, Caddy with automatic HTTPS, nightly dumps, host hardening), the SQL gateway that answers Neon's SQL-over-HTTP contract so the collector changes only its URL and credential (tested with the collector's client against Postgres: types, JSON, transactions, rollback on error), and the migration tool.
+- The collector reads `TI_SQL_URL` and `TI_SQL_TOKEN` when set, and otherwise uses Neon. Each run records the query-result bytes it read (`db.kb`), which makes the transfer budget measurable per job.
+- Chicago had no free A1 capacity in any availability domain on 18 November, and the tenancy's limit for AMD micros is zero. The new `ocia1` job asks for the A1 server in every slot until a launch succeeds, then returns at once. It signs Oracle API requests with a key it generates itself, whose private half never leaves the bucket.
+- Collector 2026-11-18.3.
+
 ## 3.0.5 (18 November 2026)
 
 - Search fallback, second pass. Live, the 3.0.4 fallback for "Optimizely security incident November 2026 malicious code supply chain attack" matched 1,672 entries and ranked generic supply chain stories first, because every word under the 3 percent line counted alike. The fallback now requires the rarest name in the query (a capitalised word: Optimizely, Bybit), or the rarest word when the query names none, and ranks entries that also carry the other distinctive words first: 114 Optimizely entries.
