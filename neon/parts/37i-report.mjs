@@ -15,8 +15,19 @@
 export const REPORT = { ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions', MODELS_URL: 'https://openrouter.ai/api/v1/models',
   PREFER: ['nvidia/nemotron-3-ultra-550b-a55b:free', 'inclusionai/ling-3.2-flash:free', 'particle-ai/particle-1:free', 'baidu/ernie-5.5-flash-preview:free',
     'nvidia/nemotron-3.5-super-vl:free', 'thinkingmachines/inkling-2-small:free', 'dots-studio/dots-3-note-preview:free'],
-  MIN_CONTEXT: 200000, ROUNDS: 9, BUDGET_MS: 330000, CALL_MS: 110000, MAX_TOKENS: 16000, DAILY_CAP: 240, PER_IP_HOUR: 6, PER_DAY: 150,
-  CORPUS_HITS: 40, PAGE_CHARS: 14000 };
+  MIN_CONTEXT: 200000, ROUNDS: 8, BUDGET_MS: 540000, CALL_MS: 150000, FINAL_MS: 240000, MAX_TOKENS: 16000, DAILY_CAP: 240, PER_IP_HOUR: 6, PER_DAY: 150,
+  CORPUS_HITS: 40, PAGE_CHARS: 7000, CONTEXT_CHARS: 90000 };
+// The working context is kept under CONTEXT_CHARS: tool results older than the last two are cut to their first 1,200
+// characters (the numbered source lines and the opening of a page survive). A model that misses its deadline gets one more
+// try on a context cut to half that size before the conversation passes to the next model; once two models have failed,
+// the next call writes the report without tools. Tool rounds reason at low effort, the final writing at medium.
+function trimContext(messages, limit) {
+  const size = () => messages.reduce((a, m) => a + String(m.content || '').length, 0);
+  const tools = messages.map((m, i) => (m.role === 'tool' ? i : -1)).filter((i) => i >= 0);
+  for (const i of tools.slice(0, -2)) { if (size() <= limit) break; const c = String(messages[i].content); if (c.length > 1300) messages[i].content = c.slice(0, 1200) + '\n[trimmed to save context]'; }
+  for (const i of tools) { if (size() <= limit) break; const c = String(messages[i].content); if (c.length > 1300) messages[i].content = c.slice(0, 1200) + '\n[trimmed to save context]'; }
+  return size();
+}
 export const REPORT_TYPES = {
   brief: { name: 'Intelligence brief', shape: `Sections: Bottom line up front (three sentences at most); Key judgments (each with a likelihood term from ICD 203 and a confidence level, high, moderate or low, and the evidence it rests on); What happened (a dated timeline); Analysis (actors, intent, capability, method, scope); Implications (for enterprises, for the sector, for the theater where relevant); Indicators to watch; Intelligence gaps.` },
   exec: { name: 'Executive summary', shape: `For a board or executive reader, about one page. Sections: What happened (plain language); Why it bears on us (exposure, business impact, regulatory angle); What we know and what we do not; Decisions and actions (numbered, each with an owner role and a time frame); Confidence. No jargon without a gloss.` },
@@ -76,13 +87,13 @@ async function reportBudget() {
   await kvPut('report:budget', { day, used: used + 1, cap: REPORT.DAILY_CAP });
   return true;
 }
-async function orChat(model, messages, tools) {
+async function orChat(model, messages, tools, ms = REPORT.CALL_MS) {
   const key = ENV().OPENROUTER_API_KEY || ENV().TI_TRIAGE_KEY;
-  const body = { model, messages, temperature: 0.3, max_tokens: REPORT.MAX_TOKENS, reasoning: { effort: 'medium', exclude: true }, ...(tools ? { tools, tool_choice: 'auto' } : {}) };
+  const body = { model, messages, temperature: 0.3, max_tokens: REPORT.MAX_TOKENS, reasoning: { effort: tools ? 'low' : 'medium', exclude: true }, ...(tools ? { tools, tool_choice: 'auto' } : {}) };
   const r = await Promise.race([
-    get(REPORT.ENDPOINT, { method: 'POST', as: 'json', timeout: REPORT.CALL_MS, body: JSON.stringify(body),
+    get(REPORT.ENDPOINT, { method: 'POST', as: 'json', timeout: ms, body: JSON.stringify(body),
       headers: { authorization: 'Bearer ' + key, 'content-type': 'application/json', 'http-referer': 'https://intel.kilfoycyber.com', 'x-title': 'KTI agentic reports' } }),
-    new Promise((ok) => setTimeout(() => ok({ ok: false, status: 0, error: 'deadline passed' }), REPORT.CALL_MS + 5000)),
+    new Promise((ok) => setTimeout(() => ok({ ok: false, status: 0, error: 'deadline passed' }), ms + 5000)),
   ]);
   const ch = r.json && r.json.choices && r.json.choices[0];
   if (!r.ok || !ch) return { ok: false, status: r.status, error: (r.json && r.json.error && r.json.error.message) || r.error || 'no answer' };
@@ -195,16 +206,25 @@ export async function runReport(id) {
 The platform holds ${c.total} items on this subject from ${c.publishers} publishers between ${c.first_seen ? String(c.first_seen).slice(0, 10) : 'n/a'} and ${c.last_seen ? String(c.last_seen).slice(0, 10) : 'n/a'}.
 Starting sources:\n${sources.length ? sources.map(fmtSrc).join('\n') : '(none: the platform holds nothing on this subject yet; use web_search)'}`;
     const messages = [{ role: 'system', content: sysPrompt(r.type) }, { role: 'user', content: user }];
-    let mi = 0, final = null, model = null, rounds = 0, fails = [];
+    let mi = 0, final = null, model = null, rounds = 0, fails = [], retried = new Set();
     while (!final && Date.now() - t0 < REPORT.BUDGET_MS && mi < models.length) {
       if (!(await reportBudget())) throw new Error('the daily model request allowance for reports is spent');
-      const last = rounds >= REPORT.ROUNDS || Date.now() - t0 > REPORT.BUDGET_MS - REPORT.CALL_MS - 10000;
+      const left = REPORT.BUDGET_MS - (Date.now() - t0);
+      const last = rounds >= REPORT.ROUNDS || fails.length >= 2 || left < REPORT.CALL_MS + REPORT.FINAL_MS / 2;
+      trimContext(messages, retried.has(models[mi]) ? REPORT.CONTEXT_CHARS / 2 : REPORT.CONTEXT_CHARS);
       if (last) messages.push({ role: 'user', content: 'Write the final report now from the sources you have; no more tool calls.' });
-      const a = await orChat(models[mi], messages, last ? null : TOOLS);
+      const a = await orChat(models[mi], messages, last ? null : TOOLS, Math.max(30000, Math.min(last ? REPORT.FINAL_MS : REPORT.CALL_MS, left - 5000)));
       if (!a.ok || (!a.msg.content && !(a.msg.tool_calls || []).length)) {
-        fails.push(models[mi] + ': ' + (a.error || 'empty answer (' + a.finish + ')'));
-        await step(id, `Model ${models[mi]} did not answer (${String(a.error || 'empty answer').slice(0, 80)}); handing over to the next model`);
-        mi++; if (last) messages.pop(); continue;
+        const why = String(a.error || 'empty answer (' + a.finish + ')');
+        if (last) messages.pop();
+        if (!retried.has(models[mi]) && /deadline|timeout|abort|429|rate/i.test(why + ' ' + a.status)) {
+          retried.add(models[mi]);
+          await step(id, `Model ${models[mi]} did not answer in time (${why.slice(0, 60)}); trying it once more on a shorter context`);
+          continue;
+        }
+        fails.push(models[mi] + ': ' + why);
+        await step(id, `Model ${models[mi]} did not answer (${why.slice(0, 80)}); handing over to the next model`);
+        mi++; continue;
       }
       model = models[mi];
       const calls = a.msg.tool_calls || [];
@@ -241,10 +261,11 @@ Starting sources:\n${sources.length ? sources.map(fmtSrc).join('\n') : '(none: t
     // goes back once for revision against the listed sources, and the revision is kept if it cites more.
     const citedIn = (t) => new Set([...String(t).matchAll(/\[(\d{1,3})\]/g)].map((m) => +m[1]).filter((n) => n >= 1 && n <= sources.length));
     const want = Math.min(8, sources.length);
-    if (citedIn(final).size < want && Date.now() - t0 < REPORT.BUDGET_MS - REPORT.CALL_MS && model && (await reportBudget())) {
+    if (citedIn(final).size < want && Date.now() - t0 < REPORT.BUDGET_MS && model && (await reportBudget())) {
       await step(id, `Draft cites ${citedIn(final).size} sources; asking for corroboration from more of the ${sources.length} sources seen`);
       messages.push({ role: 'assistant', content: final }, { role: 'user', content: `Revise the report. It cites ${citedIn(final).size} distinct sources; corroborate each key fact with every listed source that carries it, citing at least ${want} distinct sources from as many independent publishers as the list allows. Keep the structure, change no fact the sources do not support, and return the full revised report only.` });
-      const v = await orChat(model, messages, null);
+      trimContext(messages, REPORT.CONTEXT_CHARS);
+      const v = await orChat(model, messages, null, REPORT.FINAL_MS);
       if (v.ok && v.msg.content && citedIn(v.msg.content).size > citedIn(final).size) final = String(v.msg.content).trim();
     }
     // Citations to numbers that were never given are dropped; the source list holds the cited sources in order.
@@ -263,7 +284,7 @@ Starting sources:\n${sources.length ? sources.map(fmtSrc).join('\n') : '(none: t
 }
 // Reports the upload trigger missed (a queued row older than two minutes), worked by the scheduled run.
 export async function jobReports() {
-  const q = await sql(`SELECT id FROM ti.report WHERE (status = 'queued' AND created_at < now() - interval '2 minutes') OR (status = 'running' AND started_at < now() - interval '15 minutes') ORDER BY created_at LIMIT 2`);
+  const q = await sql(`SELECT id FROM ti.report WHERE (status = 'queued' AND created_at < now() - interval '2 minutes') OR (status = 'running' AND started_at < now() - interval '15 minutes') ORDER BY created_at LIMIT 1`);
   const out = [];
   for (const r of q) out.push(await runReport(r.id));
   return { worked: out.length, reports: out };

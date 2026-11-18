@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.3 (17 November 2026)
+
+- Report reliability. A technical deep-dive on Optimizely failed when three free models in turn ran past the 110-second deadline with a context swollen by full pages. The agent now keeps its working context under 90,000 characters (older tool results cut to their opening 1,200 characters, pages read to 7,000), gives a model that misses its deadline or is rate-limited one more try on half that context, writes the report without tools once two models have failed, reasons at low effort in tool rounds and medium effort for the writing, and allows 150 seconds a tool round, 240 for the writing and nine minutes in all. A failed report shows its error and a Retry button.
+- Collector 2026-11-17.9.
+
 ## 3.0.2 (17 November 2026)
 
 - Corroboration depth for agentic reports: a draft citing fewer than eight distinct sources (or all of them, when fewer were seen) goes back to the model once to corroborate each key fact from the listed sources; the revision is kept when it cites more. The first practitioner report (Optimizely, retail SOC direction) started at once and finished in 144 seconds but cited 4 sources.

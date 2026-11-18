@@ -167,13 +167,15 @@
     const c = TI.obj(r.corpus) || {};
     const meta = [`Report ${r.id}`, 'requested ' + day(r.created_at)];
     if (r.status === 'done') meta.push(`written by ${r.model} in ${Math.round((Date.parse(r.done_at) - Date.parse(r.started_at || r.created_at)) / 1000)} s`, `${c.cited || 0} sources cited from ${c.cited_publishers || 0} publishers; ${c.total || 0} platform entries from ${c.publishers || 0} publishers on the subject`);
-    else if (r.status === 'failed') meta.push('failed: ' + (r.error || 'unknown error'));
+    else if (r.status === 'failed') meta.push('failed: ' + (r.error || 'unknown error') + '. Use Retry to queue it again; the free models are sometimes saturated');
     else meta.push(r.status === 'queued' ? 'queued' : 'in progress');
     if (r.prompt) meta.push('direction: ' + r.prompt);
     $('report-meta').textContent = meta.join(' · ') + (r.status === 'done' ? '. Machine-written from the cited sources; unreviewed by an analyst.' : '');
     const steps = TI.list(r.steps) || [];
     $('report-steps').innerHTML = r.status === 'done' ? '' : steps.map((s) => `<li>${esc(String(s.at || '').slice(11, 19))} ${esc(s.text)}</li>`).join('') + (r.status === 'queued' || r.status === 'running' ? '<li class="ti-dim">Working…</li>' : '');
     $('report-body').innerHTML = r.body ? md(r.body) : '';
+    const rb = $('report-retry');
+    if (rb) rb.hidden = r.status !== 'failed';
     const src = TI.list(r.sources) || [];
     $('report-sources-h').hidden = !src.length;
     $('report-sources').innerHTML = src.map((s) => `<li id="rsrc-${s.n}" value="${s.n}"><a href="${esc(safeUrl(s.url_resolved || s.url))}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a> <span class="ti-dim">${esc(s.publisher || '')}${s.published ? ' · ' + esc(day(s.published)) : ''} · ${esc(s.via || '')}</span></li>`).join('');
@@ -222,6 +224,13 @@
     for (const id of ['search-days', 'search-cat', 'search-theater']) $(id).addEventListener('change', () => { state.days = +$('search-days').value; state.cat = $('search-cat').value; state.theater = $('search-theater').value; if (state.q) submit(state.q); });
     $('search-more').addEventListener('click', () => { state.offset += 50; run(true); });
     $('report-go').addEventListener('click', generate);
+    $('report-retry').addEventListener('click', async () => {
+      const r = state.report; if (!r) return;
+      $('report-retry').disabled = true;
+      const x = await fetch('/api/report', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ q: r.q, type: r.type, prompt: r.prompt || '' }) }).then((y) => y.json()).catch((e) => ({ error: String(e) }));
+      $('report-retry').disabled = false;
+      if (x.id) openReport(x.id); else $('report-meta').textContent = 'Not queued: ' + (x.error || 'no answer');
+    });
     $('report-close').addEventListener('click', () => { clearTimeout(state.poll); $('report-view').hidden = true; setHash(state.q ? { q: state.q } : {}); });
     $('report-copy').addEventListener('click', () => { const u = location.origin + '/#search?report=' + (state.report && state.report.id); (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => { $('report-copy').textContent = 'Link copied'; setTimeout(() => ($('report-copy').textContent = 'Copy link'), 2000); }).catch(() => prompt('Report link', u)); });
     $('report-md').addEventListener('click', () => {
