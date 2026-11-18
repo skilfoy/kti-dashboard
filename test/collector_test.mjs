@@ -252,8 +252,13 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(M.gdeltBackoffMs(1) === 900000 && M.gdeltBackoffMs(3) === 3600000 && M.gdeltBackoffMs(9) === 21600000, 'back-off doubles to six hours');
   const files = (await db.query(`SELECT status, count(*)::int AS n FROM ti.gdelt_file GROUP BY 1 ORDER BY 1`)).rows;
   ok(files.find((f) => f.status === 'missing').n === 2 && files.find((f) => f.status === 'ok').n === 286, 'file statuses ' + JSON.stringify(files));
+  // A run with no file to parse never reads the atlas (3.2.1): with the atlas gone from the bucket and none in memory, it
+  // still succeeds; the next run that parses a file reads it again.
+  const atlasKey = 'ti-docs/ref/countries-50m.json', atlasBuf = bucket.get(atlasKey);
+  bucket.delete(atlasKey); M.setGeo(null);
   const again = await M.runJob('gdelt', {});
-  ok(again.ok && again.processed === 0, 'incremental run finds nothing new');
+  ok(again.ok && again.processed === 0, 'incremental run finds nothing new, without reading the atlas ' + JSON.stringify(again.error || ''));
+  bucket.set(atlasKey, atlasBuf);
   // Recheck: a slot recorded missing by the earlier first-404 rule that GDELT now serves is recovered, a few per run.
   const lateSlot = stamp(new Date(latestD.getTime() - 50 * 900000));
   gdelt.set(lateSlot, gdelt.get(LATEST));

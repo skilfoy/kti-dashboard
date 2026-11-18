@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.2.1 (18 November 2026)
+
+- Measured after 3.2.0 (20:33 to 23:23 UTC): bucket reads 2.1 MB an hour (atlas 0.97, bundle 0.54, triage mirror 0.53, the A1 retrier's settings and bootstrap 0.05), query results 2.35 MB an hour (triage 0.86, of which one six-hourly full mirror refresh was 1.8 MB; sources 0.47; GDELT 0.43; infra 0.31). The meter rose about 5.9 MB an hour against the 6.2 MB an hour that 5 GB allows for the rest of November.
+- GDELT reads the world atlas only when a file arrives to be parsed (half the runs on 18 November found none), and concurrent callers share one atlas read. The triage mirror's full refresh is daily instead of six-hourly; the row count check and the verifier overlay already keep the mirror exact between refreshes.
+- Expected: about 0.7 MB an hour less, so about 5.2 MB an hour, and November near 4.7 GB.
+- Collector 2026-11-18.6.
+
 ## 3.2.0 (18 November 2026)
 
 - Transfer, storage side. Neon's transfer meter counts object storage reads as well as query results. The bucket's GET log for 07:08 to 17:24 UTC on 18 November held 86 MB, about three quarters of the meter's rise over those hours: the world atlas (28.7 MB, 38 reads at 756 KB), the code bundle (23.6 MB, 60 cold starts), the bundle's kept copy (14.9 MB, read back on every cold start to check it was there), the triage mirror (14.8 MB) and the triage evaluation set (2.6 MB). The 3.0.4 mirror had moved the triage window's reads from Postgres to the bucket at a third of the size, so it still saved transfer, though less than its note claimed.

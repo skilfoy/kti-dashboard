@@ -316,14 +316,17 @@ export async function triageBatch(items, cap, { retry = true, reserve = 0 } = {}
 // The window's triage rows (3.0.4). Every byte a query returns counts against the Free plan's 5 GB of monthly Postgres
 // transfer, and the two full reads of the 72-hour window (the stored stories the new titles join, then the published
 // list) cost about 1.4 MB an hour, more than any other job. Rows are written once by this job and changed afterwards only
-// by the verifier, so the window is kept as a gzipped mirror in the bucket (bucket reads are not Postgres transfer): a
+// by the verifier, so the window is kept as a gzipped mirror in the bucket (a third of the size; bucket reads count
+// against the plan's transfer too, as found in 3.2.0): a
 // run reads the rows labelled since the mirror was written and the verified rows, overlays them, drops rows that left
 // the window, and writes the mirror back. A mirror older than MIRROR_FULL_MS, of another version, unreadable, or whose
-// row count differs from the table's count for the window is replaced by a full read.
+// row count differs from the table's count for the window is replaced by a full read. The full read was every six hours
+// until 3.2.1 (1.8 MB each, a third of the job's transfer); the count check already catches a deleted row and the overlay
+// carries the verifier's changes, so it is now daily.
 // The mirror last written by this instance is kept in memory as well (3.2.0): the triage job reads the window twice
 // (the stored stories before labelling, the published document after), and the second read, like any later run in a
 // warm instance, overlays the rows labelled since from memory instead of reading the 500 KB object again.
-const MIRROR_KEY = 'mirror/triage-window.json.gz', MIRROR_FULL_MS = 6 * 3600e3, MIRROR_V = 1;
+const MIRROR_KEY = 'mirror/triage-window.json.gz', MIRROR_FULL_MS = 24 * 3600e3, MIRROR_V = 1;
 let MIRROR_MEM = null;
 export function resetMirrorMemory() { MIRROR_MEM = null; }
 const TRIAGE_COLS = 'link, kind, source, title, published, relevance, vector, theater, actors, cves, why, model, prompt_v, at, cluster, verify, verify_model';
