@@ -59,7 +59,7 @@ export async function jobOciA1() {
   const base = `https://iaas.${conf.region}.oraclecloud.com/20160918`;
   // A server launched earlier (by this job or by hand) under the same name ends the search.
   const ls = await ociCall('GET', `${base}/instances?compartmentId=${encodeURIComponent(conf.compartment)}&displayName=${encodeURIComponent(conf.name)}`, null, auth);
-  if (ls.status !== 200) return { error: `list instances ${ls.status}: ${(ls.json && ls.json.message) || ls.text}`, fingerprint: k.fingerprint };
+  if (ls.status !== 200) return { error: `list instances ${ls.status}: ${(ls.json && ls.json.message) || ls.text}`, fingerprint: k.fingerprint, ...(ls.status === 401 ? { public_key: k.pub } : {}) };
   const live = (ls.json || []).find((i) => !/TERMINAT/.test(i.lifecycleState));
   if (live) { await kvPut(OCI.STATE, { ...st, instance: live.id, launched_at: live.timeCreated }); return { done: true, instance: live.id, state: live.lifecycleState }; }
   const boot = await s3Get(conf.user_data_key);
