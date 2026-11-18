@@ -758,7 +758,8 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
       { id: 'test/big:free', pricing: { prompt: '0', completion: '0' }, supported_parameters: ['tools', 'reasoning'], context_length: 1000000 }, { id: 'test/small:free', pricing: { prompt: '0', completion: '0' }, supported_parameters: ['tools'], context_length: 8000 }] });
     if (u === M.REPORT.ENDPOINT) {
       const b = JSON.parse(opts.body); calls.push(b);
-      if (calls.length === 1) return resp(200, { choices: [{ finish_reason: 'tool_calls', message: { content: '', tool_calls: [{ id: 't1', type: 'function', function: { name: 'web_search', arguments: '{"query":"Optimizely incident"}' } }, { id: 't2', type: 'function', function: { name: 'fetch_page', arguments: '{"source":"https://analysis.example/optimizely"}' } }] } }] });
+      if (calls.length === 1) return resp(429, { error: { message: 'rate limited upstream' } });
+      if (calls.length === 2) return resp(200, { choices: [{ finish_reason: 'tool_calls', message: { content: '', tool_calls: [{ id: 't1', type: 'function', function: { name: 'web_search', arguments: '{"query":"Optimizely incident"}' } }, { id: 't2', type: 'function', function: { name: 'fetch_page', arguments: '{"source":"https://analysis.example/optimizely"}' } }] } }] });
       const toolText = b.messages.filter((m) => m.role === 'tool').map((m) => m.content).join('\n');
       const n = (toolText.match(/\[(\d+)\] Optimizely incident analysis/) || [])[1];
       return resp(200, { choices: [{ finish_reason: 'stop', message: { content: `## Bottom line up front\nAttackers injected a skimmer through Optimizely [1][${n}]. Invented claim [99].\n\n## Corroboration\n- Skimmer: [1][${n}]` } }] });
@@ -771,7 +772,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const trig = await M.default.fetch(new Request('https://ti.example/report-run', { method: 'POST', headers: { 'x-neon-trigger-invocation-id': 'inv-1', 'content-type': 'application/json' }, body: JSON.stringify({ data: { key: `reports/queue/${st.id}.json` } }) }));
   const tr = await trig.json(), rep = await M.getReport(st.id);
   const src = rep.sources || [];
-  ok(trig.status === 200 && tr.ok && rep.status === 'done' && rep.model === 'test/big:free' && calls.length === 3 && calls[0].tools.length === 3 && !calls[2].tools && /Revise the report/.test(calls[2].messages.slice(-1)[0].content)
+  ok(trig.status === 200 && tr.ok && rep.status === 'done' && rep.model === 'test/big:free' && calls.length === 4 && calls[1].tools.length === 3 && !calls[3].tools && /Revise the report/.test(calls[3].messages.slice(-1)[0].content) && (rep.steps || []).some((x) => /trying it once more/.test(x.text))
     && !/\[99\]/.test(rep.body) && src.length === 2 && src.some((x) => x.url === 'https://analysis.example/optimizely') && src.some((x) => x.via === 'corpus'),
     'the upload trigger runs the report: a free model with tools, web search through Bing News with the publisher link unwrapped, an invented citation dropped ' + JSON.stringify({ tr, status: rep.status, err: rep.error, src, calls: calls.length }));
   ok((await M.getReport('nope')) === null && (await M.listReports()).some((r) => r.id === st.id), 'reports are listed and ids are checked');

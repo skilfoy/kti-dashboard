@@ -13,7 +13,7 @@ Object.assign(LEASE_S, { psirt: 240, triage: 600, triageeval: 600, news: 180 });
 // Source network and agentic reports (3.0, 37h-sources.mjs and 37i-report.mjs). The sources job replaces the news job and
 // the blogs job's reading on the schedule; both stay callable by hand.
 Object.assign(JOBS, { sources: jobSources, reports: jobReports });
-Object.assign(LEASE_S, { sources: 240, reports: 720 });
+Object.assign(LEASE_S, { sources: 240, reports: 900 });
 export async function runJob(job, opts = {}) {
   const fn = JOBS[job];
   if (!fn) return { job, ok: false, error: 'unknown job' };
