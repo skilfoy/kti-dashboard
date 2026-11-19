@@ -13,23 +13,24 @@
 // one or two plain words needs its vendor in the same entry; countries are kept only beside another entity, so the
 // geopolitical stream adds country context to the cyber entities without becoming a country index of its own.
 export const ENTITY = { BATCH: 3000, BUDGET_MS: 100000, KEEP_DAYS: 400, MAX_N: 7, CUE_SPAN: 3, DOC_EVERY_MS: 3600e3, AMB_EVERY_MS: 86400e3,
-  AMB_MIN: 3, AMB_RATIO: 2, AMB_HARD: 12, BASELINE_DAYS: 14, GAZ_URL: 'https://intel.kilfoycyber.com/data/entity_gazetteer.json' };
+  STANDALONE_MIN: 2, BASELINE_DAYS: 14, GAZ_URL: 'https://intel.kilfoycyber.com/data/entity_gazetteer.json' };
 export const CYBER_CATS = new Set(['research', 'topic-cyber', 'cyber-news', 'vulnerability']);
 // Cue words by the kind of entity they vouch for. A threat name needs a threat word beside it ("Play ransomware",
 // "Sea Turtle hackers"); a vendor needs a vulnerability word ("Apple patches a zero-day"). Generic words such as
 // "security", "cyber" or "attack" vouch for nothing: they sit next to everything in a cyber headline, and on the first
 // live run (19 November 2026) they let "Global" and "Agenda" through.
 const CUES = {
-  threat: { prefix: ['ransomwar', 'malwar', 'gang', 'hacker', 'actor', 'operator', 'affiliate', 'extortion', 'extortionist', 'backdoor', 'botnet', 'loader',
-    'stealer', 'infostealer', 'trojan', 'spyware', 'wiper', 'implant', 'dropper', 'rootkit', 'cybercrim', 'leak', 'variant', 'strain', 'payload'],
+  threat: { prefix: ['ransomwar', 'malwar', 'gang', 'hacker', 'operator', 'affiliate', 'extortion', 'extortionist', 'backdoor', 'botnet', 'loader',
+    'stealer', 'infostealer', 'trojan', 'spyware', 'wiper', 'implant', 'dropper', 'rootkit', 'leak', 'variant', 'strain', 'payload'],
     exact: new Set(['rat', 'c2', 'apt', 'apts', 'group', 'groups', 'crew', 'ransom', 'worm']) },
   vendor: { prefix: ['vulnerab', 'zero-day', 'zeroday', 'flaw', 'patch', 'exploit', 'advisor', 'cve-', 'bug', 'firmware', 'hotfix'],
     exact: new Set(['cve', '0-day', 'update', 'updates', 'fix', 'fixes', 'rce', 'kev']) },
 };
+const KIND_WORDS = new Set('wiper wipers loader loaders backdoor backdoors stealer stealers infostealer trojan trojans spyware implant dropper rootkit botnet ransomware malware worm rat payload variant strain exploit patch update'.split(' '));
 const cueKind = (t) => (t === 'vendor' || t === 'product' ? 'vendor' : 'threat');
 const isCue = (low, kind) => CUES[kind].exact.has(low) || CUES[kind].prefix.some((p) => low.startsWith(p));
 // Bump when the matcher's rules change; with the gazetteer's own rules version it decides when every mention is re-derived.
-export const MATCH_V = 3;
+export const MATCH_V = 4;
 const DEMONYM = 'RU:Russian|CN:Chinese|IR:Iranian|KP:North Korean|KR:South Korean|IL:Israeli|UA:Ukrainian|US:American|GB:British|BY:Belarusian|PK:Pakistani|IN:Indian|'
   + 'VN:Vietnamese|TR:Turkish|TW:Taiwanese|JP:Japanese|DE:German|FR:French|SA:Saudi|AE:Emirati|SY:Syrian|LB:Lebanese|VE:Venezuelan|CU:Cuban|KZ:Kazakh|'
   + 'PL:Polish|NL:Dutch|AU:Australian|CA:Canadian|IT:Italian|ES:Spanish|BR:Brazilian|MX:Mexican|NG:Nigerian|IQ:Iraqi|QA:Qatari|EG:Egyptian|PS:Palestinian|'
@@ -58,6 +59,8 @@ export function compileGazetteer(doc, { ambiguous = [] } = {}) {
     for (const [name, mode] of e.a || []) {
       const k = squashName(name);
       if (k.length < 3 || byKey.has(k)) continue;
+      // A single-word name that is itself a cue word ("Wiper", "Loader", "Backdoor") names a kind of thing, not this one.
+      if (tokenize(name).length === 1 && KIND_WORDS.has(name.toLowerCase())) continue;
       // A name of letters only matches as many words as it has ("DONOT" is not "do not"); one with a digit also
       // matches split ("APT 28", "LockBit 3.0").
       byKey.set(k, { id: e.id, mode, t: e.t, nt: tokenize(name).length, dig: /\d/.test(name) });
@@ -90,9 +93,11 @@ export function compileGazetteer(doc, { ambiguous = [] } = {}) {
 // Entities named in one text: Map id -> the words that named it. Longest match at each position wins.
 export function matchText(G, text) {
   const toks = tokenize(text), found = new Map(), pending = [];
-  const cue = (i, n, t) => {
+  // A cue-only name ('w') needs its cue next to it ("Play ransomware", "gang Qilin"); an ambiguous name ('s') within three
+  // words. "Hackers Remotely Crash Servers" no longer names Industroyer by its alias "Crash".
+  const cue = (i, n, t, span = ENTITY.CUE_SPAN) => {
     const kind = cueKind(t);
-    for (let j = Math.max(0, i - ENTITY.CUE_SPAN); j < Math.min(toks.length, i + n + ENTITY.CUE_SPAN); j++) if ((j < i || j >= i + n) && isCue(toks[j].low, kind)) return true;
+    for (let j = Math.max(0, i - span); j < Math.min(toks.length, i + n + span); j++) if ((j < i || j >= i + n) && isCue(toks[j].low, kind)) return true;
     return false;
   };
   for (let i = 0; i < toks.length;) {
@@ -108,7 +113,7 @@ export function matchText(G, text) {
       switch (c.mode) {
         case 'i': case 'v': ok = c.nt == null || c.dig || n === c.nt; break;
         case 's': ok = n === 1 && toks[i].cap && (!G.ambiguous.has(key) || cue(i, n, c.t)); break;
-        case 'w': ok = n === (c.nt || 1) && toks[i].cap && cue(i, n, c.t); break;
+        case 'w': ok = n === (c.nt || 1) && toks[i].cap && cue(i, n, c.t, 1); break;
         case 'x': ok = n === 1 && c.exact.has(toks[i].raw.replace(/\.$/, '')); break;
         default: ok = false;
       }
@@ -179,12 +184,12 @@ async function syncEntities(g) {
 
 // A single-word name is ambiguous when general news uses it (geopolitics, theater and maritime feeds) at more than
 // AMB_RATIO times its rate in the cyber feeds, at least AMB_MIN times in the collection, or AMB_HARD times outright.
-export function ambiguousWords(general, cyber, nGeneral, nCyber) {
-  const cy = new Map(cyber.map((r) => [r.word, +r.ndoc]));
-  return general.filter((r) => {
-    const g = +r.ndoc, c = cy.get(r.word) || 0;
-    return g >= ENTITY.AMB_HARD || (g >= ENTITY.AMB_MIN && g / Math.max(1, nGeneral) > ENTITY.AMB_RATIO * (c / Math.max(1, nCyber)));
-  }).map((r) => r.word).sort();
+// A single word stands alone only when the collection attests it as a cyber name: in at least STANDALONE_MIN cyber-feed
+// entries and in general news at most a tenth as often. Every other single word (rare, unseen, or at home in general
+// news: "Rover" from Land Rover, "Frankenstein", "Summit") needs a cue word beside it.
+export function ambiguousWords(words, general, cyber) {
+  const ge = new Map(general.map((r) => [r.word, +r.ndoc])), cy = new Map(cyber.map((r) => [r.word, +r.ndoc]));
+  return [...new Set(words)].filter((w) => { const g = ge.get(w) || 0, c = cy.get(w) || 0; return !(c >= ENTITY.STANDALONE_MIN && g <= c / 10); }).sort();
 }
 async function ambiguity(g, force = false) {
   const kv = (await sql(`SELECT v, at FROM ti.kv WHERE k = 'entities:amb'`))[0];
@@ -196,7 +201,7 @@ async function ambiguity(g, force = false) {
     [`SELECT word, ndoc FROM ts_stat($$SELECT tsv FROM ti.item WHERE category IN ('${cats.join("','")}')$$) WHERE word = ANY(ARRAY(SELECT jsonb_array_elements_text($1::jsonb)))`, [words]],
     [`SELECT count(*) FILTER (WHERE category IN ('geopolitics','topic-theater','maritime','think-tank','defense','government'))::int AS g, count(*) FILTER (WHERE category = ANY(ARRAY(SELECT jsonb_array_elements_text($1::jsonb))))::int AS c FROM ti.item`, [cats]],
   ]);
-  const amb = ambiguousWords(gen, cyb, n[0].g, n[0].c);
+  const amb = ambiguousWords(words, gen, cyb);
   await sql(`INSERT INTO ti.kv (k, v, at) VALUES ('entities:amb', $1::jsonb, now()) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v, at = now()`, [{ hash: g.hash, words: amb, checked: words.length, general: n[0].g, cyber: n[0].c }]);
   return amb;
 }
