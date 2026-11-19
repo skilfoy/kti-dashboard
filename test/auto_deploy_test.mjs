@@ -74,7 +74,7 @@ const NAMES = ['ABUSECH_AUTH_KEY', 'CLOQ_API_KEY', 'DATABASE_URL', 'FIRMS_MAP_KE
 
 // keptOld: 'gz' (the loader's copy since 3.2.0), true (a plain copy kept before 3.2.0) or false. leases: [{job, until}]
 // for op=status, each released after `holdMs` of fake clock.
-function world({ serveSha = NEW, fallback = false, keptOld = 'gz', start = at('10:02:00'), leases = [], staleStatus = 0 } = {}) {
+function world({ serveSha = NEW, fallback = false, keptOld = 'gz', start = at('10:02:00'), leases = [], staleStatus = 0, staleRun = 0 } = {}) {
   const w = { clock: start, bucket: new Map([['code/collector.mjs', OLD_SRC], ['code/collector.mjs.gz', zlib.gzipSync(OLD_SRC)]]), env: { TI_CODE_SHA256: OLD, TI_CODE_SHA256_PREV: 'e'.repeat(64) }, deploys: [], writes: [], issues: [], comments: [], logs: [], leases };
   if (keptOld === 'gz') w.bucket.set(`code/by-sha/${OLD}.mjs.gz`, zlib.gzipSync(OLD_SRC));
   else if (keptOld) w.bucket.set(`code/by-sha/${OLD}.mjs`, OLD_SRC);
@@ -108,6 +108,7 @@ function world({ serveSha = NEW, fallback = false, keptOld = 'gz', start = at('1
         w.writes.push(gz ? 'PUSH gz' : 'PUSH'); w.bucket.set(gz ? 'code/collector.mjs.gz' : 'code/collector.mjs', gz ? zlib.gzipSync(NEW_SRC) : NEW_SRC);
         return json({ asset: 'code', status: 200, sha256: NEW });
       }
+      if (op === 'run' && running() === 'new' && w.staleRun > 0) { w.staleRun--; w.writes.push('RUN'); return json({ version: '2026-11-02.1', jobs: [{ job: 'gdelt', ok: true }] }); }
       if (op === 'run') {
         w.writes.push('RUN');
         const v = running() === 'new' ? '2026-11-03.1' : '2026-11-02.1';
@@ -126,7 +127,7 @@ function world({ serveSha = NEW, fallback = false, keptOld = 'gz', start = at('1
     }
     throw new Error('unexpected request ' + method + ' ' + u.href);
   };
-  w.stale = staleStatus;
+  w.stale = staleStatus; w.staleRun = staleRun;
   w.run = (extra = {}) => D.deploy({ env: { ...SECRETS, ...extra.env }, http: w.http, wait: async (ms) => { w.clock += ms; }, now: () => w.clock, log: (l) => w.logs.push(l),
     bundlePath, loaderPath, sha: 'abc123', files: extra.files || ['neon/parts/20-gdelt.mjs'], prevLoader: extra.prevLoader || null });
   return w;
@@ -137,6 +138,12 @@ function world({ serveSha = NEW, fallback = false, keptOld = 'gz', start = at('1
   const w = world({ staleStatus: 2 });
   const r = await w.run();
   ok(r.ok && w.env.TI_CODE_SHA256 === NEW && w.issues.length === 0, 'a stale op=status answer is asked again, not rolled back ' + r.error);
+}
+// An old warm instance takes the first two gdelt runs after the pin: the run is asked again.
+{
+  const w = world({ staleRun: 2 });
+  const r = await w.run();
+  ok(r.ok && w.env.TI_CODE_SHA256 === NEW && w.writes.filter((x) => x === 'RUN').length === 3, 'a stale run answer is run again, not rolled back ' + r.error);
 }
 // A month-long operator pause does not hold the deploy; a running job's lease does.
 {
