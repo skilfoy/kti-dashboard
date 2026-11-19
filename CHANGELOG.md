@@ -1,5 +1,18 @@
 # Changelog
 
+## 3.4.2 (19 November 2026)
+
+- Precision, from the first complete pass over the 67,830 stored entries. The most-named list held clear false matches, all from everyday words that MISP and Malpedia carry as aliases: Derusbi's "PHOTO" (94 entries), DONOT matching the words "do not" (73), Sea Turtle's "SILICON" (57), Earth Lusca's "Chromium" (78), the leak-site group "Global" (54), Broomstick's "Clean Up" (34), the "CALENDAR" family (34) and Qilin's "Agenda".
+- Gazetteer rules (version 2):
+  - An all-caps or camel-case word is still a word, so it is counted only capitalized, and only beside a cue when common.
+  - A name made only of everyday words, or of four letters or fewer, needs a cue word.
+  - A KEV vendor or product name outranks another entity's alias.
+- Matcher rules (version 2):
+  - A name of letters only matches as many words as it has.
+  - Cue words are typed. Threat names need a threat word (ransomware, gang, hackers, APT, backdoor). Vendors need a vulnerability word (flaw, patch, zero-day, CVE). Generic words (security, cyber, attack, campaign, operation) no longer vouch.
+- A change of either rules version re-derives every mention. Entries in the store are read again; older entry documents are matched again on their titles.
+- Collector 2026-11-19.5.
+
 ## 3.4.1 (19 November 2026)
 
 - The entities job's first live run read 876,000 rows in 95 seconds (251 MB of query results, 174 MB sent) and stored 1,375 mentions. The sources job stamps each insert with one `now()`, so up to 9,196 entries share a seen_at to the microsecond. The watermark kept a millisecond copy, which sorts before all of them, so the job reread the same 3,000 entries until its budget ran out. The job was paused (lease held) at 15:27 UTC. The watermark now keeps seen_at as text at full precision, and a batch that does not move it stops the run.

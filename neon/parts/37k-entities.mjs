@@ -15,11 +15,21 @@
 export const ENTITY = { BATCH: 3000, BUDGET_MS: 100000, KEEP_DAYS: 400, MAX_N: 7, CUE_SPAN: 3, DOC_EVERY_MS: 3600e3, AMB_EVERY_MS: 86400e3,
   AMB_MIN: 4, AMB_RATIO: 2, AMB_HARD: 40, GAZ_URL: 'https://intel.kilfoycyber.com/data/entity_gazetteer.json' };
 export const CYBER_CATS = new Set(['research', 'topic-cyber', 'cyber-news', 'vulnerability']);
-const CUE_PREFIX = ['ransomwar', 'malwar', 'gang', 'hacker', 'hacking', 'hacked', 'actor', 'threat', 'campaign', 'operator', 'affiliate', 'extortion', 'extort',
-  'backdoor', 'botnet', 'loader', 'stealer', 'infostealer', 'trojan', 'spyware', 'wiper', 'implant', 'phish', 'cyber', 'breach', 'exploit', 'vulnerab',
-  'zero-day', 'zeroday', 'flaw', 'patch', 'attack', 'intrusion', 'espionage', 'ddos', 'variant', 'payload', 'dropper', 'strain', 'cybercrim', 'leak',
-  'apt', 'advisory', 'security', 'compromis', 'malicious', 'spy', 'hijack', 'worm', 'rootkit', 'ransom'];
-const CUE_EXACT = new Set(['rat', 'c2', 'cve', 'bug', 'bugs', '0-day', 'group', 'groups', 'crew', 'family', 'sample', 'samples', 'kit']);
+// Cue words by the kind of entity they vouch for. A threat name needs a threat word beside it ("Play ransomware",
+// "Sea Turtle hackers"); a vendor needs a vulnerability word ("Apple patches a zero-day"). Generic words such as
+// "security", "cyber" or "attack" vouch for nothing: they sit next to everything in a cyber headline, and on the first
+// live run (19 November 2026) they let "Global" and "Agenda" through.
+const CUES = {
+  threat: { prefix: ['ransomwar', 'malwar', 'gang', 'hacker', 'actor', 'operator', 'affiliate', 'extortion', 'extortionist', 'backdoor', 'botnet', 'loader',
+    'stealer', 'infostealer', 'trojan', 'spyware', 'wiper', 'implant', 'dropper', 'rootkit', 'cybercrim', 'leak', 'variant', 'strain', 'payload'],
+    exact: new Set(['rat', 'c2', 'apt', 'apts', 'group', 'groups', 'crew', 'ransom', 'worm']) },
+  vendor: { prefix: ['vulnerab', 'zero-day', 'zeroday', 'flaw', 'patch', 'exploit', 'advisor', 'cve-', 'bug', 'firmware', 'hotfix'],
+    exact: new Set(['cve', '0-day', 'update', 'updates', 'fix', 'fixes', 'rce', 'kev']) },
+};
+const cueKind = (t) => (t === 'vendor' || t === 'product' ? 'vendor' : 'threat');
+const isCue = (low, kind) => CUES[kind].exact.has(low) || CUES[kind].prefix.some((p) => low.startsWith(p));
+// Bump when the matcher's rules change; with the gazetteer's own rules version it decides when every mention is re-derived.
+export const MATCH_V = 2;
 const DEMONYM = 'RU:Russian|CN:Chinese|IR:Iranian|KP:North Korean|KR:South Korean|IL:Israeli|UA:Ukrainian|US:American|GB:British|BY:Belarusian|PK:Pakistani|IN:Indian|'
   + 'VN:Vietnamese|TR:Turkish|TW:Taiwanese|JP:Japanese|DE:German|FR:French|SA:Saudi|AE:Emirati|SY:Syrian|LB:Lebanese|VE:Venezuelan|CU:Cuban|KZ:Kazakh|'
   + 'PL:Polish|NL:Dutch|AU:Australian|CA:Canadian|IT:Italian|ES:Spanish|BR:Brazilian|MX:Mexican|NG:Nigerian|IQ:Iraqi|QA:Qatari|EG:Egyptian|PS:Palestinian|'
@@ -36,7 +46,6 @@ export function tokenize(text) {
   for (const m of String(text || '').matchAll(TOKEN)) out.push({ raw: m[0], k: squashName(m[0]), cap: /^\p{Lu}/u.test(m[0]), low: m[0].toLowerCase() });
   return out;
 }
-const isCue = (low) => CUE_EXACT.has(low) || CUE_PREFIX.some((p) => low.startsWith(p));
 
 // The compiled matcher: squashed name -> one candidate {id, mode, exact?}. A gazetteer name owns its key; a country name
 // takes a key only when no entity holds it.
@@ -49,7 +58,9 @@ export function compileGazetteer(doc, { ambiguous = [] } = {}) {
     for (const [name, mode] of e.a || []) {
       const k = squashName(name);
       if (k.length < 3 || byKey.has(k)) continue;
-      byKey.set(k, { id: e.id, mode });
+      // A name of letters only matches as many words as it has ("DONOT" is not "do not"); one with a digit also
+      // matches split ("APT 28", "LockBit 3.0").
+      byKey.set(k, { id: e.id, mode, t: e.t, nt: tokenize(name).length, dig: /\d/.test(name) });
       maxN = Math.max(maxN, tokenize(name).length);
     }
   }
@@ -79,8 +90,9 @@ export function compileGazetteer(doc, { ambiguous = [] } = {}) {
 // Entities named in one text: Map id -> the words that named it. Longest match at each position wins.
 export function matchText(G, text) {
   const toks = tokenize(text), found = new Map(), pending = [];
-  const cue = (i, n) => {
-    for (let j = Math.max(0, i - ENTITY.CUE_SPAN); j < Math.min(toks.length, i + n + ENTITY.CUE_SPAN); j++) if ((j < i || j >= i + n) && isCue(toks[j].low)) return true;
+  const cue = (i, n, t) => {
+    const kind = cueKind(t);
+    for (let j = Math.max(0, i - ENTITY.CUE_SPAN); j < Math.min(toks.length, i + n + ENTITY.CUE_SPAN); j++) if ((j < i || j >= i + n) && isCue(toks[j].low, kind)) return true;
     return false;
   };
   for (let i = 0; i < toks.length;) {
@@ -94,10 +106,9 @@ export function matchText(G, text) {
       if (!c) continue;
       let ok;
       switch (c.mode) {
-        case 'i': ok = true; break;
-        case 'v': ok = true; break;
-        case 's': ok = n === 1 && toks[i].cap && (!G.ambiguous.has(key) || cue(i, n)); break;
-        case 'w': ok = n === 1 && toks[i].cap && cue(i, n); break;
+        case 'i': case 'v': ok = c.nt == null || c.dig || n === c.nt; break;
+        case 's': ok = n === 1 && toks[i].cap && (!G.ambiguous.has(key) || cue(i, n, c.t)); break;
+        case 'w': ok = n === (c.nt || 1) && toks[i].cap && cue(i, n, c.t); break;
         case 'x': ok = n === 1 && c.exact.has(toks[i].raw.replace(/\.$/, '')); break;
         default: ok = false;
       }
@@ -200,10 +211,16 @@ export async function jobEntities(opts = {}) {
   const g = await loadGazetteer();
   const sync = await syncEntities(g);
   const G = compileGazetteer(g.doc, { ambiguous: await ambiguity(g, !!opts.rebuild) });
+  // A change of matching rules (the matcher's MATCH_V or the gazetteer's rules) re-derives every mention: the stored
+  // entries are read again from the start, and older entry documents are matched again on their titles.
+  const rules = `${MATCH_V}.${g.doc.rules || 1}`;
+  const rk = (await sql(`SELECT v FROM ti.kv WHERE k = 'entities:rules'`))[0];
+  let rederived = null;
+  if (!rk || !rk.v || rk.v.rules !== rules) rederived = await rederive(G, rules, rk && rk.v && rk.v.rules);
   const kv = (await sql(`SELECT v FROM ti.kv WHERE k = 'entities:mark'`))[0];
   const mark = (kv && kv.v) || {};
   if (opts.reprocess) for (const s of Object.keys(SOURCES_SQL)) mark[s] = null;
-  const out = { gazetteer: { date: g.doc.date, via: g.via, ...sync }, ambiguous: G.ambiguous.size, read: 0, entries: 0, mentions: 0, by_source: {} };
+  const out = { gazetteer: { date: g.doc.date, via: g.via, ...sync }, rules, ...(rederived ? { rederived } : {}), ambiguous: G.ambiguous.size, read: 0, entries: 0, mentions: 0, by_source: {} };
   for (const src of Object.keys(SOURCES_SQL)) {
     const s = out.by_source[src] = { read: 0, entries: 0, mentions: 0 };
     let m = mark[src] || { at: '1970-01-01T00:00:00Z', link: '' };
@@ -246,7 +263,7 @@ export async function jobEntities(opts = {}) {
   }
   out.behind = Date.now() >= deadline - 5000;
   const d = (await sql(`SELECT at FROM ti.kv WHERE k = 'entities:doc'`))[0];
-  if (opts.rebuild || out.mentions > 0 && (!d || Date.now() - new Date(d.at).getTime() > ENTITY.DOC_EVERY_MS) || !d) {
+  if (opts.rebuild || rederived || out.mentions > 0 && (!d || Date.now() - new Date(d.at).getTime() > ENTITY.DOC_EVERY_MS) || !d) {
     const doc = await graphDoc(g);
     out.published = await putDoc('entities', doc);
     out.rising = doc.rising;
@@ -254,6 +271,40 @@ export async function jobEntities(opts = {}) {
   }
   await recordVolume([['entity_mentions', out.mentions]]);
   return { ...out, ms: Date.now() - t0 };
+}
+
+// Derived rows are rebuilt under new rules. Entries still in the 45-day store are read again by the main loop (their
+// watermarks reset); older entry documents are matched again on their stored titles here.
+async function rederive(G, rules, from) {
+  const t0 = Date.now();
+  const [gone] = await sqlTx([
+    [`WITH live AS (SELECT link FROM ti.item UNION SELECT link FROM ti.advisory), d AS (DELETE FROM ti.mention m USING live WHERE m.link = live.link RETURNING 1) SELECT count(*)::int AS n FROM d`],
+    [`DELETE FROM ti.mdoc d USING (SELECT link FROM ti.item UNION SELECT link FROM ti.advisory) live WHERE d.link = live.link`],
+    [`DELETE FROM ti.kv WHERE k = 'entities:mark'`],
+  ]);
+  let after = '', old = 0, kept = 0;
+  for (;;) {
+    const docs = await sql(`SELECT link, title, published, host FROM ti.mdoc WHERE link > $1 ORDER BY link LIMIT 2000`, [after]);
+    if (!docs.length) break;
+    const ments = [], drop = [];
+    for (const d of docs) {
+      const f = matchText(G, d.title);
+      if (!f.size) { drop.push(d.link); continue; }
+      kept++;
+      for (const [eid, via] of f) ments.push({ eid, link: d.link, published: d.published, host: d.host, via: String(via).slice(0, 80) });
+    }
+    const links = docs.map((d) => d.link);
+    await sqlTx([
+      [`DELETE FROM ti.mention WHERE link = ANY(ARRAY(SELECT jsonb_array_elements_text($1::jsonb)))`, [links]],
+      ...(drop.length ? [[`DELETE FROM ti.mdoc WHERE link = ANY(ARRAY(SELECT jsonb_array_elements_text($1::jsonb)))`, [drop]]] : []),
+      ...(ments.length ? [[`INSERT INTO ti.mention (eid, link, published, host, via) SELECT eid, link, published, host, via
+        FROM jsonb_to_recordset($1::jsonb) AS x(eid text, link text, published timestamptz, host text, via text) ON CONFLICT DO NOTHING`, [ments]]] : []),
+    ]);
+    old += docs.length;
+    after = docs[docs.length - 1].link;
+  }
+  await sql(`INSERT INTO ti.kv (k, v, at) VALUES ('entities:rules', $1::jsonb, now()) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v, at = now()`, [{ rules, from: from || null }]);
+  return { from: from || null, to: rules, cleared: gone[0].n, older_docs: old, older_kept: kept, ms: Date.now() - t0 };
 }
 
 // Rising: the last seven days against the 23 before them, as a Poisson z score on the daily rate, with at least five
