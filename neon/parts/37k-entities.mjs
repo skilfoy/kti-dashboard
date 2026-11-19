@@ -13,7 +13,7 @@
 // one or two plain words needs its vendor in the same entry; countries are kept only beside another entity, so the
 // geopolitical stream adds country context to the cyber entities without becoming a country index of its own.
 export const ENTITY = { BATCH: 3000, BUDGET_MS: 100000, KEEP_DAYS: 400, MAX_N: 7, CUE_SPAN: 3, DOC_EVERY_MS: 3600e3, AMB_EVERY_MS: 86400e3,
-  AMB_MIN: 4, AMB_RATIO: 2, AMB_HARD: 40, GAZ_URL: 'https://intel.kilfoycyber.com/data/entity_gazetteer.json' };
+  AMB_MIN: 3, AMB_RATIO: 2, AMB_HARD: 12, BASELINE_DAYS: 14, GAZ_URL: 'https://intel.kilfoycyber.com/data/entity_gazetteer.json' };
 export const CYBER_CATS = new Set(['research', 'topic-cyber', 'cyber-news', 'vulnerability']);
 // Cue words by the kind of entity they vouch for. A threat name needs a threat word beside it ("Play ransomware",
 // "Sea Turtle hackers"); a vendor needs a vulnerability word ("Apple patches a zero-day"). Generic words such as
@@ -29,7 +29,7 @@ const CUES = {
 const cueKind = (t) => (t === 'vendor' || t === 'product' ? 'vendor' : 'threat');
 const isCue = (low, kind) => CUES[kind].exact.has(low) || CUES[kind].prefix.some((p) => low.startsWith(p));
 // Bump when the matcher's rules change; with the gazetteer's own rules version it decides when every mention is re-derived.
-export const MATCH_V = 2;
+export const MATCH_V = 3;
 const DEMONYM = 'RU:Russian|CN:Chinese|IR:Iranian|KP:North Korean|KR:South Korean|IL:Israeli|UA:Ukrainian|US:American|GB:British|BY:Belarusian|PK:Pakistani|IN:Indian|'
   + 'VN:Vietnamese|TR:Turkish|TW:Taiwanese|JP:Japanese|DE:German|FR:French|SA:Saudi|AE:Emirati|SY:Syrian|LB:Lebanese|VE:Venezuelan|CU:Cuban|KZ:Kazakh|'
   + 'PL:Polish|NL:Dutch|AU:Australian|CA:Canadian|IT:Italian|ES:Spanish|BR:Brazilian|MX:Mexican|NG:Nigerian|IQ:Iraqi|QA:Qatari|EG:Egyptian|PS:Palestinian|'
@@ -307,10 +307,12 @@ async function rederive(G, rules, from) {
   return { from: from || null, to: rules, cleared: gone[0].n, older_docs: old, older_kept: kept, ms: Date.now() - t0 };
 }
 
-// Rising: the last seven days against the 23 before them, as a Poisson z score on the daily rate, with at least five
-// entries from three publishers in the seven days. New: first named by the collection in the last seven days.
-export function riseScore(n7, n30) {
-  const base = Math.max(0, n30 - n7) / 23 * 7, e = Math.max(base, 0.5);
+// Rising: the last seven days against the days before them (up to 23), as a Poisson z score on the daily rate, with at
+// least five entries from three publishers in the seven days. New: first named by the collection in the last seven
+// days. Both wait until the collection has run BASELINE_DAYS: before that every entity is "new" and every count rises
+// against an empty baseline (on 19 November 2026, two days after the source network started, 100 entities rose).
+export function riseScore(n7, n30, priorDays = 23) {
+  const base = Math.max(0, n30 - n7) / Math.max(1, priorDays) * 7, e = Math.max(base, 0.5);
   return Math.round(((n7 - e) / Math.sqrt(e)) * 10) / 10;
 }
 export function npmi(nab, na, nb, N) {
@@ -320,7 +322,7 @@ export function npmi(nab, na, nb, N) {
   return Math.round((Math.log(pab / (pa * pb)) / -Math.log(pab)) * 1000) / 1000;
 }
 async function graphDoc(g) {
-  const [stats, pairs, nd, firsts] = await sqlTx([
+  const [stats, pairs, nd, firsts, sn] = await sqlTx([
     [`SELECT m.eid, e.t, e.n, count(*) FILTER (WHERE m.published > now() - interval '1 day')::int AS n1, count(*) FILTER (WHERE m.published > now() - interval '7 days')::int AS n7,
         count(*)::int AS n30, count(DISTINCT m.host) FILTER (WHERE m.published > now() - interval '7 days')::int AS p7, count(DISTINCT m.host)::int AS p30, max(m.published) AS last
       FROM ti.mention m JOIN ti.entity e ON e.id = m.eid WHERE m.published > now() - interval '30 days' AND m.published <= now() + interval '1 day' GROUP BY 1, 2, 3`],
@@ -328,11 +330,15 @@ async function graphDoc(g) {
       WHERE a.published > now() - interval '30 days' AND NOT (a.eid LIKE 'country:%' AND b.eid LIKE 'country:%') GROUP BY 1, 2 HAVING count(DISTINCT a.host) >= 2 ORDER BY n DESC LIMIT 4000`],
     [`SELECT count(DISTINCT link)::int AS n FROM ti.mention WHERE published > now() - interval '30 days'`],
     [`SELECT eid, min(published) AS first FROM ti.mention GROUP BY 1`],
+    [`SELECT least((SELECT min(seen_at) FROM ti.item), (SELECT (v->>'since')::timestamptz FROM ti.kv WHERE k = 'entities:since')) AS since`],
   ]);
+  const since = sn[0] && sn[0].since ? new Date(sn[0].since).getTime() : Date.now();
+  await sql(`INSERT INTO ti.kv (k, v, at) VALUES ('entities:since', $1::jsonb, now()) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v, at = now()`, [{ since: new Date(since).toISOString() }]);
+  const ageDays = (Date.now() - since) / 864e5, prior = Math.min(23, ageDays - 7), ready = ageDays >= ENTITY.BASELINE_DAYS;
   const first = new Map(firsts.map((r) => [r.eid, r.first])), N = nd[0].n, wk = Date.now() - 7 * 864e5;
   const st = new Map(stats.map((s) => [s.eid, s]));
-  const ents = stats.map((s) => ({ id: s.eid, t: s.t, n: s.n, n1: s.n1, n7: s.n7, n30: s.n30, p7: s.p7, p30: s.p30, first: first.get(s.eid) || null, last: s.last, z: riseScore(s.n7, s.n30) }))
-    .map((e) => ({ ...e, rising: e.n7 >= 5 && e.p7 >= 3 && e.z >= 3 && e.t !== 'country', new: !!e.first && new Date(e.first).getTime() > wk && e.p7 >= 2 && e.t !== 'country' }));
+  const ents = stats.map((s) => ({ id: s.eid, t: s.t, n: s.n, n1: s.n1, n7: s.n7, n30: s.n30, p7: s.p7, p30: s.p30, first: first.get(s.eid) || null, last: s.last, z: ready ? riseScore(s.n7, s.n30, prior) : null }))
+    .map((e) => ({ ...e, rising: ready && e.n7 >= 5 && e.p7 >= 3 && e.z >= 3 && e.t !== 'country', new: ready && !!e.first && new Date(e.first).getTime() > wk && e.p7 >= 2 && e.t !== 'country' }));
   const edges = pairs.map((p) => ({ a: p.a, b: p.b, n: p.n, p: p.p, last: p.last, npmi: npmi(p.n, (st.get(p.a) || {}).n30, (st.get(p.b) || {}).n30, N) }))
     .filter((e) => e.npmi > 0).sort((x, y) => y.n * Math.max(0.05, y.npmi) - x.n * Math.max(0.05, x.npmi)).slice(0, 1500);
   const top = new Map();
@@ -350,6 +356,7 @@ async function graphDoc(g) {
     .concat(rels.map((r) => ({ kind: 'rel', ...r })));
   return {
     source: 'KTI entity graph over the source network and advisory feeds', generated: new Date().toISOString(), served_from: 'store', window_days: 30, entries_30d: N,
+    collecting_since: new Date(since).toISOString(), baseline_ready: ready, baseline_ready_at: new Date(since + ENTITY.BASELINE_DAYS * 864e5).toISOString(),
     gazetteer: { date: g.doc.date, counts: g.doc.counts, names: g.doc.names, terms: g.doc.terms },
     method: 'Each collected entry (title and publisher summary) is matched against the entity gazetteer: names of two or more words or with a digit in any case, single words only capitalized and, when common in general news, beside a cue word; product names beside their vendor; countries only beside another entity. Co-mention edges count entries that name both entities in the last 30 days, need two publishers, and rank by count times normalized PMI. Rising: a Poisson z of 3 or more for the last 7 days against the 23 before, with 5 entries from 3 publishers. Curated relationships (ATT&CK, MISP, KEV) are served per entity and kept apart from co-mentions.',
     rising: ents.filter((e) => e.rising).length, new: ents.filter((e) => e.new).length, entities: ents.length, edges: edges.length, curated: rels.length, count: rows.length, rows,

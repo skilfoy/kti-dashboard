@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.4.3 (19 November 2026)
+
+- Second precision pass, on the re-derived mentions. Single-word aliases still led the false matches: Turla's ATT&CK aliases "Krypton" and "Summit", Cleaver's "Alibaba", Broomstick's "Oyster", TargetCompany's "Fargo", Milan's "James", Industroyer's "Crash", and Malpedia and leak-site names such as "Jason", "Glasses", "Rover", "Payload", "Dark" and "Beast".
+- A single word now stands alone only when it is the name ATT&CK gives the object ("Turla", "Akira", "Qilin") or a KEV vendor's name. Every other single-word alias or family name needs a cue word beside it (gazetteer rules 3).
+- A word counts as common in general news from 12 entries (was 40), or from 3 at twice its cyber-news rate (was 4) (matcher rules 3).
+- Rising and new wait until the collection has run 14 days. On 19 November, two days after the source network started, 100 entities "rose" against an empty baseline. The Graph page says when the lists start. The rise score uses the days the baseline covers.
+- Collector 2026-11-19.6.
+
 ## 3.4.2 (19 November 2026)
 
 - Precision, from the first complete pass over the 67,830 stored entries. The most-named list held clear false matches, all from everyday words that MISP and Malpedia carry as aliases: Derusbi's "PHOTO" (94 entries), DONOT matching the words "do not" (73), Sea Turtle's "SILICON" (57), Earth Lusca's "Chromium" (78), the leak-site group "Global" (54), Broomstick's "Clean Up" (34), the "CALENDAR" family (34) and Qilin's "Agenda".

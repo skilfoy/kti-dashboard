@@ -30,7 +30,7 @@ import sys
 
 
 # Bump when a mode or ownership rule changes: the collector re-derives every mention under the new rules.
-RULES = 2
+RULES = 3
 
 
 def self_test():
@@ -77,7 +77,7 @@ def self_test():
     names = lambda i: {n: m for n, m in E[i]["a"]}
     checks = [
         ("MISP entry citing G0007 merged, synonyms kept", "Pawn Storm" in names("actor:G0007") and E["actor:G0007"]["src"] == ["attack", "misp"]),
-        ("modes: digit any-case, capitalized word", names("actor:G0007")["APT28"] == "i" and names("actor:G0007")["Sofacy"] == "s"),
+        ("modes: digit any-case", names("actor:G0007")["APT28"] == "i"),
         ("a stray synonym does not fuse two actors", "actor:G0032" in E and "Lazarus Group" in names("actor:G0032") and "Lazarus Group" not in names("actor:misp:u2")),
         ("an entry named after one group's alias is that group", "actor:misp:u3" not in E and "Phosphorus" in names("actor:G0059")),
         ("a leak-site group tracked by ATT&CK keeps the G id", E["actor:G1024"]["t"] == "extortion" and E["actor:G1024"]["m"]["leak"] == "akira" and "extortion:akira" not in E),
@@ -88,8 +88,9 @@ def self_test():
         ("KEV vendor, product and CVE", names("product:microsoft:outlook").get("Outlook") == "v" and ["cve:CVE-2024-3400", "product:paloaltonetworks:panos", "affects", "kev"] in g["edges"]
          and E["cve:CVE-2024-3400"]["m"]["ransomware"] is True),
         ("ATT&CK description first sentence", E["actor:G0007"]["m"]["d"] == "APT28 is a group."),
-        ("everyday words need a cue", names("malware:mp:m2") == {"Derusbi": "s", "PHOTO": "w", "Clean Up": "w"} and names("actor:misp:u4") == {"n0n": "w"}),
-        ("distinctive names stand alone", names("extortion:lockbit5")["LockBit"] == "s" and names("actor:G0007")["Fancy Bear"] == "i"),
+        ("everyday words need a cue", names("malware:mp:m2") == {"Derusbi": "w", "PHOTO": "w", "Clean Up": "w"} and names("actor:misp:u4") == {"n0n": "w"}),
+        ("distinctive names stand alone", names("actor:G0007")["Fancy Bear"] == "i" and names("actor:G1024")["Akira"] == "s"),
+        ("a single word other than ATT&CK's own name needs a cue", names("actor:G0007")["Sofacy"] == "w" and names("extortion:lockbit5")["LockBit"] == "w" and names("malware:mp:m2")["Derusbi"] == "w"),
         ("a KEV product name outranks another entity's alias", "Chromium" not in names("actor:misp:u5") and names("product:google:chromium").get("Chromium") == "v"),
         ("rules version", g["rules"] == RULES),
     ]
@@ -220,6 +221,7 @@ class Book:
                 k["names"].append(n)
             self.by_key.setdefault(squash(n), set()).discard(drop)
             self.by_key[squash(n)].add(keep)
+        k["vetted"] = k.get("vetted", set()) | d.get("vetted", set())
         for s in d["src"]:
             if s not in k["src"]:
                 k["src"].append(s)
@@ -271,7 +273,7 @@ for o in objs:
     if t == "campaign":
         meta.update({"first": (o.get("first_seen") or "")[:10], "last": (o.get("last_seen") or "")[:10]})
     eid = f"{t}:{xid}"
-    B.add(eid, t, o["name"], aliases, meta, "attack")
+    B.add(eid, t, o["name"], aliases, meta, "attack")["vetted"] = {o["name"]}
     stix2id[o["id"]] = eid
 for o in objs:
     if o["type"] != "relationship":
@@ -434,6 +436,11 @@ for e in B.ent.values():
             shadowed += 1
             continue
         md = mode_for(n, e["t"])
+        # A single word stands alone only as the name ATT&CK gives an object ("Turla", "Akira") or a KEV vendor's name.
+        # Other single-word aliases and families ("Krypton" and "Summit" for Turla, Malpedia's "Jason", "Glasses",
+        # "Rover", leak-site "Payload" and "Beast") were the false matches of the second live pass: they need a cue.
+        if md == "s" and e["t"] not in ("vendor", "product") and n not in e.get("vetted", set()):
+            md = "w"
         if e["t"] == "product" and md != "i":
             md = "v"
         if e["t"] == "product" and md == "i" and not n.lower().startswith(e["n"].split(" ")[0].lower()) and len(TOK.findall(n)) < 3 and not re.search(r"[a-z][A-Z]|[A-Z]{2,}|\d", n):

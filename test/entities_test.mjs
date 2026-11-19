@@ -90,9 +90,9 @@ const M = await import(path.join(ROOT, 'neon', 'collector.mjs'));
 }
 {
   const amb = M.ambiguousWords([{ word: 'agenda', ndoc: 120 }, { word: 'sandworm', ndoc: 5 }, { word: 'turla', ndoc: 3 }, { word: 'kimsuky', ndoc: 6 }],
-    [{ word: 'sandworm', ndoc: 40 }, { word: 'kimsuky', ndoc: 1 }], 40000, 20000);
+    [{ word: 'sandworm', ndoc: 40 }, { word: 'kimsuky', ndoc: 1 }, { word: 'turla', ndoc: 30 }], 40000, 20000);
   ok(amb.join() === 'agenda,kimsuky', 'ambiguous: common in general news or far commoner there than in cyber news ' + amb);
-  ok(M.riseScore(20, 23) > 3 && M.riseScore(7, 30) < 1 && M.riseScore(5, 5) >= 3, 'rise score ' + [M.riseScore(20, 23), M.riseScore(7, 30), M.riseScore(5, 5)]);
+  ok(M.riseScore(20, 23) > 3 && M.riseScore(7, 30) < 1 && M.riseScore(5, 5) >= 3 && M.riseScore(10, 20, 7) < M.riseScore(10, 20, 23), 'rise score ' + [M.riseScore(20, 23), M.riseScore(7, 30), M.riseScore(5, 5)]);
   ok(M.npmi(10, 10, 10, 1000) > 0.6 && M.npmi(1, 500, 500, 1000) < 0 && M.npmi(0, 1, 1, 10) === 0, 'normalized PMI');
 }
 
@@ -130,6 +130,7 @@ ok((await db.query(`SELECT count(*)::int AS n FROM ti.erel`)).rows[0].n === 3, '
 const doc = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/entities.json.gz')).toString());
 const ent = doc.rows.filter((x) => x.kind === 'entity'), edg = doc.rows.filter((x) => x.kind === 'edge');
 ok(ent.find((e) => e.id === 'actor:G0007').n30 === 3 && ent.find((e) => e.id === 'actor:G0007').p30 === 3, 'entity counts and publishers');
+ok(doc.baseline_ready === false && !ent.some((e) => e.rising || e.new) && ent.every((e) => e.z === null), 'no rising or new entity before the baseline holds 14 days');
 ok(edg.some((e) => e.a === 'actor:G0007' && e.b === 'malware:S0154' && e.n === 3 && e.p === 3 && e.an === 'APT28'), 'co-mention edge with names ' + JSON.stringify(edg[0]));
 ok(!edg.some((e) => e.a.startsWith('country:') && e.b.startsWith('country:')), 'no country-to-country edges');
 

@@ -28,8 +28,8 @@ Each name carries a match mode:
 | Mode | Rule | Examples |
 |---|---|---|
 | `i` | Any case. Used for names of two or more words and names with a digit. A letters-only name matches exactly its own number of words. | Volt Typhoon, APT28 (also "APT 28") |
-| `s` | A single word (all-caps and camel-case included), counted only when capitalized. It also needs a cue word within three words when the collection shows it is common in general news. | Kimsuky, Akira, LockBit |
-| `w` | A name of four letters or fewer, a common English word, or a name made only of everyday words. Counted only with a cue word beside it. | Play, ZINC, Cuba, PHOTO, Clean Up |
+| `s` | A single word that is the name ATT&CK gives the object, or a KEV vendor's name (all-caps and camel-case included), counted only when capitalized. It also needs a cue word within three words when the collection shows it is common in general news. | Kimsuky, Akira, LockBit |
+| `w` | Any other single-word alias or family name, a name of four letters or fewer, a common English word, or a name made only of everyday words. Counted only with a cue word beside it. | Play, ZINC, Cuba, PHOTO, Clean Up |
 | `v` | A product name of one or two plain words, counted only when its vendor is named in the same entry. | Exchange Server beside Microsoft |
 
 - **Cue words** are typed by entity:
@@ -37,7 +37,7 @@ Each name carries a match mode:
   - Vendors and products need a vulnerability word: vulnerability, flaw, patch, zero-day, exploit, advisory, CVE, update, fix.
   - Words that sit beside everything in a cyber headline (security, cyber, attack, campaign, operation) are not cues.
 - **Rules versions**: `RULES` in the builder and `MATCH_V` in the collector. A change of either makes the next run re-derive every mention.
-- **Ambiguity** is measured daily over the collection with `ts_stat`. A single-word name is ambiguous when it appears in 40 or more general-news entries (geopolitics, theater, maritime, think-tank, defense and government feeds). It is also ambiguous when it appears in at least 4 of them at more than twice its rate in the cyber feeds.
+- **Ambiguity** is measured daily over the collection with `ts_stat`. A single-word name is ambiguous when it appears in 12 or more general-news entries (geopolitics, theater, maritime, think-tank, defense and government feeds). It is also ambiguous when it appears in at least 3 of them at more than twice its rate in the cyber feeds.
 - **Countries** are matched from country names, demonyms ("Russian", "North Korean") and exact-case forms ("US", "U.S.", "UK", "DPRK", "PRC"). They are kept only beside another entity, so the geopolitical stream gives cyber entities their country context without turning into a country index. A single word that is both a family and a country ("Cuba") is the family beside a cue word and the country otherwise.
 - **CVEs** are matched by pattern in any case. A CVE that is not in KEV becomes an entity on its first mention.
 - **Products** named with their vendor also name the vendor.
@@ -66,7 +66,7 @@ Other state:
   - `entity` rows: counts for 1, 7 and 30 days, publishers for 7 and 30 days, first and last seen, a rise score, `rising` and `new` flags, and a rank among the most named of their type.
   - `edge` rows: co-mentions over 30 days. Each needs two publishers and is ranked by entries times normalized PMI. Country-to-country pairs are left out.
   - `rel` rows: curated relationships among the entities the document carries.
-- **Rising**: a Poisson z of 3 or more for the last 7 days against the 23 before them, with at least 5 entries from 3 publishers.
+- **Rising**: a Poisson z of 3 or more for the last 7 days against the days before them (up to 23), with at least 5 entries from 3 publishers. Rising and new start once the collection has run 14 days (`baseline_ready`, `baseline_ready_at`).
 - **New**: first named in the last 7 days, by 2 or more publishers.
 - **`/api/graph?id=<entity>&days=7..400`**: the entity, its names, mentions per day, co-mentioned entities (entries, publishers, normalized PMI, last date), curated relationships with direction, and the 30 latest entries with the words that named it.
 - **`/api/graph?a=<id>&b=<id>`**: the entries that name both, and any curated relationship between them.
