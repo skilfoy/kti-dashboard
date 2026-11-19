@@ -141,6 +141,19 @@ if os.path.exists(feeds_src):
     os.makedirs(os.path.join(a.out, "data"), exist_ok=True)
     json.dump(fr, open(os.path.join(a.out, "data", "feeds.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     print(f"feeds.json: {len(fr.get('feeds', []))} feeds")
+# The standing watches (data/watches.json) are published at /data/watches.json, where the collector's watch job reads
+# them; each must name a PIR of the authored register and a known kind.
+watches_src = os.path.join(os.path.dirname(os.path.abspath(a.authored)), "watches.json")
+if os.path.exists(watches_src):
+    wd = json.load(open(watches_src, encoding="utf-8"))
+    pir_ids = {r["pir_id"] for r in (load_json(os.path.join(a.authored, "pirs.json")) or [])}
+    kinds = {"entity_terms", "entity_category", "terms", "kev_added", "cve_surge", "first_seen", "surge"}
+    for w in wd.get("watches", []):
+        if w.get("pir") not in pir_ids or w.get("kind") not in kinds or (w.get("terms") and w["terms"] not in wd.get("terms", {})):
+            sys.exit(f"data/watches.json: watch {w.get('id')} names an unknown PIR, kind or term list")
+    os.makedirs(os.path.join(a.out, "data"), exist_ok=True)
+    json.dump(wd, open(os.path.join(a.out, "data", "watches.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    print(f"watches.json: {len(wd.get('watches', []))} watches")
 # The entity gazetteer (build_gazetteer.py) is a document, not a row dataset: published at /data/entity_gazetteer.json,
 # where the collector's entities job reads it, the same way.
 gaz_src = os.path.join(a.feeds, "entity_gazetteer.json")

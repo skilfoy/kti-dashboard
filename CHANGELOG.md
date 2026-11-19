@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.5.0 (19 November 2026)
+
+- Standing watches. `data/watches.json` turns the PIRs' elements of information into 12 watches over the entity graph and CISA KEV:
+  - PIR-1: state-attributed or criminal actors named with financial-sector words; new actor names.
+  - PIR-2: KEV additions, with how many days earlier the collection named the CVE; CVEs outside KEV reported by three or more publishers in 72 hours.
+  - PIR-3: extortion groups with financial victims; surges.
+  - PIR-5: state actors named with critical infrastructure, or by government and CERT publications.
+  - PIR-6: identity-abuse techniques, alone and with actors.
+  - PIR-7: takedowns, arrests, indictments and sanctions.
+- The collector's new `watch` job runs after `entities` in every slot. It keeps one change alert per watch and subject (`ti.alert`); new entries update an open alert, and a subject quiet for 14 days opens a new one. First-seen and surge wait for the 14-day baseline.
+- Alerts appear in a Change alerts card on the Requirements page, at `/api/alerts` (JSON and Atom, by PIR), in the `live_alerts` dataset and in a TAXII "KTI change alerts" collection.
+- A visitor's watchlist. "Watch" on an entity card keeps up to 25 entities in that browser and shows what changed since the last visit: entries, first co-mentions, KEV additions for watched vendors and products, and alerts. `/api/watch?ids=` gives the same as JSON or Atom, so a feed reader follows a list without an account. Nothing about a visitor is stored.
+- PIR wording no longer assumes an organization behind the platform. "our payment, banking and settlement infrastructure", "our third parties", "our operations", "our screening obligations" and the estate and inventory gaps now speak to the financial sector and to the reader.
+- Collector 2026-11-19.10. Schema: `ti.alert`, lease row `watch`.
+
 ## 3.4.6 (19 November 2026)
 
 - 3.4.4's attestation rule had not taken effect. The daily word list was cached by gazetteer hash only, so the job kept using the list 3.4.3 measured: 27 ambiguous words where the new rule gives several hundred. The cache is now keyed by matcher rules too. MATCH_V 5 re-derives every mention under the fresh list.
