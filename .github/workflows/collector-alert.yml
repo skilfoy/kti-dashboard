@@ -52,15 +52,12 @@ jobs:
             'threatcluster', 'sec_edgar', 'blocklist_de', 'spamhaus_drop'];
           // Documented gaps (runbook 6): reported only when their answer changes. The collector marks them state "known_gap"
           // from 2026-11-02.1; before that the expected HTTP answer decides. Volume rows of the maritime gaps hold at zero.
-          // GreyNoise (intermittent): its free lookup rate-limits cloud egress (HTTP 429) and sometimes answers, so a passing
-          // check holds the gap until the feed passes steadily (24-hour uptime of 95 percent or more); it needs an API key.
-          // GreyNoise left the gaps on 17 November 2026 (steady answers since 10 November).
           export const KNOWN_GAPS = { marad_msci: { expect: [403] }, ukmto: { expect: [403] }, nga_msi: { expect: [200, 206, 503], stale: true }, gdelt_doc_api: { expect: [429] } };
           export const STEADY_UPTIME = 95;
           export const GAP_VOLUME = ['marad', 'asam', 'navwarn_security'];
-          // Answer classes (3 November 2026): for the GDELT DOC API and GreyNoise, HTTP 429, a timeout and a failed fetch
-          // (status 0) are one answer, refused at cloud egress; another answer (an HTTP 200 among them) lifts the gap.
-          // GreyNoise is intermittent: a passing check keeps the gap until 24-hour uptime holds at 95 percent or more.
+          // Answer classes (3 November 2026): for the GDELT DOC API, HTTP 429, a timeout and a failed fetch (status 0) are one
+          // answer, refused at cloud egress; another answer (an HTTP 200 among them) lifts the gap. An entry marked
+          // intermittent keeps its gap while a passing check stays under 95 percent 24-hour uptime.
           for (const f of ['gdelt_doc_api']) KNOWN_GAPS[f] = { ...KNOWN_GAPS[f], expect: [429, 0] };
           const holdsWhileIntermittent = (f) => !!KNOWN_GAPS[f.feed].intermittent && f.ok === true && (f.uptime_24h ?? 0) < 95;
           // Submarine cables (weekly, Sundays 05:19 UTC): silent after a week plus 90 minutes.

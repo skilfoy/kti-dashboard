@@ -598,7 +598,6 @@
     "live_ransomware",
     "live_cyberattacks",
     "live_leaksites",
-    "live_exposure",
     "page:ransomware",
     "page:brief"
    ],
@@ -708,7 +707,6 @@
    "feeds": [
     "live_threatfox",
     "live_threatmap",
-    "live_exposure",
     "page:map"
    ],
    "url": "https://threatfox.abuse.ch/",
@@ -872,63 +870,11 @@
    "reviewed": "2026-11-03"
   },
   {
-   "id": "greynoise",
-   "name": "GreyNoise community lookup",
-   "owner": "GreyNoise Intelligence",
-   "category": "Infrastructure",
-   "feeds": [
-    "live_exposure",
-    "page:residual"
-   ],
-   "url": "https://www.greynoise.io/",
-   "access": "key",
-   "secret": {
-    "name": "GREYNOISE_API_KEY",
-    "where": "neon_function_variable"
-   },
-   "licence": "GreyNoise terms (community API)",
-   "attribution": "",
-   "commercial_use": "",
-   "cadence": "30-minute probe; on demand (/api/exposure)",
-   "health_feed": "greynoise",
-   "jobs": [],
-   "status": "live",
-   "gap_note": "",
-   "source_ids": [],
-   "added": "2026-11-03",
-   "reviewed": "2026-11-17"
-  },
-  {
-   "id": "hibp",
-   "name": "Have I Been Pwned (breaches by domain)",
-   "owner": "Troy Hunt",
-   "category": "Exposure",
-   "feeds": [
-    "live_exposure",
-    "page:residual"
-   ],
-   "url": "https://haveibeenpwned.com/",
-   "access": "open",
-   "secret": null,
-   "licence": "CC BY 4.0 (breach metadata)",
-   "attribution": "Data from Have I Been Pwned",
-   "commercial_use": "",
-   "cadence": "on demand (/api/exposure)",
-   "health_feed": "hibp",
-   "jobs": [],
-   "status": "live",
-   "gap_note": "",
-   "source_ids": [],
-   "added": "2026-11-03",
-   "reviewed": "2026-11-03"
-  },
-  {
    "id": "tor-exits",
    "name": "Tor Project exit list",
    "owner": "The Tor Project",
    "category": "Infrastructure",
    "feeds": [
-    "live_exposure",
     "live_lists"
    ],
    "url": "https://check.torproject.org/torbulkexitlist",
@@ -3804,14 +3750,12 @@
   },
   {
    "id": "analyst-calibration",
-   "name": "Analyst-set calibration (verticals, controls, indicator rules)",
+   "name": "Analyst-set calibration (verticals, indicator rules)",
    "owner": "Sean Kilfoy",
    "category": "Analyst",
    "feeds": [
     "verticals",
-    "controls",
     "indicator_rules",
-    "page:residual",
     "page:theaters"
    ],
    "url": "https://intel.kilfoycyber.com/",
@@ -3821,55 +3765,6 @@
    "attribution": "",
    "commercial_use": "",
    "cadence": "changed only on Sean's instruction",
-   "health_feed": null,
-   "jobs": [],
-   "status": "live",
-   "gap_note": "",
-   "source_ids": [],
-   "added": "2026-11-03",
-   "reviewed": "2026-11-03"
-  },
-  {
-   "id": "autorecon-ingest",
-   "name": "AutoRecon results for owned assets (Sean's ingest)",
-   "owner": "Sean Kilfoy",
-   "category": "Exposure",
-   "feeds": [
-    "assets",
-    "page:residual"
-   ],
-   "url": "https://github.com/Tib3rius/AutoRecon",
-   "access": "open",
-   "secret": null,
-   "licence": "Own data (tool GPL-3.0)",
-   "attribution": "",
-   "commercial_use": "",
-   "cadence": "when Sean supplies results",
-   "health_feed": null,
-   "jobs": [],
-   "status": "live",
-   "gap_note": "",
-   "source_ids": [],
-   "added": "2026-11-03",
-   "reviewed": "2026-11-03",
-   "note": "Only assets Sean owns or is authorized to test"
-  },
-  {
-   "id": "darknet-ingest",
-   "name": "darknet-mcp-server results for own estate (Sean's ingest)",
-   "owner": "Sean Kilfoy",
-   "category": "Exposure",
-   "feeds": [
-    "exposure_darkweb",
-    "page:residual"
-   ],
-   "url": "https://intel.kilfoycyber.com/",
-   "access": "open",
-   "secret": null,
-   "licence": "Own data; counts, dates and categories only",
-   "attribution": "",
-   "commercial_use": "",
-   "cadence": "when Sean supplies results",
    "health_feed": null,
    "jobs": [],
    "status": "live",

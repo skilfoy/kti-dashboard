@@ -274,7 +274,5 @@ function call(file, query, headers = { 'x-vercel-oidc-token': 'test.oidc.token' 
   ok(['203.0.113.9', '198.51.100.4', '185.220.101.7'].every((ip) => r.body.nodes.some((n) => n[1] === ip)), 'public threatmap carries every address');
   r = await call('index.js', { route: 'enrich', type: 'hash', q: 'a'.repeat(64) }, undefined, PUBLIC);
   ok(r.code === 200 && !/keyless/.test(state.enrichUrls.at(-1)) && r.body.results.length === 3, 'public enrichment reads every analyzer');
-  r = await call('exposure.js', {}, undefined, PUBLIC);
-  ok(r.code === 200 && r.body.rows[0].kind === 'summary', 'exposure monitor answers on the public host');
   console.log(`PASS ${pass} checks`);
 })().catch((e) => { console.error(e); process.exit(1); });

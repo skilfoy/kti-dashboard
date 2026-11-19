@@ -383,7 +383,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(JSON.stringify(h.known_gaps.slice().sort()) === JSON.stringify(GAPS) && !h.down.some((f) => GAPS.includes(f)) && h.down.includes('epss'),
     'known gaps kept out of the down list ' + JSON.stringify({ down: h.down, gaps: h.known_gaps }));
   const hd = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/health.json.gz')).toString());
-  ok(hd.rows.find((x) => x.kind === 'feed' && x.feed === 'epss').failing_streak === 1 && hd.rows.find((x) => x.feed === 'greynoise').ok === true, 'health doc');
+  ok(hd.rows.find((x) => x.kind === 'feed' && x.feed === 'epss').failing_streak === 1 && !hd.rows.some((x) => x.feed === 'greynoise' || x.feed === 'hibp'), 'health doc');
   ok(hd.rows.some((x) => x.kind === 'job' && x.job === 'gdelt'), 'health doc lists jobs');
   const fr = Object.fromEntries(hd.rows.filter((x) => x.kind === 'feed').map((x) => [x.feed, x]));
   ok(fr.marad_msci.state === 'known_gap' && fr.marad_msci.ok === false && /Akamai/.test(fr.marad_msci.gap) && fr.nga_msi.state === 'known_gap' && fr.nga_msi.ok === true
@@ -904,8 +904,6 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(r2.ok && !r2.collapsed, 'without seven days of baseline nothing is called collapsed');
 }
 
-// GreyNoise: retired from the documented gaps on 17 November 2026 after a week of steady answers.
-ok(!M.KNOWN_GAPS.greynoise && M.feedState({ feed: 'greynoise', ok: true, status: 404 }) === 'up' && M.feedState({ feed: 'greynoise', ok: false, status: 429 }) === 'down', 'greynoise is no longer a gap');
 
 // Leases: a held lease skips.
 {

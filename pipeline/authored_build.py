@@ -62,9 +62,6 @@ C = [{k: v for k, v in r.items() if k != "source_name"} for r in load("collectio
 M = load("method.json")
 F = load("followons.json")
 VE = load("verticals.json")
-CT = load("controls.json")
-AS = load("assets.json")
-EX = load("exposure_darkweb.json")
 if os.path.exists(os.path.join(FROM_JSON, "chokepoints.json")):
     CP = load("chokepoints.json")
 else:  # seed from the authored module
@@ -261,22 +258,6 @@ for ve in VE:
     for vid in ve["vector_w"]:
         check(vid in vec_ids, f"{ve['vertical_id']}: unknown vector weight {vid}")
 check(sum(1 for ve in VE if ve.get("default") == "Yes") == 1, "verticals: need exactly one default")
-for ct in CT:
-    check(ct["vector_id"] in vec_ids, f"controls {ct['vector_id']}: unknown vector")
-    check(0 <= ct["coverage"] <= 1, f"controls {ct['vector_id']}: coverage outside 0-1")
-for a in AS:
-    check(a["exposure"] in ("Internet-facing", "Internal"), f"asset {a.get('host')}: bad exposure")
-    for k in ("host", "product", "site", "source"):
-        check(isinstance(a.get(k), str), f"asset {a.get('host')}: missing {k}")
-check(len({a["host"] for a in AS}) == len(AS), "assets: host must be unique (the page keys rows by host)")
-_EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
-for x in EX:
-    check(x.get("severity") in ("Low", "Medium", "High", "Critical"), f"exposure {x.get('kind')}: bad severity")
-    check(isinstance(x.get("metric"), int) and x["metric"] >= 0, f"exposure {x.get('kind')}: metric must be a non-negative integer")
-    # Counts only: an email address or a password-looking field in the dark-web read must never reach the page.
-    check(not _EMAIL.search(json.dumps(x)), f"exposure {x.get('kind')}: contains an email address")
-    check(not any(k in x for k in ("password", "passwords", "top_passwords", "top_logins", "login")), f"exposure {x.get('kind')}: carries credential fields")
-check(len({x["kind"] for x in EX}) == len(EX), "exposure: kind must be unique (the page keys rows by kind)")
 check(len({c["chokepoint_id"] for c in CP}) == len(CP), "chokepoints: duplicate id")
 for c in CP:
     cid = c.get("chokepoint_id")
@@ -291,7 +272,7 @@ BANNED = [(r"\bactually\b", "the word 'actually'"), (r"\bmatters?\b|\bmattered\b
           (r"\bnot (?:just|merely|only|simply) [^.;:]{2,80}[,;] but\b", "a negative-then-positive juxtaposition"),
           (r"\u2014[^\u2014]*\u2014[^\u2014]*\u2014", "more than two em dashes in one field")]
 for name, rows in [("items", I), ("theaters", T), ("indicators", IND), ("judgments", J), ("evidence", E), ("vectors", V),
-                   ("pirs", P), ("method", M), ("followons", F), ("verticals", VE), ("controls", CT), ("chokepoints", CP),
+                   ("pirs", P), ("method", M), ("followons", F), ("verticals", VE), ("chokepoints", CP),
                    ("outcomes", OUTC), ("leads", LEADS)]:
     for r in rows:
         for k, v in r.items():
@@ -402,9 +383,6 @@ dump("collection_matrix.json", C)
 dump("method.json", M)
 dump("followons.json", F)
 dump("verticals.json", VE)
-dump("controls.json", CT)
-dump("assets.json", AS)
-dump("exposure_darkweb.json", EX)
 dump("chokepoints.json", CP)
 dump("outcomes.json", OUTC)
 dump("leads.json", LEADS)

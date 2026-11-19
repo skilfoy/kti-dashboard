@@ -22,16 +22,9 @@ variables, so name only what changes). `get_function` lists the names, never the
 | `CLOQ_API_KEY` | cl0q data API (higher limits) | Read-only API key | Sean (cl0q account) | New key in cl0q, deploy it, revoke the old one | `/api/enrich?type=asn&q=13335` shows the cl0q analyzer ok |
 | `SEC_USER_AGENT` | Contact string for SEC fair access; also identifies the cables job to Overpass and Wikidata | Not a credential; a name and an email address | Sean | Change when the contact changes | Health feed `sec_edgar` ok; the cables run detail shows requests answered |
 | `ABUSECH_AUTH_KEY` | abuse.ch ThreatFox, URLhaus, MalwareBazaar, YARAify (not-for-profit use) | One Auth-Key from auth.abuse.ch | Sean (auth.abuse.ch) | New key in auth.abuse.ch, deploy it, revoke the old one | Health feeds `threatfox` and `urlhaus` ok (a refused key shows HTTP 401 or `unknown_auth_key`) |
-| `GREYNOISE_API_KEY` (optional) | GreyNoise lookups that do not depend on the keyless lookup's tolerance of cloud egress (it refused with HTTP 429 from 3 to 9 November 2026 and has answered steadily since 10 November) | A GreyNoise community or paid key, read-only | Sean (GreyNoise account), tracked in the KTI work tracker | New key, deploy it, revoke the old one | Health feed `greynoise` ok and steady (24-hour uptime 95 percent or more) |
 | `TAVILY_API_KEY`, `BRAVE_API_KEY`, `SEARXNG_URL`, `JINA_API_KEY` (optional) | Extra web search and page-reading providers for agentic reports; without them the agent searches Bing News, Google News and DuckDuckGo for free | Tavily (1,000 searches a month free), Brave Search API (2,000 a month free), a SearXNG instance's address, a Jina Reader key | Sean, if wanted | Set with `neon functions deploy ti --env NAME=value` (the variables merge) | A report's progress lists the provider among those tried |
 | `TI_KEY` (optional, unset) | Operator override header `x-ti-key` | Full operator access to the collector | Only if Sean decides to set it | Replace the value; it is compared in constant time | `op=status` with the header |
 | `AWS_ENDPOINT_URL_S3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` | Branch object storage | Injected by Neon for the branch | Neon (managed) | Rotate the branch's storage credential in the Neon Console | Any job publishing a document |
-
-Where the GreyNoise key lives: in the collector's Neon environment only. The collector's health probe sends it as the
-`key` header when it is set and uses the keyless community lookup when it is not (`greynoiseHeaders` in
-`neon/parts/40-ops.mjs`), so nothing breaks before the key exists. The exposure monitor (`api/exposure.js`) stays keyless
-for now; moving its GreyNoise lookup behind the collector's `/enrich` is a follow-on, so the key never has to sit on
-Vercel as well.
 
 ## GitHub (repository skilfoy/kti-dashboard)
 
@@ -54,7 +47,7 @@ published keys; no shared secret exists on either side.
 
 When a value may have leaked (pasted in a chat, an issue, a log, a commit, or a laptop lost):
 
-1. **Revoke first.** Disable the exposed value at its provider before anything else: abuse.ch, FIRMS, cl0q, GreyNoise,
+1. **Revoke first.** Disable the exposed value at its provider before anything else: abuse.ch, FIRMS, cl0q,
    Neon (API key, storage credential, role password), Vercel (token, bypass secret). A revoked value is harmless even
    if copies exist.
 2. **Replace.** Create the new value with the same least-privilege scope and put it where it lives (Neon environment-only

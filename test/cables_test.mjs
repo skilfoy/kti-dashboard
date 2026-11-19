@@ -204,13 +204,8 @@ const doc = () => JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/cables.jso
   // feedState: the GDELT DOC API alternates between 429 and timeouts; both are one answer class. 200 lifts the gap.
   ok(M.feedState({ feed: 'gdelt_doc_api', ok: false, status: 429 }) === 'known_gap' && M.feedState({ feed: 'gdelt_doc_api', ok: false, status: 0 }) === 'known_gap'
     && M.feedState({ feed: 'gdelt_doc_api', ok: true, status: 200 }) === 'up' && M.feedState({ feed: 'gdelt_doc_api', ok: false, status: 503 }) === 'down', 'gdelt_doc_api: 429 and timeout one class; 200 lifts it');
-  // GreyNoise left the gaps on 17 November 2026: a refused check now reads down, a passing one up.
-  ok(!M.KNOWN_GAPS.greynoise && M.feedState({ feed: 'greynoise', ok: false, status: 429 }) === 'down' && M.feedState({ feed: 'greynoise', ok: true, status: 404 }) === 'up', 'greynoise: no longer a gap');
-  delete process.env.GREYNOISE_API_KEY;
-  ok(!('key' in M.greynoiseHeaders()), 'no key: keyless lookup');
-  process.env.GREYNOISE_API_KEY = 'gn-test-value';
-  ok(M.greynoiseHeaders().key === 'gn-test-value', 'key set: sent as the "key" header');
-  delete process.env.GREYNOISE_API_KEY;
+  // The HIBP and GreyNoise probes left with the exposure monitor on 19 November 2026.
+  ok(!('greynoiseHeaders' in M), 'no GreyNoise probe headers');
 }
 
 console.log(`PASS ${pass} checks (cables)`);
