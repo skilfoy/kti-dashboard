@@ -1,5 +1,16 @@
 # Changelog
 
+## 3.7.0 (19 November 2026)
+
+- Cyber-physical coincidences. The new `cyphys` job runs hourly at :49 and reads three signals per country over 72 hours, each against its own baseline:
+  - an IODA outage at warning or critical level lasting an hour or more;
+  - GDELT material conflict in the last day at a z score of 2 or more over the country's 30 days;
+  - collected entries naming the country beside a threat actor, extortion group or malware, from three or more publishers and at least twice the country's usual rate.
+- Two elevated signals at once make a coincidence. State-attributed actors named in the window are listed under their attributed country, so the attacker side and the target side stay apart. The signals are shown side by side and never combined into a cause.
+- A Map page card lists the countries with an elevated signal, coincidences first, as the `live_cyphys` dataset.
+- PIR-4 gets its first watch: W-4A turns a coincidence into a change alert.
+- Collector 2026-11-19.13. Lease row `cyphys`.
+
 ## 3.6.0 (19 November 2026)
 
 - Track record. The new `score` job (hourly) measures the platform's accuracy from its own store and keeps each measure as a daily series (`ti.score`), so the record cannot be restated after the fact:

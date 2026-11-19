@@ -95,6 +95,13 @@
    "window_days": 7
   },
   {
+   "id": "W-4A",
+   "pir": "PIR-4",
+   "kind": "coincidence",
+   "title": "Internet outage, conflict surge and threat reporting elevated together in one country",
+   "min_signals": 2
+  },
+  {
    "id": "W-3B",
    "pir": "PIR-3",
    "kind": "surge",

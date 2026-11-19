@@ -216,6 +216,6 @@ const s1 = await M.entitySearch('fancy');
 ok(s1.hits[0] && s1.hits[0].id === 'actor:G0007', 'search by alias ' + JSON.stringify(s1.hits[0]));
 const s2 = await M.entitySearch('exchange', 'product');
 ok(s2.hits.length === 1 && s2.hits[0].id === 'product:microsoft:exchangeserver', 'search by type');
-ok(M.plan(new Date('2026-11-19T10:04:00Z')).join() === 'gdelt,infra,snap,sources,entities,watch,reports' && M.plan(new Date('2026-11-19T10:49:00Z')).slice(-4).join() === 'triage,entities,watch,reports', 'entities in every slot, after the sources and triage');
+ok(M.plan(new Date('2026-11-19T10:04:00Z')).join() === 'gdelt,infra,snap,sources,entities,watch,reports' && M.plan(new Date('2026-11-19T10:49:00Z')).slice(-5).join() === 'triage,cyphys,entities,watch,reports', 'entities in every slot, after the sources and triage');
 
 console.log(`entities_test: ${pass} checks passed`);

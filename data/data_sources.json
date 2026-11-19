@@ -4683,6 +4683,33 @@
    "source_ids": [],
    "added": "2026-11-19",
    "reviewed": "2026-11-19"
+  },
+  {
+   "id": "cyber-physical",
+   "name": "KTI cyber-physical coincidences (IODA, GDELT, entity graph)",
+   "owner": "KTI",
+   "category": "Platform",
+   "feeds": [
+    "live_cyphys",
+    "page:map",
+    "live_alerts"
+   ],
+   "url": "https://github.com/skilfoy/kti-dashboard/blob/main/neon/parts/37n-cyphys.mjs",
+   "access": "open",
+   "secret": null,
+   "licence": "The project's own; built from IODA (Georgia Tech), GDELT and the entity graph under their own terms",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (at :49)",
+   "health_feed": null,
+   "jobs": [
+    "cyphys"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-19",
+   "reviewed": "2026-11-19"
   }
  ]
 }

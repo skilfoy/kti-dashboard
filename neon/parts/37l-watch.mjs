@@ -92,6 +92,13 @@ export async function evalWatch(w, doc, ctx) {
       WHERE m.eid LIKE 'cve:%' AND d.published > now() - make_interval(hours => $1) AND d.published <= now() + interval '1 day' AND NOT coalesce(e.m ? 'kev', false)
       GROUP BY 1 HAVING count(DISTINCT d.host) >= ${minP} ORDER BY p DESC LIMIT 40`, [hours]).then((rs) => rs.map((r) => ({ ...r, name: r.subject.slice(4) })));
   }
+  if (w.kind === 'coincidence') {
+    const kv = (await sql(`SELECT v FROM ti.kv WHERE k = 'cyphys:latest'`))[0];
+    const min = Math.max(2, +w.min_signals || 2);
+    return ((kv && kv.v && kv.v.coincidences) || []).filter((c) => c.elevated >= min).map((c) => ({ subject: 'country:' + c.cc, name: c.name, type: 'country', n: c.elevated, p: c.cyber_p,
+      first_at: c.outage_last || kv.v.at, last_at: kv.v.at, links: [], detail: { outage_hours: c.outage_hours, conflict_z: c.conflict_z, conflict_24h: c.conflict_24h, cyber_p: c.cyber_p,
+        signals: ['outage', 'conflict', 'cyber'].filter((s) => c[s]), entities: (c.entities || []).slice(0, 6).map((e) => e.n) } }));
+  }
   if (w.kind === 'first_seen' || w.kind === 'surge') {
     if (!ctx.baselineReady) return [];
     const s = selectSql(w.select || {}, 1);
@@ -122,6 +129,7 @@ export function headline(w, c, doc) {
     case 'terms': return `"${c.name}" in ${pubs}`;
     case 'first_seen': return `${c.name} named for the first time (${pubs})`;
     case 'surge': return `${c.name} named well above its baseline (${pubs} in 7 days, z ${c.detail && c.detail.z})`;
+    case 'coincidence': return `${c.name}: ${c.detail.signals.join(', ')} elevated together${c.detail.outage_hours ? `; ${c.detail.outage_hours} h of outage` : ''}${c.detail.conflict_z != null && c.detail.signals.includes('conflict') ? `; conflict z ${c.detail.conflict_z}` : ''}${c.detail.signals.includes('cyber') ? `; ${c.detail.cyber_p} publishers on threat actors` : ''}`;
     case 'entity_category': return `${c.name} named in government or CERT publications (${pubs})`;
     default: return `${c.name} named with ${(doc && doc.term_labels && doc.term_labels[w.terms]) || w.terms + ' terms'} (${pubs})`;
   }

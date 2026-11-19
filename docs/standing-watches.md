@@ -17,13 +17,14 @@ Watches name public threat entities and topics only, never an organization's ass
 | W-2B | PIR-2 | A CVE outside KEV is reported by three or more publishers in 72 hours |
 | W-3A | PIR-3 | An extortion group is named with a financial-services victim |
 | W-3B | PIR-3 | An extortion group is named far above its own baseline (z of 3 or more, three publishers; after the baseline) |
+| W-4A | PIR-4 | Two or more of an internet outage, a conflict surge and threat reporting are elevated together in one country (cyber-physical coincidences, hourly) |
 | W-5A | PIR-5 | A state-attributed actor is named with critical-infrastructure words |
 | W-5B | PIR-5 | A government or CERT publication names a state-attributed actor |
 | W-6A | PIR-6 | An identity-abuse technique (vishing, help desk, MFA, SIM swap, deepfake, IT workers) is in three or more publishers' titles in three days |
 | W-6B | PIR-6 | An actor or extortion group is named with an identity-abuse technique |
 | W-7A | PIR-7 | A takedown, arrest, indictment, extradition or sanction names a threat entity, by two or more publishers |
 
-PIR-4 (geopolitical theaters) has no watch here. The theater warning-indicator rules already measure it.
+PIR-4's theater warning indicators keep their own rules. W-4A adds the cyber-physical coincidence across all countries.
 
 **Term lists.** The term lists (`financial`, `critical`, `identity`, `disruption`) are word-bounded Postgres regular expressions over entry titles.
 

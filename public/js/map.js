@@ -459,6 +459,23 @@
     drawCountries(sec);
     drawConflictTable(sec);
     drawCyberTables(sec);
+    // Cyber-physical coincidences (37n-cyphys.mjs).
+    const tc = sec.querySelector('#tbl-cyphys');
+    if (tc && TI.tableState(tc, ['live_cyphys'])) {
+      const names = (v) => TI.list(v).map((e) => TI.obj(e).n).filter(Boolean).slice(0, 5).join(', ');
+      const rows = (TI.rows('live_cyphys') || []).filter((r) => r.kind === 'country').map((r) => ({ ...r, signals: ['outage', 'conflict', 'cyber'].filter((s) => String(r[s]) === 'true').join(', ') || '—',
+        threat: names(r.entities), attributed: names(r.attributed_actors), graph: '#graph?id=country%3A' + r.cc }));
+      TI.table(tc, rows, [
+        { field: 'name', label: 'Country', link: 'graph' },
+        { field: 'elevated', label: 'Signals', num: true },
+        { field: 'signals', label: 'Elevated' },
+        { field: 'outage_hours', label: 'Outage h', num: true },
+        { field: 'conflict_z', label: 'Conflict z', num: true },
+        { field: 'cyber_p', label: 'Threat publishers', num: true },
+        { field: 'threat', label: 'Named beside it', cls: 'ti-wrap', hideSm: true },
+        { field: 'attributed', label: 'Attributed actors named', cls: 'ti-wrap', hideSm: true },
+      ], { sort: 'elevated', dir: 'desc', limit: 40, empty: 'No country has an elevated signal in 72 hours.' });
+    }
     // On-demand enrichment of one public indicator (intel.js).
     if (TI.intel) TI.intel.enrichCard(sec);
   });

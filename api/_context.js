@@ -35,6 +35,8 @@ TYPES.entities = { snap: 'entities', freshMin: 120, store: true };
 TYPES.alerts = { snap: 'alerts', freshMin: 60, store: true };
 // Track record (3.6.0).
 TYPES.scorecard = { snap: 'scorecard', freshMin: 150, store: true };
+// Cyber-physical coincidences (3.7.0).
+TYPES.cyphys = { snap: 'cyphys', freshMin: 150, store: true };
 const CABLE_TERMS = { licence: 'ODbL-1.0', licence_url: 'https://opendatacommons.org/licenses/odbl/1-0/', attribution: '© OpenStreetMap contributors',
   attribution_url: 'https://www.openstreetmap.org/copyright', licence_note: '/open-data/cables-LICENSE.txt', coverage: 'partial' };
 function cablesGeojson(doc) {
