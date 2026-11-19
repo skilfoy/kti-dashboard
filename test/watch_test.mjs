@@ -161,4 +161,27 @@ ok(M.plan(new Date('2026-11-19T10:04:00Z')).join() === 'gdelt,infra,snap,sources
   const again = await M.runJob('score');
   ok(again.ok && (await db.query(`SELECT count(*)::int AS n FROM ti.score WHERE metric = 'kev_foresight_share'`)).rows[0].n === 1, 'one value per metric and day');
 }
+// ---------------------------------------------------------------- cyber-physical coincidences (37n-cyphys.mjs)
+{
+  ok(M.conflictZ(60, 10, 5) === 10 && M.conflictZ(12, 10, 0) === 0.6 && M.conflictZ(null, 1, 1) === null, 'conflict z, with a Poisson floor on the spread');
+  const f = M.flagsOf({ outage_hours: 3, conflict_z: 4, conflict_24h: 50, cyber_p: 3, cyber_per_day: 2, cyber_base: 0.2 });
+  ok(f.outage && f.conflict && f.cyber && f.elevated === 3 && M.flagsOf({ outage_hours: 0.5, conflict_z: 4, conflict_24h: 5, cyber_p: 1, cyber_per_day: 1, cyber_base: 1 }).elevated === 0, 'flags and their floors');
+  // Ukraine: three hours of outage, a conflict spike over ten quiet days, and threat reporting from three publishers.
+  await db.query(`INSERT INTO ti.disruption (source, entity, start_at, end_at, cc, name, level, score) VALUES ('ioda', 'country/UA/bgp', now() - interval '5 hours', now() - interval '2 hours', 'UA', 'Ukraine', 'warning', 900),
+    ('ioda', 'country/UA/ping-slash24', now() - interval '4 hours', now() - interval '3 hours', 'UA', 'Ukraine', 'critical', 2000), ('ioda', 'country/FR/bgp', now() - interval '10 hours', now() - interval '9 hours', 'FR', 'France', 'normal', 10)`);
+  for (let d = 2; d <= 12; d++) await db.query(`INSERT INTO ti.gdelt_country (slot, iso2, n, m) VALUES (now() - make_interval(days => $1), 'UA', 20, 10)`, [d]);
+  await db.query(`INSERT INTO ti.gdelt_country (slot, iso2, n, m) VALUES (now() - interval '3 hours', 'UA', 300, 120)`);
+  await insert([['https://u/1', 'Sandworm wiper hits Ukrainian grid', 'u1.com', 'research', 0.3, ['actor:G0007', 'country:UA']], ['https://u/2', 'APT28 targets Ukraine again', 'u2.com', 'cyber-news', 0.4, ['actor:G0007', 'country:UA']],
+    ['https://u/3', 'Ukrainian CERT warns of APT28', 'u3.com', 'government', 0.5, ['actor:G0007', 'country:UA']]]);
+  const rc = await M.runJob('cyphys');
+  const cd = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/cyphys.json.gz')).toString());
+  const ua = cd.rows.find((r) => r.cc === 'UA'), ru = cd.rows.find((r) => r.cc === 'RU');
+  ok(rc.ok && ua && ua.outage && ua.conflict && ua.cyber && ua.elevated === 3 && ua.outage_hours === 3 && ua.outage_signals === 2 && ua.outage_critical, 'Ukraine: three signals elevated ' + JSON.stringify(ua).slice(0, 300));
+  ok(!cd.rows.some((r) => r.cc === 'FR'), 'a normal-level outage is not a signal');
+  ok(ru && ru.attributed_actors.some((a) => a.id === 'actor:G0007') && ru.elevated === 0, 'Russia carries the attributed actor (attacker side), not an elevated signal');
+  ok(cd.coincidences === 1 && ua.entities.some((e) => e.n === 'APT28'), 'one coincidence, with the threat entities named beside the country');
+  await M.runJob('watch');
+  const w4 = (await db.query(`SELECT headline, subject FROM ti.alert WHERE watch = 'W-4A'`)).rows;
+  ok(w4.length === 1 && w4[0].subject === 'country:UA' && /outage, conflict, cyber elevated together/.test(w4[0].headline), 'W-4A: the coincidence becomes a change alert ' + JSON.stringify(w4));
+}
 console.log(`watch_test: ${pass} checks passed`);

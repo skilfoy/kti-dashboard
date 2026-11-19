@@ -299,6 +299,11 @@
           <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-map-out" data-source="live_outages" data-row-key="cc,start_at,datasource"></table></div>
         </div>
       </div>
+      <div class="ti-card ti-section" id="map-cyphys-card">
+        <h3 class="ti-h3">Cyber-physical coincidences, 72 hours <span class="ti-pir">PIR-4, PIR-5</span></h3>
+        <p class="ti-card-note">Three signals per country, each against its own baseline:<br>&bull; an IODA outage at warning or critical level lasting an hour or more;<br>&bull; GDELT material-conflict events in the last day at a z score of 2 or more over the country's 30-day pattern;<br>&bull; collected entries naming the country beside a threat actor, extortion group or malware, from three or more publishers and at least twice the country's usual rate.<br>Two signals at once make a coincidence, shown first. The signals sit side by side for an analyst to read; none is evidence that another caused it. Actors attributed to a country are listed under that country (the attacker side), apart from the countries they were named beside.</p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-cyphys" data-source="live_cyphys" data-row-key="cc"></table></div>
+      </div>
       <div class="ti-card ti-section" id="map-att-card">
         <h3 class="ti-h3">Attributed targeting by origin <span class="ti-pir">MISP galaxy · CFR tracker</span></h3>
         <p class="ti-card-note">Origin and victim countries for named actors, as recorded in the MISP galaxy threat-actor cluster with the Council on Foreign Relations Cyber Operations Tracker fields. This is historical attribution from public reporting with each source's own confidence; it says where reporting placed targeting over the years, not what is happening now.</p>
