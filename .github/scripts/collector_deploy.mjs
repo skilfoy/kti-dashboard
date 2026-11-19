@@ -276,8 +276,10 @@ export async function deploy({ env = process.env, http = fetch, wait = sleep, no
       let run = await A('op=run&job=gdelt', 60000);
       const job = (j) => ((j && j.jobs) || []).find((x) => x.job === 'gdelt') || {};
       if (job(run.json).skipped) { await wait(20000); run = await A('op=run&job=gdelt', 60000); }
-      // An instance that was warm before the pin keeps serving the old bundle until it is recycled (19 November 2026: the
-      // gdelt run reached a new instance, op=status an old one 2 seconds later). Ask again for up to two minutes.
+      // Requests reach whichever instance is warm, and one warm before the pin runs the old bundle until it is recycled
+      // (19 November 2026: one deploy saw the run on the new bundle and op=status on the old, the next the other way
+      // round). Run again for up to two minutes before judging.
+      for (let k = 0; k < 6 && (run.json && run.json.version) !== newVersion; k++) { await wait(20000); run = await A('op=run&job=gdelt', 60000); }
       let status = await A('op=status', 30000);
       for (let k = 0; k < 6 && !(status.json && status.json.version === newVersion); k++) { await wait(20000); status = await A('op=status', 30000); }
       const e = { envDeploy: fnNow.current_deployment, namesBefore, newVersion, newSha: NEW,
