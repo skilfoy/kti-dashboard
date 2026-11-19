@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.4.6 (19 November 2026)
+
+- 3.4.4's attestation rule had not taken effect. The daily word list was cached by gazetteer hash only, so the job kept using the list 3.4.3 measured: 27 ambiguous words where the new rule gives several hundred. The cache is now keyed by matcher rules too. MATCH_V 5 re-derives every mention under the fresh list.
+- Collector 2026-11-19.9.
+
 ## 3.4.5 (19 November 2026)
 
 - Graph page, checked in a browser on live data:

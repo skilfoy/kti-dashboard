@@ -195,6 +195,14 @@ siteUp = true;
   ok(rr2.ok && !rr2.rederived && rr2.read === 0, 'no second rederivation');
 }
 
+// The cached word list belongs to the matcher rules that made it.
+{
+  await db.query(`UPDATE ti.kv SET v = jsonb_set(jsonb_set(v, '{match}', '0'), '{words}', '["stale"]') WHERE k = 'entities:amb'`);
+  const ra = await M.runJob('entities');
+  const kv = (await db.query(`SELECT v FROM ti.kv WHERE k = 'entities:amb'`)).rows[0].v;
+  ok(ra.ok && kv.match === M.MATCH_V && !kv.words.includes('stale'), 'a word list from other rules is measured again');
+}
+
 // ---------------------------------------------------------------- queries
 const card = await M.entityCard('actor:G0007');
 ok(card.entity.n === 'APT28' && card.entries === 3 && card.series.length >= 1, 'card: entity and series');
