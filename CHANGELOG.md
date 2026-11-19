@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.4.1 (19 November 2026)
+
+- The entities job's first live run read 876,000 rows in 95 seconds (251 MB of query results, 174 MB sent) and stored 1,375 mentions. The sources job stamps each insert with one `now()`, so up to 9,196 entries share a seen_at to the microsecond. The watermark kept a millisecond copy, which sorts before all of them, so the job reread the same 3,000 entries until its budget ran out. The job was paused (lease held) at 15:27 UTC. The watermark now keeps seen_at as text at full precision, and a batch that does not move it stops the run.
+- Collector 2026-11-19.4.
+
 ## 3.4.0 (19 November 2026)
 
 - Entity graph. A gazetteer built daily in the site build (`pipeline/build_gazetteer.py`, published at `/data/entity_gazetteer.json`) holds about 7,900 entities with 11,100 names: ATT&CK groups, software and campaigns, MISP threat actors, Malpedia families (new source: the MISP galaxy Malpedia cluster, CC BY-SA 4.0), leak-site extortion groups, KEV vendors, products and CVEs, with 5,700 curated relationships. Same-thing entries collapse: a MISP actor into the ATT&CK group it cites or whose alias it bears, a leak-site group into the ATT&CK group or Malpedia family of its name.

@@ -191,8 +191,8 @@ async function ambiguity(g, force = false) {
 }
 
 const SOURCES_SQL = {
-  item: `SELECT link, title, summary, source, host, feed, category, published, seen_at FROM ti.item WHERE (seen_at, link) > ($1::timestamptz, $2::text) ORDER BY seen_at, link LIMIT $3`,
-  advisory: `SELECT link, title, '' AS summary, NULL AS source, NULL AS host, feed, 'vulnerability' AS category, coalesce(published, seen_at) AS published, cves, seen_at
+  item: `SELECT link, title, summary, source, host, feed, category, published, seen_at, seen_at::text AS mark_at FROM ti.item WHERE (seen_at, link) > ($1::timestamptz, $2::text) ORDER BY seen_at, link LIMIT $3`,
+  advisory: `SELECT link, title, '' AS summary, NULL AS source, NULL AS host, feed, 'vulnerability' AS category, coalesce(published, seen_at) AS published, cves, seen_at, seen_at::text AS mark_at
     FROM ti.advisory WHERE (seen_at, link) > ($1::timestamptz, $2::text) ORDER BY seen_at, link LIMIT $3`,
 };
 export async function jobEntities(opts = {}) {
@@ -230,8 +230,12 @@ export async function jobEntities(opts = {}) {
       // CVEs outside KEV and countries are entities the gazetteer does not list: they are added on first mention.
       if (fresh.size) st.push([`INSERT INTO ti.entity (id, t, n, names, m) SELECT id, t, n, n, m FROM jsonb_to_recordset($1::jsonb) AS x(id text, t text, n text, m jsonb) ON CONFLICT (id) DO NOTHING`,
         [[...fresh].map((id) => { const e = G.ents.get(id); return e ? { id, t: e.t, n: e.n, m: e.m } : { id, t: 'cve', n: id.slice(4), m: {} }; })]]);
+      // The watermark keeps seen_at at full precision, as text. The sources job stamps a whole insert with one now(), so
+      // thousands of entries share one microsecond value; a millisecond copy of it sorts before all of them, and the
+      // first deploy reread the same 3,000 entries 290 times in one run (19 November 2026).
       const last = rows[rows.length - 1];
-      m = { at: new Date(last.seen_at).toISOString(), link: last.link };
+      if (last.mark_at === m.at && last.link === m.link) throw new Error('the watermark did not move at ' + m.at);
+      m = { at: last.mark_at, link: last.link };
       mark[src] = m;
       st.push([`INSERT INTO ti.kv (k, v, at) VALUES ('entities:mark', $1::jsonb, now()) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v, at = now()`, [mark]]);
       await sqlTx(st);
