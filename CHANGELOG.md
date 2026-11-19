@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.8.0 (19 November 2026)
+
+- Sigma detection drafts. The new `sigma` job runs in the :34 slot and drafts at most one subject an hour and six a day. A subject is a malware family, tool, actor, campaign, extortion brand or CVE that three or more publishers named in 14 days, with a research entry. A free hosted model writes up to three rules from up to five of the subject's entry pages.
+- A rule is accepted only through deterministic checks:
+  - a Sigma taxonomy log source and its fields, with plain modifiers and no regular expressions or keyword lists;
+  - a condition that parses, uses every selection and needs a positive match;
+  - every detection value printed in the cited pages, and one of them specific to the threat;
+  - ATT&CK technique ids that exist in v20, and cited sources.
+- A failing rule goes back to the model once with the failures. A rule that still fails is kept as rejected, with the reasons.
+- The collector writes the YAML: status experimental, an unreviewed-draft author line, a deterministic id and the cited pages as references. The offline test parses every draft with pySigma 2.1.0 and runs its core validators.
+- A Defense page card lists the drafts and marks techniques that no public Sigma rule covers. It shows the YAML of a selected rule and the checker's reasons for a rejected one. The card is published as the `live_sigma` dataset.
+- `/api/sigma` serves the attempts and rules as JSON, or every accepted draft as one YAML file (`?format=yaml`, `?id=`, `?subject=`).
+- `fetchPage` takes a character limit.
+- Collector 2026-11-19.14. Schema: `ti.sigma`, lease row `sigma`.
+
 ## 3.7.0 (19 November 2026)
 
 - Cyber-physical coincidences. The new `cyphys` job runs hourly at :49 and reads three signals per country over 72 hours, each against its own baseline:

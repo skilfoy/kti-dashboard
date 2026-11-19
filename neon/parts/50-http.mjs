@@ -16,8 +16,8 @@ Object.assign(JOBS, { sources: jobSources, reports: jobReports });
 Object.assign(LEASE_S, { sources: 240, reports: 900 });
 // Entity graph (3.4.0, 37k-entities.mjs): every slot, after the sources job, so an entry is in the graph within the slot
 // that collected it.
-Object.assign(JOBS, { entities: jobEntities, watch: jobWatch, score: jobScore, cyphys: jobCyphys });
-Object.assign(LEASE_S, { entities: 240, watch: 180, score: 120, cyphys: 120 });
+Object.assign(JOBS, { entities: jobEntities, watch: jobWatch, score: jobScore, cyphys: jobCyphys, sigma: jobSigma });
+Object.assign(LEASE_S, { entities: 240, watch: 180, score: 120, cyphys: 120, sigma: 330 });
 export async function runJob(job, opts = {}) {
   const fn = JOBS[job];
   if (!fn) return { job, ok: false, error: 'unknown job' };
@@ -75,6 +75,8 @@ export function plan(at) {
   // Cyber-physical coincidences (37n-cyphys.mjs) hourly, before the watch job reads them.
   if (m >= 45) jobs.push('retention', 'fires', 'maritime', 'sources', 'triage', 'cyphys');
   jobs.push('entities', 'watch');
+  // Sigma drafts (37o-sigma.mjs) in the lightest quarter hour, after the entities and watches it reads.
+  if (m >= 30 && m < 45) jobs.push('sigma');
   jobs.push('reports');
   return jobs;
 }

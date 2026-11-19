@@ -137,6 +137,13 @@ CREATE TABLE IF NOT EXISTS ti.score (day date NOT NULL, metric text NOT NULL, va
 INSERT INTO ti.lease (job) VALUES ('score') ON CONFLICT DO NOTHING;
 -- Cyber-physical coincidences (3.7.0, 37n-cyphys.mjs); the latest coincidences live in ti.kv ('cyphys:latest').
 INSERT INTO ti.lease (job) VALUES ('cyphys') ON CONFLICT DO NOTHING;
+-- Sigma detection drafts (3.8.0, 37o-sigma.mjs): one row per drafting attempt, its rules (accepted and rejected, with
+-- the checker's reasons), the pages read and the model calls; kept 365 days.
+CREATE TABLE IF NOT EXISTS ti.sigma (id bigserial PRIMARY KEY, subject text NOT NULL, name text NOT NULL, etype text, outcome text NOT NULL, reason text, model text,
+  rules jsonb NOT NULL DEFAULT '[]'::jsonb, sources jsonb NOT NULL DEFAULT '[]'::jsonb, calls jsonb NOT NULL DEFAULT '[]'::jsonb, prompt_v int, created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS sigma_subject ON ti.sigma (subject, created_at);
+CREATE INDEX IF NOT EXISTS sigma_created ON ti.sigma (created_at);
+INSERT INTO ti.lease (job) VALUES ('sigma') ON CONFLICT DO NOTHING;
 -- 2026-11-18: pg_stat_statements is enabled on the production database (CREATE EXTENSION pg_stat_statements, as the
 -- owner) to rank the collector's reads by the Postgres transfer they cost (Free plan: 5 GB a month). It is left out of
 -- this file because PGlite, which the tests load this schema into, does not ship it.

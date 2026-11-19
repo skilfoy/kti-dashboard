@@ -13,7 +13,8 @@ GitHub (skilfoy/kti-dashboard, private)
   public/               the static site: page, runtime, styles, vendored d3
   api/ lib/             threat-feeds: the site's live-data service (Vercel functions)
   neon/                 the collector (a Neon Function every 15 minutes, with Postgres and a bucket); its entities job
-                        builds the entity graph over everything collected (docs/entity-graph.md)
+                        builds the entity graph over everything collected (docs/entity-graph.md); its sigma job
+                        drafts Sigma rules from current reporting under deterministic checks (docs/sigma-drafts.md)
   .github/workflows/    Site: build, test, deploy; Collector alerts and Reassessment watch: issues without a model;
                         Collector deploy: build and approval gate
 
@@ -42,7 +43,7 @@ Secrets live only where they are used: the collector's keys in the Neon Function
 
 ```
 npm ci
-python3 -m pip install pyyaml==6.0.2
+python3 -m pip install pyyaml==6.0.3 pysigma==2.1.0   # pySigma only for the Sigma drafts test
 python3 -I pipeline/build_feeds.py work feeds          # about 10 minutes; GitHub-hosted sources only
 python3 -I pipeline/site_build.py --authored data/authored --feeds feeds --out public
 node test/dev_server.mjs                               # http://localhost:4173, live service offline
