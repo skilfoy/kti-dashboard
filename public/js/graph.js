@@ -25,9 +25,10 @@
     state.byId = byId;
     $('graph-sum').textContent = `${(d.entries_30d || 0).toLocaleString()} entries named at least one entity in the last 30 days; ${(d.entities || 0).toLocaleString()} entities named, ${d.edges || 0} co-mention edges shown, ${d.rising || 0} rising and ${d.new || 0} new this week. Gazetteer of ${(d.gazetteer && d.gazetteer.date) || 'unknown date'}; updated ${day(d.generated)} ${String(d.generated || '').slice(11, 16)} UTC.`;
     const risers = ents.filter((e) => e.rising).sort((a, b) => b.z - a.z);
-    $('graph-rising-list').innerHTML = risers.length ? risers.slice(0, 30).map((e) => chip(e.id, e.n, e.t, `${e.n7} entries, ${e.p7} publishers, z ${e.z}`)).join('') : '<li class="ti-card-note">Nothing rising past the threshold this week.</li>';
+    const wait = d.baseline_ready === false ? `<li class="ti-card-note">The rising and new lists start on ${esc(day(d.baseline_ready_at))}, once the collection (running since ${esc(day(d.collecting_since))}) gives each entity 14 days to compare against.</li>` : '';
+    $('graph-rising-list').innerHTML = wait ? wait : risers.length ? risers.slice(0, 30).map((e) => chip(e.id, e.n, e.t, `${e.n7} entries, ${e.p7} publishers, z ${e.z}`)).join('') : '<li class="ti-card-note">Nothing rising past the threshold this week.</li>';
     const fresh = ents.filter((e) => e.new).sort((a, b) => b.n7 - a.n7);
-    $('graph-new-list').innerHTML = fresh.length ? fresh.slice(0, 30).map((e) => chip(e.id, e.n, e.t, `first ${day(e.first)}, ${e.n7} entries`)).join('') : '<li class="ti-card-note">No entity first named this week.</li>';
+    $('graph-new-list').innerHTML = wait ? '' : fresh.length ? fresh.slice(0, 30).map((e) => chip(e.id, e.n, e.t, `first ${day(e.first)}, ${e.n7} entries`)).join('') : '<li class="ti-card-note">No entity first named this week.</li>';
     const order = ['actor', 'extortion', 'malware', 'tool', 'cve', 'vendor', 'product', 'campaign'];
     $('graph-top-list').innerHTML = order.map((t) => {
       const list = ents.filter((e) => e.t === t && e.top_rank).sort((a, b) => a.top_rank - b.top_rank).slice(0, 10);
