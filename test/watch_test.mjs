@@ -88,6 +88,8 @@ const alerts = async () => (await db.query(`SELECT id, watch, subject, n, p, hea
 let A = await alerts();
 const has = (w, s) => A.find((a) => a.watch === w && a.subject === s);
 ok(has('W-1A', 'actor:G0007') && has('W-1A', 'actor:G0007').n === 1, 'W-1A: a state actor named with banks');
+const lk = (await db.query(`SELECT links FROM ti.alert WHERE watch = 'W-1A'`)).rows[0].links;
+ok(Array.isArray(lk) && lk[0].link === 'https://a/1' && lk[0].title.startsWith('APT28'), 'alert links are a JSON array of entries ' + JSON.stringify(lk).slice(0, 120));
 ok(!has('W-1A', 'extortion:qilin'), 'W-1A: Qilin has no attributed country');
 ok(has('W-3A', 'extortion:qilin') && /credit union|financial/.test(has('W-3A', 'extortion:qilin').headline), 'W-3A: an extortion group with a financial victim ' + (has('W-3A', 'extortion:qilin') || {}).headline);
 ok(!has('W-1B', 'extortion:qilin'), 'W-1B needs two publishers');
