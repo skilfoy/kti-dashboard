@@ -30,7 +30,8 @@ const KIND_WORDS = new Set('wiper wipers loader loaders backdoor backdoors steal
 const cueKind = (t) => (t === 'vendor' || t === 'product' ? 'vendor' : 'threat');
 const isCue = (low, kind) => CUES[kind].exact.has(low) || CUES[kind].prefix.some((p) => low.startsWith(p));
 // Bump when the matcher's rules change; with the gazetteer's own rules version it decides when every mention is re-derived.
-export const MATCH_V = 4;
+// 5: the daily word list is cached per MATCH_V (3.4.4's attestation rule had run on the list 3.4.3 cached).
+export const MATCH_V = 5;
 const DEMONYM = 'RU:Russian|CN:Chinese|IR:Iranian|KP:North Korean|KR:South Korean|IL:Israeli|UA:Ukrainian|US:American|GB:British|BY:Belarusian|PK:Pakistani|IN:Indian|'
   + 'VN:Vietnamese|TR:Turkish|TW:Taiwanese|JP:Japanese|DE:German|FR:French|SA:Saudi|AE:Emirati|SY:Syrian|LB:Lebanese|VE:Venezuelan|CU:Cuban|KZ:Kazakh|'
   + 'PL:Polish|NL:Dutch|AU:Australian|CA:Canadian|IT:Italian|ES:Spanish|BR:Brazilian|MX:Mexican|NG:Nigerian|IQ:Iraqi|QA:Qatari|EG:Egyptian|PS:Palestinian|'
@@ -193,7 +194,7 @@ export function ambiguousWords(words, general, cyber) {
 }
 async function ambiguity(g, force = false) {
   const kv = (await sql(`SELECT v, at FROM ti.kv WHERE k = 'entities:amb'`))[0];
-  if (!force && kv && kv.v && Date.now() - new Date(kv.at).getTime() < ENTITY.AMB_EVERY_MS && kv.v.hash === g.hash) return kv.v.words || [];
+  if (!force && kv && kv.v && Date.now() - new Date(kv.at).getTime() < ENTITY.AMB_EVERY_MS && kv.v.hash === g.hash && kv.v.match === MATCH_V) return kv.v.words || [];
   const words = [...new Set(g.doc.entities.flatMap((e) => e.a.filter((a) => a[1] === 's').map((a) => squashName(a[0]))))];
   const cats = [...CYBER_CATS];
   const [gen, cyb, n] = await sqlTx([
@@ -202,7 +203,7 @@ async function ambiguity(g, force = false) {
     [`SELECT count(*) FILTER (WHERE category IN ('geopolitics','topic-theater','maritime','think-tank','defense','government'))::int AS g, count(*) FILTER (WHERE category = ANY(ARRAY(SELECT jsonb_array_elements_text($1::jsonb))))::int AS c FROM ti.item`, [cats]],
   ]);
   const amb = ambiguousWords(words, gen, cyb);
-  await sql(`INSERT INTO ti.kv (k, v, at) VALUES ('entities:amb', $1::jsonb, now()) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v, at = now()`, [{ hash: g.hash, words: amb, checked: words.length, general: n[0].g, cyber: n[0].c }]);
+  await sql(`INSERT INTO ti.kv (k, v, at) VALUES ('entities:amb', $1::jsonb, now()) ON CONFLICT (k) DO UPDATE SET v = EXCLUDED.v, at = now()`, [{ hash: g.hash, match: MATCH_V, words: amb, checked: words.length, general: n[0].g, cyber: n[0].c }]);
   return amb;
 }
 
