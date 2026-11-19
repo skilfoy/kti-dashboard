@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------- runner
 const JOBS = { gdelt: jobGdelt, infra: jobInfra, health: jobHealth, snap: jobSnap, ioda: jobIoda, retention: jobRetention, lists: jobLists, fires: jobFires,
-  maritime: jobMaritime, leaksites: jobLeaksites, ransompay: jobRansompay, unit42: jobUnit42, genioc: jobGenioc, lanesreg: jobLanesreg, blogs: jobBlogs, links: jobLinks, sec8k: jobSec8k, ocia1: jobOciA1 };
+  maritime: jobMaritime, leaksites: jobLeaksites, ransompay: jobRansompay, unit42: jobUnit42, genioc: jobGenioc, lanesreg: jobLanesreg, blogs: jobBlogs, links: jobLinks, sec8k: jobSec8k };
 const LEASE_S = { gdelt: 240, infra: 240, health: 120, snap: 120, ioda: 120, retention: 120, lists: 180, fires: 180, maritime: 120, leaksites: 120, ransompay: 240,
-  unit42: 180, genioc: 240, lanesreg: 120, blogs: 240, links: 180, sec8k: 120, ocia1: 120 };
+  unit42: 180, genioc: 240, lanesreg: 120, blogs: 240, links: 180, sec8k: 120 };
 // Submarine cables (37e-cables.mjs) on the lease row reserved for them since G26: weekly, Sundays at 05:19 UTC.
 JOBS.cables = jobCables;
 LEASE_S.cables = 180;
@@ -14,6 +14,10 @@ Object.assign(LEASE_S, { psirt: 240, triage: 600, triageeval: 600, news: 180 });
 // the blogs job's reading on the schedule; both stay callable by hand.
 Object.assign(JOBS, { sources: jobSources, reports: jobReports });
 Object.assign(LEASE_S, { sources: 240, reports: 900 });
+// Entity graph (3.4.0, 37k-entities.mjs): every slot, after the sources job, so an entry is in the graph within the slot
+// that collected it.
+Object.assign(JOBS, { entities: jobEntities });
+Object.assign(LEASE_S, { entities: 240 });
 export async function runJob(job, opts = {}) {
   const fn = JOBS[job];
   if (!fn) return { job, ok: false, error: 'unknown job' };
@@ -67,8 +71,7 @@ export function plan(at) {
     jobs.push('triageeval');
   }
   if (m >= 45) jobs.push('retention', 'fires', 'maritime', 'sources', 'triage');
-  // Until the Oracle A1 server is launched (37j-oci.mjs), every slot asks for one; afterwards the job returns at once.
-  jobs.push('ocia1');
+  jobs.push('entities');
   jobs.push('reports');
   return jobs;
 }
@@ -226,6 +229,12 @@ export default {
       }
       if (req.method === 'GET' && path.startsWith('/report/')) { const r = await getReport(path.slice(8)); return r ? json(r) : json({ error: 'not found' }, 404); }
       if (req.method === 'GET' && path === '/reports') return json({ reports: await listReports(url.searchParams.get('limit')) });
+      if (req.method === 'GET' && path === '/graph') {
+        const sp = url.searchParams, days = sp.get('days');
+        const r = sp.get('id') ? await entityCard(sp.get('id'), days) : sp.get('a') ? await entityPair(sp.get('a'), sp.get('b'), days) : sp.get('q') ? await entitySearch(sp.get('q'), sp.get('t') || '', sp.get('limit'))
+          : { error: 'id, a and b, or q required', status: 400 };
+        return json(r, r.status && r.error ? r.status : 200);
+      }
       if (req.method === 'GET' && path.startsWith('/doc/')) {
         const name = path.slice(5);
         if (!/^[a-z0-9-]{1,64}$/.test(name)) return json({ error: 'bad name' }, 400);

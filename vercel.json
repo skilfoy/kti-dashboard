@@ -14,6 +14,7 @@
     { "source": "/api/context", "destination": "/api/index?route=context" },
     { "source": "/api/enrich", "destination": "/api/index?route=enrich" },
     { "source": "/api/search", "destination": "/api/index?route=search" },
+    { "source": "/api/graph", "destination": "/api/index?route=graph" },
     { "source": "/api/report", "destination": "/api/index?route=report" },
     { "source": "/taxii2", "destination": "/api/index?route=taxii&path=" },
     { "source": "/taxii2/", "destination": "/api/index?route=taxii&path=" },

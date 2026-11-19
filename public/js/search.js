@@ -75,7 +75,7 @@
       return `<li class="ti-hit${h.relevance >= 2 ? ' ti-hit-hot' : ''}"><div class="ti-hit-t"><a href="${esc(safeUrl(h.link))}" target="_blank" rel="noopener noreferrer">${hl(h.title, ts, 400)}</a></div>
         <div class="ti-hit-m">${esc(h.source || h.host || '')} · ${esc(day(h.published))} <span class="ti-dim">(${esc(ago(h.published))})</span>${also.length ? ` · also carried by ${esc(also.slice(0, 5).join(', '))}${also.length > 5 ? ' and ' + (also.length - 5) + ' more' : ''}` : ''}</div>
         ${snip.trim() ? `<div class="ti-hit-s">${esc(snip).replace(/\u0001/g, '<mark>').replace(/\u0002/g, '</mark>')}</div>` : ''}
-        <div class="ti-hit-c">${chips.map((c) => `<span class="ti-tag">${esc(c)}</span>`).join('')}${h.why ? ` <span class="ti-dim">${esc(h.why)}</span>` : ''}</div></li>`;
+        <div class="ti-hit-c">${chips.map((c) => `<span class="ti-tag">${esc(c)}</span>`).join('')}${TI.list(h.entities).slice(0, 8).map((e) => Array.isArray(e) ? ` <a class="ti-tag ti-tag-ent" href="#graph?id=${encodeURIComponent(e[0])}" title="Open ${esc(e[1])} in the entity graph">${esc(e[1])}</a>` : '').join('')}${h.why ? ` <span class="ti-dim">${esc(h.why)}</span>` : ''}</div></li>`;
     }).join('');
     ol.innerHTML = (append ? ol.innerHTML : '') + html;
     $('search-results').hidden = false;

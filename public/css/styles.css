@@ -498,3 +498,23 @@ mark { background: color-mix(in srgb, var(--ti-elev) 40%, transparent); color: i
 .ti-rsources li:target { background: color-mix(in srgb, var(--ti-elev) 25%, transparent); }
 .ti-rlist { list-style: none; padding: 0; margin: 0; }
 .ti-rlist li { padding: 4px 0; overflow-wrap: anywhere; }
+
+/* Entity graph (3.4.0) */
+.ti-tag-ent { text-decoration: none; color: var(--color-fg); }
+.ti-tag-ent:hover { text-decoration: underline; }
+.ti-gchips { list-style: none; margin: 0 0 var(--cds-gap-md); padding: 0; display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs) var(--cds-gap-sm); }
+.ti-gchip { display: inline-flex; align-items: center; gap: 6px; font-size: var(--cds-font-size-caption); color: var(--color-fg); text-decoration: none; border: 1px solid var(--color-border-line); border-radius: 999px; padding: 2px 10px; }
+.ti-gchip:hover, .ti-gchip:focus-visible { border-color: var(--color-fg-muted); }
+.ti-gdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: 0; flex: none; }
+.ti-gtop { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--cds-gap-md); }
+.ti-h4 { font-size: var(--cds-font-size-body); font-weight: var(--cds-font-weight-medium); margin: 0 0 var(--cds-gap-xs); }
+.ti-gnet, .ti-gego { width: 100%; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-panel); overflow: hidden; margin: var(--cds-gap-sm) 0; }
+.ti-gnet svg, .ti-gego svg { display: block; cursor: grab; }
+.ti-glinks line { stroke: var(--cds-chart-axis); stroke-opacity: 0.7; }
+.ti-gnode { cursor: pointer; }
+.ti-gnode text { font-size: 11px; fill: var(--color-fg); paint-order: stroke; stroke: var(--color-panel); stroke-width: 3px; pointer-events: none; }
+.ti-gnode:focus-visible circle { stroke: var(--color-fg); stroke-width: 2.5px; }
+.ti-gfilters { display: flex; flex-wrap: wrap; gap: var(--cds-gap-xs); align-items: center; }
+.ti-glist { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow: auto; font-size: var(--cds-font-size-body); }
+.ti-glist li { padding: 3px 0; border-bottom: 1px solid var(--color-border-line); }
+#gc-nb tbody tr { cursor: pointer; }

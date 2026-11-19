@@ -27,6 +27,7 @@ const iso = (s, d) => { const t = Date.parse(s); return isFinite(t) ? new Date(t
 const COLS = {
   [uuid('col:judgments')]: { key: 'judgments', title: 'KTI key judgments', description: 'The platform\'s ranked analytic judgments on cyber and cyber-physical threats, with likelihood, probability, severity and the evidence items behind each.' },
   [uuid('col:advisories')]: { key: 'advisories', title: 'KTI vendor and CERT advisories', description: 'Advisories from 24 vendor PSIRT and CERT feeds of the last 14 days, as STIX vulnerability objects by CVE and one report per advisory; CVEs in CISA KEV are labelled.' },
+  [uuid('col:graph')]: { key: 'graph', title: 'KTI entity graph', description: 'The actors, extortion groups, malware, tools, campaigns, CVEs, vendors, products and countries the platform\'s collection named most in the last 30 days, with curated relationships from ATT&CK, MISP and KEV and observed co-mention relationships (related-to, with entry and publisher counts and normalized PMI). Co-mention is association in reporting, not attribution.' },
   [uuid('col:reports')]: { key: 'reports', title: 'KTI agentic reports', description: 'Machine-written intelligence reports generated on the platform from its collected reporting and live web search, each citing its sources. Unreviewed.' },
 };
 const fetchJson = (u) => fetch(u, { headers: { accept: 'application/json' } }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
@@ -65,6 +66,56 @@ async function objectsFor(key, req) {
     }
     return out;
   }
+  if (key === 'graph') {
+    const d = await store.getDoc(req, 'entities', { timeout: 15000 });
+    if (!d.ok) return [];
+    const gen = iso(d.doc.generated, new Date().toISOString()), out = [], ref = new Map();
+    const TYPE = { actor: 'intrusion-set', extortion: 'intrusion-set', malware: 'malware', tool: 'tool', campaign: 'campaign', cve: 'vulnerability', vendor: 'identity', product: 'software', country: 'location' };
+    const sid = (id) => {
+      const t = TYPE[id.split(':')[0]];
+      if (!t) return null;
+      return t === 'vulnerability' ? `vulnerability--${uuid(id.slice(4))}` : `${t}--${uuid('entity|' + id)}`;
+    };
+    for (const e of (d.doc.rows || []).filter((r) => r.kind === 'entity')) {
+      const t = TYPE[e.t] || TYPE[e.id.split(':')[0]], id = sid(e.id);
+      if (!t || !id) continue;
+      const created = iso(e.first, gen), modified = iso(e.last, gen) > created ? iso(e.last, gen) : created;
+      const att = /^(actor|extortion|malware|tool|campaign):([GSC]\d{4})$/.exec(e.id);
+      const base = { type: t, spec_version: '2.1', id, object_marking_refs: [TLP_GREEN] };
+      let o;
+      if (t === 'software') o = { ...base, name: e.n };
+      else if (t === 'location') o = { ...base, created_by_ref: IDENT, created, modified, name: e.n, country: e.id.slice(8) };
+      else if (t === 'identity') o = { ...base, created_by_ref: IDENT, created, modified, name: e.n, identity_class: 'organization', sectors: ['technology'] };
+      else if (t === 'vulnerability') o = { ...base, created_by_ref: IDENT, created, modified, name: e.n, external_references: [{ source_name: 'cve', external_id: e.n }] };
+      else o = { ...base, created_by_ref: IDENT, created, modified, name: e.n, ...(t === 'malware' ? { is_family: true } : {}), ...(e.t === 'extortion' ? { labels: ['extortion'] } : {}),
+        ...(att ? { external_references: [{ source_name: 'mitre-attack', external_id: att[2], url: `https://attack.mitre.org/${att[2][0] === 'G' ? 'groups' : att[2][0] === 'S' ? 'software' : 'campaigns'}/${att[2]}` }] } : {}) };
+      o.x_kti_entity = e.id; o.x_kti_entries_7d = e.n7; o.x_kti_entries_30d = e.n30; o.x_kti_publishers_30d = e.p30;
+      if (e.rising) o.x_kti_rising = true;
+      ref.set(e.id, id);
+      out.push(o);
+    }
+    // STIX relationship types: "uses" stands as is; "attributed-to" becomes "originates-from" for a country and stays
+    // only for a campaign attributed to a group; every other curated link (KEV "affects" and "made-by") and every
+    // co-mention is "related-to", with the source's own term kept in x_kti_relationship.
+    const relType = (r, a, b) => {
+      if (r.kind === 'edge') return 'related-to';
+      if (r.rel === 'uses') return 'uses';
+      if (r.rel === 'attributed-to' && b.startsWith('location--')) return 'originates-from';
+      if (r.rel === 'attributed-to' && a.startsWith('campaign--') && b.startsWith('intrusion-set--')) return 'attributed-to';
+      return 'related-to';
+    };
+    for (const r of (d.doc.rows || []).filter((x) => x.kind === 'rel' || x.kind === 'edge')) {
+      const a = ref.get(r.a), b = ref.get(r.b);
+      if (!a || !b) continue;
+      const rel = relType(r, a, b);
+      const o = { type: 'relationship', spec_version: '2.1', id: `relationship--${uuid(['graph', r.kind, r.a, r.b, r.rel || ''].join('|'))}`, created_by_ref: IDENT, created: gen, modified: gen,
+        relationship_type: rel, source_ref: a, target_ref: b, object_marking_refs: [TLP_GREEN] };
+      if (r.kind === 'edge') Object.assign(o, { description: `Named together in ${r.n} collected entries from ${r.p} publishers in the last 30 days (normalized PMI ${r.npmi}). Co-mention in reporting, not attribution.`, x_kti_basis: 'observed', x_kti_entries: r.n, x_kti_publishers: r.p, x_kti_npmi: r.npmi });
+      else Object.assign(o, { x_kti_basis: r.basis, x_kti_relationship: r.rel });
+      out.push(o);
+    }
+    return out;
+  }
   if (key === 'reports') {
     const r = await store.call(req, '/reports?limit=100', { timeout: 15000 });
     if (!r.ok) return [];
@@ -92,7 +143,7 @@ module.exports = async (req, res) => {
     const base = `https://${req.headers['x-forwarded-host'] || req.headers.host || 'intel.kilfoycyber.com'}/taxii2/`;
     if (!parts.length) return send(res, 200, { title: 'Kilfoy Threat Intelligence TAXII 2.1', description: 'Read-only TAXII 2.1 server for the KTI platform (TLP:GREEN).', contact: SITE, default: base + 'api/', api_roots: [base + 'api/'] });
     if (parts[0] !== 'api') return err(res, 404, 'Not found');
-    if (parts.length === 1) return send(res, 200, { title: 'KTI', description: 'Key judgments, advisories and agentic reports.', versions: [MT], max_content_length: 10485760 });
+    if (parts.length === 1) return send(res, 200, { title: 'KTI', description: 'Key judgments, advisories, agentic reports and the entity graph.', versions: [MT], max_content_length: 10485760 });
     if (parts[1] !== 'collections') return err(res, 404, 'Not found');
     const col = (id) => ({ id, title: COLS[id].title, description: COLS[id].description, can_read: true, can_write: false, media_types: [STIX] });
     if (parts.length === 2) return send(res, 200, { collections: Object.keys(COLS).map(col) });

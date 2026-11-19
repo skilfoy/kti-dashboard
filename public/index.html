@@ -68,11 +68,12 @@
     <button class="ti-tab" role="tab" id="tab-vulnerabilities" data-page="vulnerabilities" aria-selected="false"><span class="ti-step">5</span>Vulnerabilities</button>
     <button class="ti-tab" role="tab" id="tab-ransomware" data-page="ransomware" aria-selected="false"><span class="ti-step">6</span>Ransomware</button>
     <button class="ti-tab" role="tab" id="tab-actors" data-page="actors" aria-selected="false"><span class="ti-step">7</span>Actors</button>
-    <button class="ti-tab" role="tab" id="tab-defense" data-page="defense" aria-selected="false"><span class="ti-step">8</span>Defense</button>
-    <button class="ti-tab" role="tab" id="tab-requirements" data-page="requirements" aria-selected="false"><span class="ti-step">9</span>Requirements</button>
-    <button class="ti-tab" role="tab" id="tab-sources" data-page="sources" aria-selected="false"><span class="ti-step">10</span>Sources</button>
-    <button class="ti-tab" role="tab" id="tab-method" data-page="method" aria-selected="false"><span class="ti-step">11</span>Method</button>
-    <button class="ti-tab" role="tab" id="tab-search" data-page="search" aria-selected="false"><span class="ti-step">12</span>Search &amp; reports</button>
+    <button class="ti-tab" role="tab" id="tab-graph" data-page="graph" aria-selected="false"><span class="ti-step">8</span>Graph</button>
+    <button class="ti-tab" role="tab" id="tab-defense" data-page="defense" aria-selected="false"><span class="ti-step">9</span>Defense</button>
+    <button class="ti-tab" role="tab" id="tab-requirements" data-page="requirements" aria-selected="false"><span class="ti-step">10</span>Requirements</button>
+    <button class="ti-tab" role="tab" id="tab-sources" data-page="sources" aria-selected="false"><span class="ti-step">11</span>Sources</button>
+    <button class="ti-tab" role="tab" id="tab-method" data-page="method" aria-selected="false"><span class="ti-step">12</span>Method</button>
+    <button class="ti-tab" role="tab" id="tab-search" data-page="search" aria-selected="false"><span class="ti-step">13</span>Search &amp; reports</button>
   </nav>
 
   <!-- 1 BRIEF -->
@@ -648,6 +649,64 @@
   </section>
 
   <!-- 9 DEFENSE -->
+  <section class="ti-page" id="graph" role="tabpanel" aria-labelledby="tab-graph" hidden>
+    <div class="ti-card ti-section" id="graph-head">
+      <h2 class="ti-h2">Entity graph</h2>
+      <p class="ti-card-note">Every entry the source network and the advisory feeds collect is read against a gazetteer of ATT&amp;CK groups, software and campaigns, MISP threat actors, Malpedia families, leak-site extortion groups, KEV vendors, products and CVEs, and countries. Two entities named in the same entry are co-mentioned. Co-mention shows association in reporting; attribution comes from the curated relationships (ATT&amp;CK, MISP, KEV), which are listed apart. Matching is deterministic and spends no model calls.</p>
+      <form class="ti-sform" id="graph-form" role="search" aria-label="Find an entity">
+        <input type="search" id="graph-q" placeholder="Actor, malware, extortion group, CVE, vendor or product" aria-label="Entity name or alias" autocomplete="off" maxlength="80" list="graph-suggest">
+        <datalist id="graph-suggest"></datalist>
+        <label>Type <select id="graph-t"><option value="">Any</option><option value="actor">Actor</option><option value="extortion">Extortion group</option><option value="malware">Malware</option><option value="tool">Tool</option><option value="campaign">Campaign</option><option value="cve">CVE</option><option value="vendor">Vendor</option><option value="product">Product</option><option value="country">Country</option></select></label>
+        <button type="submit" class="ti-btn">Open</button>
+      </form>
+      <p class="ti-card-note" id="graph-sum" aria-live="polite">Loading…</p>
+      <ul class="ti-gchips" id="graph-hits" hidden></ul>
+    </div>
+    <div class="ti-card ti-section" id="graph-card" hidden>
+      <div class="ti-rhead"><h2 class="ti-h2" id="gc-title"></h2><div class="ti-ractions"><button type="button" class="ti-btn" id="gc-copy">Copy link</button> <button type="button" class="ti-btn" id="gc-close">Close</button></div></div>
+      <p class="ti-card-note" id="gc-meta"></p>
+      <div class="ti-sbars" id="gc-series" aria-hidden="true"></div>
+      <div class="ti-grid-wide">
+        <div>
+          <h3 class="ti-h3">Co-mentioned, 90 days <span class="ti-pir">observed</span></h3>
+          <p class="ti-card-note">Entries that name both, the publishers behind them, and normalized PMI (1: always together; 0: no more often than chance). Pick a row for the shared entries.</p>
+          <div class="ti-tbox ti-short"><table class="ti-table" id="gc-nb"><thead><tr><th>Entity</th><th>Type</th><th>Entries</th><th>Publishers</th><th>NPMI</th><th>Last</th></tr></thead><tbody></tbody></table></div>
+        </div>
+        <div>
+          <h3 class="ti-h3">Curated relationships <span class="ti-pir">ATT&amp;CK, MISP, KEV</span></h3>
+          <ul class="ti-glist" id="gc-rel"></ul>
+        </div>
+      </div>
+      <div class="ti-gego" id="gc-ego" aria-label="Neighbourhood of the entity"></div>
+      <div id="gc-pair" hidden>
+        <h3 class="ti-h3" id="gc-pair-h"></h3>
+        <ol class="ti-hits" id="gc-pair-list"></ol>
+      </div>
+      <h3 class="ti-h3">Latest entries</h3>
+      <ol class="ti-hits" id="gc-recent"></ol>
+    </div>
+    <div class="ti-grid-wide ti-section">
+      <div class="ti-card" id="graph-rising">
+        <h3 class="ti-h3">Rising this week</h3>
+        <p class="ti-card-note">Seven days against the 23 before them (Poisson z of 3 or more, with five entries from three publishers). New: first named by the collection this week.</p>
+        <ul class="ti-gchips" id="graph-rising-list"></ul>
+        <h3 class="ti-h3">New this week</h3>
+        <ul class="ti-gchips" id="graph-new-list"></ul>
+      </div>
+      <div class="ti-card" id="graph-top">
+        <h3 class="ti-h3">Most named, last 7 days</h3>
+        <div class="ti-gtop" id="graph-top-list"></div>
+      </div>
+    </div>
+    <div class="ti-card ti-section" id="graph-net">
+      <h3 class="ti-h3">Strongest co-mentions, 30 days</h3>
+      <p class="ti-card-note">Edges need two publishers and rank by entries times normalized PMI; node size follows entries. Drag to pan, scroll to zoom, pick a node to open it.</p>
+      <div class="ti-gfilters" id="graph-filters"></div>
+      <div class="ti-gnet" id="graph-svg"></div>
+      <p class="ti-card-note" id="graph-legend"></p>
+    </div>
+  </section>
+
   <section class="ti-page" id="defense" role="tabpanel" aria-labelledby="tab-defense" hidden>
     <template>
       <p class="ti-lede">Threat-informed defense for <span class="def-vname">the selected vertical</span>: the ATT&amp;CK techniques to defend first under this dashboard's threat model, where public detection and test content runs out, which telemetry and controls cover the most of it, and what to hunt and test next. Public content counts describe what Sigma, Elastic, Splunk and Atomic Red Team have published; a defender's own rule inventory and log coverage decide its real gaps (Bhardwaj p179-182).</p>
@@ -1025,6 +1084,7 @@
 <script src="/js/sources.js"></script>
 <script src="/js/method.js"></script>
 <script src="/js/search.js"></script>
+<script src="/js/graph.js"></script>
 <script src="/js/catalog.js"></script>
 <script src="/js/controls.js"></script>
 <script src="/js/boot.js"></script>
