@@ -34,10 +34,11 @@ deploy failed" and comments on the merged pull request.
    (gzipped since 3.2.0; `code/by-sha/OLD.mjs` for a copy kept earlier) holds that hash (the loader writes it after a good run of the pinned bundle; the Neon API does not return variable values).
 3. The service deployment for the commit must report the built hash at `op=sha`.
 4. Loader (only when `neon/loader.mjs` changed): code deploy, then the next scheduled run must be good.
-5. Wait until 7 to 12 minutes after a trigger minute (:04, :19, :34, :49) with no lease held in `op=status` (scheduled
-   runs arrive up to six minutes late, now and then twelve), then push the bundle and its gzipped copy
+5. Wait until 7 to 12 minutes after a trigger minute (:04, :19, :34, :49) with no lease held in `op=status` (a lease held more than 20 minutes ahead is an operator's pause
+   and does not block; scheduled runs arrive up to six minutes late, now and then twelve), then push the bundle and its gzipped copy
    `code/collector.mjs.gz` (which the loader reads first) through the service, read both back, and deploy the environment `{TI_CODE_SHA256: NEW, TI_CODE_SHA256_PREV: OLD}`; the other variables carry
    over. The upload waits for the window too, so the bucket and the pin disagree for seconds, not minutes.
-6. `op=run&job=gdelt` and `op=status` must report the new version, and `code/by-sha/NEW.mjs.gz` must exist (probation
+6. `op=run&job=gdelt` and `op=status` must report the new version (`op=status` is asked again every 20 seconds for up to
+   two minutes, since an instance warm before the pin answers with the old bundle until it is recycled), and `code/by-sha/NEW.mjs.gz` must exist (probation
    passed without fallback). Otherwise both bucket copies and the pin go back to OLD (and the loader to its previous code), and
    an issue opens with the evidence.

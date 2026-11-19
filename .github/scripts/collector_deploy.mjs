@@ -57,10 +57,18 @@ export function waitForWindow(now) {
 export const inWindow = (now) => waitForWindow(now) === 0;
 // The jobs whose lease is held at `now`, from op=status (leases: [{job, holder, until}]); an unreadable answer counts as
 // held, so the switch waits rather than guesses.
+// A run holds its lease for at most 15 minutes (the reports job, 900 s). A lease held further ahead is an operator's
+// pause (19 November 2026: the retired ocia1 job's month-long hold kept the deploy waiting until it gave up), and a
+// paused job does not run, so it does not block the switch.
+export const PAUSE_MS = 20 * 60e3;
 export function leasesHeld(status, now) {
   const L = status && Array.isArray(status.leases) ? status.leases : null;
   if (!L) return ['(status unreadable)'];
-  return L.filter((l) => Date.parse(l.until) > now).map((l) => l.job);
+  return L.filter((l) => Date.parse(l.until) > now && Date.parse(l.until) <= now + PAUSE_MS).map((l) => l.job);
+}
+export function leasesPaused(status, now) {
+  const L = status && Array.isArray(status.leases) ? status.leases : [];
+  return L.filter((l) => Date.parse(l.until) > now + PAUSE_MS).map((l) => l.job);
 }
 // The loader's kept copy: gzipped since 3.2.0, plain before. Returns the source or null.
 export async function keptCopy(S, sha) {
@@ -241,7 +249,7 @@ export async function deploy({ env = process.env, http = fetch, wait = sleep, no
       const w = waitForWindow(now());
       if (w) { step('window', { wait_ms: w }); if (dry) break; await wait(w); }
       const st = await A('op=status', 30000), held = leasesHeld(st.json, now());
-      if (!held.length) { step('quiet', { leases_held: 0 }); break; }
+      if (!held.length) { step('quiet', { leases_held: 0, paused: leasesPaused(st.json, now()) }); break; }
       if (k >= 40) throw new Error('no quiet moment in 40 tries; leases held: ' + held.join(', '));
       step('leases held', { jobs: held });
       if (dry) break;
@@ -268,7 +276,10 @@ export async function deploy({ env = process.env, http = fetch, wait = sleep, no
       let run = await A('op=run&job=gdelt', 60000);
       const job = (j) => ((j && j.jobs) || []).find((x) => x.job === 'gdelt') || {};
       if (job(run.json).skipped) { await wait(20000); run = await A('op=run&job=gdelt', 60000); }
-      const status = await A('op=status', 30000);
+      // An instance that was warm before the pin keeps serving the old bundle until it is recycled (19 November 2026: the
+      // gdelt run reached a new instance, op=status an old one 2 seconds later). Ask again for up to two minutes.
+      let status = await A('op=status', 30000);
+      for (let k = 0; k < 6 && !(status.json && status.json.version === newVersion); k++) { await wait(20000); status = await A('op=status', 30000); }
       const e = { envDeploy: fnNow.current_deployment, namesBefore, newVersion, newSha: NEW,
         run: { http: run.http, version: run.json && run.json.version, ok: !!job(run.json).ok, error: job(run.json).error }, status: { version: status.json && status.json.version },
         probation: !!(await keptCopy(S, NEW)) };

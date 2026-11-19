@@ -74,7 +74,7 @@ const NAMES = ['ABUSECH_AUTH_KEY', 'CLOQ_API_KEY', 'DATABASE_URL', 'FIRMS_MAP_KE
 
 // keptOld: 'gz' (the loader's copy since 3.2.0), true (a plain copy kept before 3.2.0) or false. leases: [{job, until}]
 // for op=status, each released after `holdMs` of fake clock.
-function world({ serveSha = NEW, fallback = false, keptOld = 'gz', start = at('10:02:00'), leases = [] } = {}) {
+function world({ serveSha = NEW, fallback = false, keptOld = 'gz', start = at('10:02:00'), leases = [], staleStatus = 0 } = {}) {
   const w = { clock: start, bucket: new Map([['code/collector.mjs', OLD_SRC], ['code/collector.mjs.gz', zlib.gzipSync(OLD_SRC)]]), env: { TI_CODE_SHA256: OLD, TI_CODE_SHA256_PREV: 'e'.repeat(64) }, deploys: [], writes: [], issues: [], comments: [], logs: [], leases };
   if (keptOld === 'gz') w.bucket.set(`code/by-sha/${OLD}.mjs.gz`, zlib.gzipSync(OLD_SRC));
   else if (keptOld) w.bucket.set(`code/by-sha/${OLD}.mjs`, OLD_SRC);
@@ -114,6 +114,7 @@ function world({ serveSha = NEW, fallback = false, keptOld = 'gz', start = at('1
         if (v === '2026-11-03.1') w.bucket.set(`code/by-sha/${NEW}.mjs.gz`, zlib.gzipSync(NEW_SRC)); // the loader keeps the copy after a good run
         return json({ version: v, jobs: [{ job: 'gdelt', ok: true }] });
       }
+      if (op === 'status' && running() === 'new' && w.stale > 0) { w.stale--; return json({ version: '2026-11-02.1', runs: [], leases: [] }); }
       if (op === 'status') return json({ version: running() === 'new' ? '2026-11-03.1' : '2026-11-02.1', runs: [{ job: 'gdelt', ok: true, started_at: new Date(w.clock).toISOString() }],
         leases: w.leases.map((l) => ({ job: l.job, holder: 'cron', until: new Date(l.until).toISOString() })) });
     }
@@ -125,11 +126,25 @@ function world({ serveSha = NEW, fallback = false, keptOld = 'gz', start = at('1
     }
     throw new Error('unexpected request ' + method + ' ' + u.href);
   };
+  w.stale = staleStatus;
   w.run = (extra = {}) => D.deploy({ env: { ...SECRETS, ...extra.env }, http: w.http, wait: async (ms) => { w.clock += ms; }, now: () => w.clock, log: (l) => w.logs.push(l),
     bundlePath, loaderPath, sha: 'abc123', files: extra.files || ['neon/parts/20-gdelt.mjs'], prevLoader: extra.prevLoader || null });
   return w;
 }
 
+// A warm instance still on the old bundle answers op=status twice after the pin: the check asks again.
+{
+  const w = world({ staleStatus: 2 });
+  const r = await w.run();
+  ok(r.ok && w.env.TI_CODE_SHA256 === NEW && w.issues.length === 0, 'a stale op=status answer is asked again, not rolled back ' + r.error);
+}
+// A month-long operator pause does not hold the deploy; a running job's lease does.
+{
+  const w = world({ leases: [{ job: 'ocia1', until: at('10:02:00') + 30 * 864e5 }] });
+  const r = await w.run();
+  ok(r.ok && !r.evidence.steps.some((s) => s.name === 'leases held') && r.evidence.steps.some((s) => s.name === 'quiet' && s.paused.includes('ocia1')), 'a paused job does not block the switch');
+  ok(JSON.stringify(D.leasesHeld({ leases: [{ job: 'a', until: '2026-11-03T10:20:00Z' }, { job: 'b', until: '2026-12-03T10:20:00Z' }] }, at('10:11:00'))) === '["a"]', 'held: within 20 minutes only');
+}
 // Success: waits for the window, pushes, pins NEW with PREV = OLD, checks, comments on the merged pull request.
 {
   const w = world();
