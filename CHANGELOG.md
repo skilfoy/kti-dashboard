@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.4.4 (19 November 2026)
+
+- Third precision pass, sampling the matched titles behind each top entity. Turla matched on "East Asia Summit" because "cybercrime" sat nearby. Milan's alias "James" matched a James Bond story because the summary said "actor". Industroyer's alias "Crash" matched "Hackers Remotely Crash Servers". "Land Rover" became the ATT&CK malware Rover, and a political column became the Frankenstein campaign.
+- A single word now stands alone only when the collection attests it as a cyber name: two or more cyber-feed entries, and general news at most a tenth as often. Every other single word needs a cue.
+- A cue-only name needs its cue next to it ("Play ransomware", "gang Qilin"), not within three words.
+- "actor" and "cybercrime" are no longer cues.
+- A name that is itself a kind of thing ("Wiper", "Loader", "Backdoor") never matches alone.
+- Matcher rules 4.
+- Collector 2026-11-19.7.
+
 ## 3.4.3 (19 November 2026)
 
 - Second precision pass, on the re-derived mentions. Single-word aliases still led the false matches: Turla's ATT&CK aliases "Krypton" and "Summit", Cleaver's "Alibaba", Broomstick's "Oyster", TargetCompany's "Fargo", Milan's "James", Industroyer's "Crash", and Malpedia and leak-site names such as "Jason", "Glasses", "Rover", "Payload", "Dark" and "Beast".

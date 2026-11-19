@@ -37,7 +37,7 @@ Each name carries a match mode:
   - Vendors and products need a vulnerability word: vulnerability, flaw, patch, zero-day, exploit, advisory, CVE, update, fix.
   - Words that sit beside everything in a cyber headline (security, cyber, attack, campaign, operation) are not cues.
 - **Rules versions**: `RULES` in the builder and `MATCH_V` in the collector. A change of either makes the next run re-derive every mention.
-- **Ambiguity** is measured daily over the collection with `ts_stat`. A single-word name is ambiguous when it appears in 12 or more general-news entries (geopolitics, theater, maritime, think-tank, defense and government feeds). It is also ambiguous when it appears in at least 3 of them at more than twice its rate in the cyber feeds.
+- **Attestation** is measured daily over the collection with `ts_stat`. A single-word name stands alone only when it appears in at least 2 cyber-feed entries and in general news (geopolitics, theater, maritime, think-tank, defense and government feeds) at most a tenth as often. Otherwise it needs a cue within three words. A cue-only (`w`) name needs its cue next to it.
 - **Countries** are matched from country names, demonyms ("Russian", "North Korean") and exact-case forms ("US", "U.S.", "UK", "DPRK", "PRC"). They are kept only beside another entity, so the geopolitical stream gives cyber entities their country context without turning into a country index. A single word that is both a family and a country ("Cuba") is the family beside a cue word and the country otherwise.
 - **CVEs** are matched by pattern in any case. A CVE that is not in KEV becomes an entity on its first mention.
 - **Products** named with their vendor also name the vendor.

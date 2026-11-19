@@ -89,9 +89,9 @@ const M = await import(path.join(ROOT, 'neon', 'collector.mjs'));
   ok(M.entryText({ title: 'Qilin hits clinic - The Record', source: 'The Record', summary: 'x' }) === 'Qilin hits clinic . x', 'the aggregator publisher suffix is dropped');
 }
 {
-  const amb = M.ambiguousWords([{ word: 'agenda', ndoc: 120 }, { word: 'sandworm', ndoc: 5 }, { word: 'turla', ndoc: 3 }, { word: 'kimsuky', ndoc: 6 }],
-    [{ word: 'sandworm', ndoc: 40 }, { word: 'kimsuky', ndoc: 1 }, { word: 'turla', ndoc: 30 }], 40000, 20000);
-  ok(amb.join() === 'agenda,kimsuky', 'ambiguous: common in general news or far commoner there than in cyber news ' + amb);
+  const amb = M.ambiguousWords(['agenda', 'sandworm', 'turla', 'kimsuky', 'qilin', 'rover'], [{ word: 'agenda', ndoc: 120 }, { word: 'sandworm', ndoc: 5 }, { word: 'turla', ndoc: 1 }, { word: 'rover', ndoc: 1 }],
+    [{ word: 'sandworm', ndoc: 40 }, { word: 'kimsuky', ndoc: 1 }, { word: 'turla', ndoc: 30 }, { word: 'qilin', ndoc: 46 }]);
+  ok(amb.join() === 'agenda,kimsuky,rover,sandworm', 'a single word stands alone only when attested in cyber news and rare in general news ' + amb);
   ok(M.riseScore(20, 23) > 3 && M.riseScore(7, 30) < 1 && M.riseScore(5, 5) >= 3 && M.riseScore(10, 20, 7) < M.riseScore(10, 20, 23), 'rise score ' + [M.riseScore(20, 23), M.riseScore(7, 30), M.riseScore(5, 5)]);
   ok(M.npmi(10, 10, 10, 1000) > 0.6 && M.npmi(1, 500, 500, 1000) < 0 && M.npmi(0, 1, 1, 10) === 0, 'normalized PMI');
 }
@@ -100,11 +100,11 @@ const M = await import(path.join(ROOT, 'neon', 'collector.mjs'));
 const now = Date.now(), iso = (h) => new Date(now - h * 3600e3).toISOString();
 const ITEMS = [
   ['https://a.example/1', 'APT28 targets logistics with Cobalt Strike', 'Russian operators', 'research', 'a.example', 2],
-  ['https://b.example/1', 'Fancy Bear phishing uses Cobalt Strike beacons', '', 'cyber-news', 'b.example', 5],
+  ['https://b.example/1', 'Fancy Bear (Sofacy) phishing uses Cobalt Strike beacons', '', 'cyber-news', 'b.example', 5],
   ['https://c.example/1', 'Sofacy and Cobalt Strike again', 'Russian intelligence', 'research', 'c.example', 30],
   ['https://d.example/1', 'Cuba and Germany sign a trade deal', 'Talks in Berlin', 'geopolitics', 'd.example', 3],
   ['https://e.example/1', 'Microsoft fixes Exchange Server flaw CVE-2026-1111', '', 'vulnerability', 'e.example', 1],
-  ['https://f.example/1', 'Qilin claims attack on a German hospital - Example News', '', 'topic-cyber', 'f.example', 4],
+  ['https://f.example/1', 'Qilin ransomware claims attack on a German hospital - Example News', '', 'topic-cyber', 'f.example', 4],
 ];
 let k = 0;
 for (const [link, title, summary, category, host, h] of ITEMS) {
