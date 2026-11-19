@@ -42,7 +42,8 @@ export function termRegex(doc, name) {
   return '\\m(' + alts.join('|') + ')\\M';
 }
 
-const LINKS_SQL = `(array_agg(jsonb_build_object('link', d.link, 'title', d.title, 'host', d.host, 'published', d.published) ORDER BY d.published DESC))[1:${WATCH.LINKS}]`;
+// to_jsonb: a jsonb[] slice would reach the job as Postgres array text, not JSON.
+const LINKS_SQL = `to_jsonb((array_agg(jsonb_build_object('link', d.link, 'title', d.title, 'host', d.host, 'published', d.published) ORDER BY d.published DESC))[1:${WATCH.LINKS}])`;
 // The selected entities: by type, and by attributed country when the watch names one (MISP and ATT&CK attribution).
 function selectSql(sel, at) {
   const where = [`e.t = ANY(ARRAY(SELECT jsonb_array_elements_text($${at}::jsonb)))`];

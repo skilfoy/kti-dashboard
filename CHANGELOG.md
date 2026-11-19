@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.5.1 (19 November 2026)
+
+- The first live watch run, at 21:23 UTC, opened 33 alerts across 7 of the 12 watches:
+  - 7 KEV additions, one of which the collection had named 5 days before KEV;
+  - 18 CVE surges outside KEV;
+  - Operation Endgame's Gootloader takedown, the Conti arrests and Scattered Spider sentencing (W-7A);
+  - LIMINAL PANDA and CyberAv3ngers against telecom and water (W-5A).
+- The alerts' latest-entry lists reached the job as Postgres array text and were stored as a string. They are now built with `to_jsonb`, and the next run rewrites them.
+- Collector 2026-11-19.11.
+
 ## 3.5.0 (19 November 2026)
 
 - Standing watches. `data/watches.json` turns the PIRs' elements of information into 12 watches over the entity graph and CISA KEV:
