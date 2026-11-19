@@ -57,7 +57,7 @@ jobs:
 
       - name: Install
         run: |
-          python3 -m pip install --disable-pip-version-check pyyaml==6.0.2 pysigma==2.1.0
+          python3 -m pip install --disable-pip-version-check pyyaml==6.0.3 pysigma==2.1.0
           npm ci
           npm i --no-save @electric-sql/pglite@0.5.8 playwright@1.64.0
 
