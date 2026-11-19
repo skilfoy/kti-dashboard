@@ -312,6 +312,21 @@
     return /[",\n]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x;
   }).join(','))].join('\n');
 
+  function showSigma(sec, r) {
+    const box = sec.querySelector('#def-sigma-detail');
+    if (!box) return;
+    box.hidden = false;
+    sec.querySelector('#def-sigma-title').textContent = `${r.title} (${r.ok ? 'accepted draft' : 'rejected'})`;
+    sec.querySelector('#def-sigma-yaml').textContent = r.ok ? String(r.yaml || '') : `# Rejected by the checker:\n${TI.list(r.failures).map((x) => '# - ' + x).join('\n')}`;
+    const dl = sec.querySelector('#def-sigma-dl');
+    dl.hidden = !r.ok;
+    dl.href = `/api/sigma?id=${encodeURIComponent(r.id)}&format=yaml`;
+    const refs = TI.list(r.references);
+    const p = sec.querySelector('#def-sigma-src');
+    p.textContent = refs.length ? 'Sources: ' : '';
+    refs.forEach((u, i) => { if (i) p.append(', '); p.append(h('a', { href: u, target: '_blank', rel: 'noopener noreferrer', text: (u.match(/^https?:\/\/([^/]+)/) || [])[1] || u })); });
+    p.append(` · drafted by ${r.model || 'a free model'}, unreviewed.`);
+  }
   // ---------------------------------------------------------------- charts
   // Top priorities with their three drivers stacked, so a reader sees why each ranks where it does (Fleurat ch13).
   function driversChart(box, rows) {
@@ -709,6 +724,29 @@
     detail(sec, prIdx.get(selected));
     const ti = sec.querySelector('#tbl-def-inf');
     if (TI.tableState(ti, ['defense_cooccur', 'defense_priority'])) inference(sec, prIdx);
+    // Sigma drafts (neon/parts/37o-sigma.mjs, live_sigma).
+    const tsg = sec.querySelector('#tbl-def-sigma');
+    if (tsg && TI.tableState(tsg, ['live_sigma'])) {
+      const f = (sec.querySelector('#def-sigma-f') || {}).value ?? 'ok';
+      const all = (TI.rows('live_sigma') || []).filter((r) => r.kind === 'rule').map((r) => ({ ...r, ok: String(r.ok) === 'true', gap: String(r.gap) === 'true',
+        status: String(r.ok) === 'true' ? 'Accepted' : 'Rejected', ls: Object.values(TI.obj(r.logsource)).join(' / '), tech: TI.list(r.techniques).map((t) => t + (TI.obj(r.public_sigma)[t] === 0 ? ' (gap)' : '')).join(', '),
+        graph: '#graph?id=' + encodeURIComponent(r.subject), why: String(r.ok) === 'true' ? '' : TI.list(r.failures).join('; ') }));
+      const rows = all.filter((r) => (f === 'ok' ? r.ok : f === 'gap' ? r.ok && r.gap : f === 'rejected' ? !r.ok : true));
+      const attempts = (TI.rows('live_sigma') || []).filter((r) => r.kind === 'attempt');
+      sec.querySelector('#def-sigma-count').textContent = `${all.filter((r) => r.ok).length} accepted, ${all.filter((r) => !r.ok).length} rejected, ${attempts.length} subjects tried`;
+      TI.table(tsg, rows, [
+        { field: 'created_at', label: 'Drafted', fmt: 'date', cls: 'ti-nowrap' },
+        { field: 'name', label: 'Subject', link: 'graph' },
+        { field: 'title', label: 'Rule', cls: 'ti-wrap' },
+        { field: 'ls', label: 'Log source', hideSm: true },
+        { field: 'tech', label: 'ATT&CK', cls: 'ti-wrap' },
+        { field: 'level', label: 'Level', hideSm: true },
+        { field: f === 'ok' || f === 'gap' ? 'status' : 'why', label: f === 'ok' || f === 'gap' ? 'Status' : 'Checker', cls: 'ti-wrap', hideSm: f === 'ok' || f === 'gap', get: (r) => (f === 'ok' || f === 'gap' ? r.status : r.ok ? 'Accepted' : r.why) },
+      ], { sort: 'created_at', dir: 'desc', limit: 60, selected: sec._sigmaSel, onClick: (r) => { sec._sigmaSel = r.id; showSigma(sec, r); TI.draw('defense'); },
+        empty: f === 'rejected' ? 'No rule has been rejected.' : 'No draft yet: the job drafts at most one subject an hour once three publishers name it.' });
+      const sel = all.find((r) => r.id === sec._sigmaSel);
+      if (sel) showSigma(sec, sel);
+    }
     const tr = sec.querySelector('#tbl-def-reg');
     if (TI.tableState(tr, ['defense_priority', 'defense_telemetry', 'defense_content'])) {
       const reg = registerRows(pr);
@@ -747,7 +785,7 @@
   });
 
   dash.onData(() => TI.draw('defense'));
-  TI.root.addEventListener('input', (ev) => { if (['def-q', 'def-tactic', 'def-gap', 'def-scope', 'def-cri-f', 'def-observed'].includes(ev.target.id)) TI.draw('defense'); });
+  TI.root.addEventListener('input', (ev) => { if (['def-q', 'def-tactic', 'def-gap', 'def-scope', 'def-cri-f', 'def-observed', 'def-sigma-f'].includes(ev.target.id)) TI.draw('defense'); });
   TI.root.addEventListener('focusin', (ev) => { if (ev.target.id === 'def-layer-out') ev.target.select(); });
   TI.root.addEventListener('click', (ev) => {
     const b = ev.target.closest('button');
@@ -759,6 +797,7 @@
     const slug = vertical().replace(/[^a-z0-9]+/gi, '-');
     if (b.id === 'def-layer-save') saveFile(`attack-layer-${layerMode}-${slug}.json`, sec.querySelector('#def-layer-out').value, 'application/json', note);
     else if (b.id === 'def-layer-copy') copyText(sec.querySelector('#def-layer-out').value, b);
+    else if (b.id === 'def-sigma-copy') copyText(sec.querySelector('#def-sigma-yaml').textContent, b);
     else if (b.id === 'def-pri-csv') saveFile(`defense-priorities-${slug}.csv`, csv(pr, [['rank', 'rank'], ['technique_id', 'technique_id'], ['name', 'name'], ['tactics', 'tactics'], ['priority', 'priority'], ['prevalence', 'prevalence'], ['p_threat', 'threat_use'], ['breadth', 'report_breadth'], ['choke', 'choke_point'], ['actionability', 'actionability'], ['shift', 'shift_vs_plain_frequency'], ['pre_compromise', 'pre_compromise'], ['groups_in_scope', 'in_scope_groups'], ['top_groups', 'groups'], ['sigma', 'sigma'], ['elastic', 'elastic'], ['splunk', 'splunk'], ['atomic', 'atomic_tests'], ['kev_cves', 'kev_cves'], ['gap', 'gap']]), 'text/csv', sec.querySelector('#def-pri-note'));
     else if (b.id === 'def-reg-csv') saveFile(`purple-team-register-${slug}.csv`, csv(sec._reg || [], [['technique_id', 'behavior'], ['name', 'technique'], ['justification', 'intelligence_justification'], ['scenario', 'scenario'], ['scenario_url', 'scenario_link'], ['telemetry', 'telemetry'], ['content', 'public_content'], ['hypothesis', 'testable_hypothesis'], ['severity', 'prevalence_band'], ['result', 'result']]), 'text/csv', sec.querySelector('#def-reg-note'));
   });

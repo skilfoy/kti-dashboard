@@ -132,6 +132,12 @@ Send a short summary (SendUserMessage when available): this run's change-log eve
 - In section 2, read the open alerts for each PIR as leads, after the triage leads: open the entries, and cite the publishers in evidence items. An alert never becomes evidence by itself. Record what you did with an alert in the lead feedback the same way as a triage lead.
 - A watch is changed only in `data/watches.json`, through a reviewed commit: the PIR, kind, term list, publishers and window. Never add a watch on an organization's assets.
 
+## 8f. Sigma detection drafts (3.8.0)
+
+- The `sigma` job drafts Sigma rules in the :34 slot, at most one subject an hour and six a day. A free hosted model writes each draft from the subject's entry pages. Deterministic checks keep a rule only when its values are printed in those pages and its log source, fields, condition and ATT&CK ids are valid. Drafts appear on the Defense page and at `/api/sigma`. Details: docs/sigma-drafts.md.
+- Drafts are leads for detection engineering, never evidence. In section 2, use a draft only to point at the publisher's own reporting, which is what gets cited. Never publish a draft as tested content.
+- A rejected rule stays on the page with its reasons. A wrong acceptance is fixed in the checker (37o-sigma.mjs), with a test case, through a reviewed commit. Never delete the row to hide it.
+
 ## 8. Site, service and collector operations (outside the daily run)
 - Layout: `public/` is the static site (page, runtime, styles, vendored d3; `public/data` and `public/site.json` are built, never committed); `api/` and `lib/` are the threat-feeds service (Vercel functions); `neon/` is the collector; `pipeline/` builds the data; `data/authored/` is the analyst-authored data; `test/` holds the offline, browser and smoke tests.
 - Domain: intel.kilfoycyber.com is a CNAME at Squarespace (kilfoycyber.com's DNS host) to the Vercel target the workflow's "Attach the public domain" step reports; the step attaches the domain to the project if it is missing.

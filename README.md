@@ -13,7 +13,8 @@ GitHub (skilfoy/kti-dashboard, private)
   public/               the static site: page, runtime, styles, vendored d3
   api/ lib/             threat-feeds: the site's live-data service (Vercel functions)
   neon/                 the collector (a Neon Function every 15 minutes, with Postgres and a bucket); its entities job
-                        builds the entity graph over everything collected (docs/entity-graph.md)
+                        builds the entity graph over everything collected (docs/entity-graph.md); its sigma job
+                        drafts Sigma rules from current reporting under deterministic checks (docs/sigma-drafts.md)
   .github/workflows/    Site: build, test, deploy; Collector alerts and Reassessment watch: issues without a model;
                         Collector deploy: build and approval gate
 

@@ -518,3 +518,6 @@ mark { background: color-mix(in srgb, var(--ti-elev) 40%, transparent); color: i
 .ti-glist { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow: auto; font-size: var(--cds-font-size-body); }
 .ti-glist li { padding: 3px 0; border-bottom: 1px solid var(--color-border-line); }
 #gc-nb tbody tr { cursor: pointer; }
+/* Sigma drafts (Defense page): the selected rule's YAML. */
+.ti-sigma-detail { margin-top: var(--cds-pad-sm); }
+.ti-code { margin: var(--cds-pad-sm) 0 0; max-height: 28rem; overflow: auto; white-space: pre; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--cds-font-size-caption); color: var(--color-fg); background: var(--color-bg); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-sm); }

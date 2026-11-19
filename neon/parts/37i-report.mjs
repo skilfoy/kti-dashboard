@@ -197,7 +197,7 @@ export async function resolveNewsLink(url, title) {
   }
   return url;
 }
-export async function fetchPage(url, title) {
+export async function fetchPage(url, title, chars = REPORT.PAGE_CHARS) {
   if (!/^https?:\/\//.test(String(url || ''))) return { ok: false, error: 'not a web address' };
   url = await resolveNewsLink(url, title);
   const h = hostOf(url);
@@ -205,11 +205,11 @@ export async function fetchPage(url, title) {
   const r = await get(url, { timeout: 20000, headers: { accept: 'text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5' } });
   if (r.ok) {
     const t = pageText(r.text);
-    if (t.length > 400) return { ok: true, text: t.slice(0, REPORT.PAGE_CHARS), title: stripTags((String(r.text).match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || ''), url };
+    if (t.length > 400) return { ok: true, text: t.slice(0, chars), title: stripTags((String(r.text).match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || ''), url };
   }
   if (ENV().JINA_API_KEY) {
     const j = await get('https://r.jina.ai/' + url, { timeout: 30000, headers: { authorization: 'Bearer ' + ENV().JINA_API_KEY, accept: 'text/plain' } });
-    if (j.ok && String(j.text || '').length > 400) return { ok: true, text: String(j.text).slice(0, REPORT.PAGE_CHARS), title: '' };
+    if (j.ok && String(j.text || '').length > 400) return { ok: true, text: String(j.text).slice(0, chars), title: '' };
   }
   return { ok: false, error: r.ok ? 'page has too little readable text' : r.error || 'HTTP ' + r.status };
 }

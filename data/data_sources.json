@@ -4710,6 +4710,32 @@
    "source_ids": [],
    "added": "2026-11-19",
    "reviewed": "2026-11-19"
+  },
+  {
+   "id": "sigma-drafts",
+   "name": "KTI Sigma detection drafts (free hosted model, deterministic checks)",
+   "owner": "KTI",
+   "category": "Platform",
+   "feeds": [
+    "live_sigma",
+    "page:defense"
+   ],
+   "url": "https://github.com/skilfoy/kti-dashboard/blob/main/neon/parts/37o-sigma.mjs",
+   "access": "open",
+   "secret": null,
+   "licence": "The project's own drafts; the cited publishers' pages are read, never republished (references only)",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly at most (at :34), six drafts a day",
+   "health_feed": null,
+   "jobs": [
+    "sigma"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-19",
+   "reviewed": "2026-11-19"
   }
  ]
 }

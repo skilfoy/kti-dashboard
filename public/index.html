@@ -786,6 +786,21 @@
           <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-def-cri" data-source="defense_cri_rank" data-row-key="key"></table></div>
         </div>
       </div>
+      <div class="ti-card ti-section" id="def-sigma-card">
+        <h3 class="ti-h3">Sigma drafts from current reporting <span class="ti-count" id="def-sigma-count"></span></h3>
+        <p class="ti-card-note">Draft Sigma rules for the threats the collection reports now. Each hour at most one malware family, tool, actor, campaign, extortion brand or CVE that three or more publishers named in 14 days is drafted by a free hosted model from up to five of its entries' pages. A rule is kept only when deterministic checks pass: a Sigma taxonomy log source and its fields, a condition that parses and needs a positive match, every detection value printed in the cited pages, one value specific to the threat, and ATT&amp;CK technique ids that exist in v20. Techniques with no public Sigma rule are marked as gaps. Rejected rules stay listed with the checker's reasons. These are unreviewed leads: test each one against your own telemetry before use. Pick a row for the YAML.</p>
+        <div class="ti-tools">
+          <select class="ti-select" id="def-sigma-f" aria-label="Sigma draft status"><option value="ok">Accepted drafts</option><option value="gap">Accepted, public-rule gap</option><option value="rejected">Rejected rules</option><option value="">All rules</option></select>
+          <a class="ti-chip" id="def-sigma-all" href="/api/sigma?format=yaml" target="_blank" rel="noopener">All accepted drafts (YAML)</a>
+          <span class="ti-count" id="def-sigma-note"></span>
+        </div>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-def-sigma" data-source="live_sigma" data-row-key="id"></table></div>
+        <div class="ti-sigma-detail" id="def-sigma-detail" hidden>
+          <div class="ti-tools"><strong id="def-sigma-title"></strong><button class="ti-chip" type="button" id="def-sigma-copy">Copy</button><a class="ti-chip" id="def-sigma-dl" href="#" target="_blank" rel="noopener">Open YAML</a></div>
+          <pre class="ti-code" id="def-sigma-yaml" tabindex="0"></pre>
+          <p class="ti-cap ti-muted" id="def-sigma-src"></p>
+        </div>
+      </div>
       <div class="ti-card ti-section" id="def-register">
         <h3 class="ti-h3">Purple-team test definitions <span class="ti-pir">Validation</span></h3>
         <p class="ti-card-note">The 15 highest-priority techniques that in-scope groups use and Atomic Red Team can exercise, as the test-definition half of a purple-team register: the behavior, the intelligence that justifies testing it, the scenario, the telemetry the detection relies on, the testable hypothesis and the adversary-prevalence band (Tiepolo and Sorensen p572-575). Asset criticality and results belong to the exercise: record each as Detected-Alerted, Detected-Noisy, Detected-Late, Logged-Not-Detected or Missed, with a content, telemetry or process root cause.</p>
