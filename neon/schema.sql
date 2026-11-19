@@ -132,6 +132,9 @@ CREATE INDEX IF NOT EXISTS alert_watch_subject ON ti.alert (watch, subject, last
 CREATE INDEX IF NOT EXISTS alert_subject ON ti.alert (subject);
 CREATE INDEX IF NOT EXISTS alert_opened ON ti.alert (opened_at);
 INSERT INTO ti.lease (job) VALUES ('watch') ON CONFLICT DO NOTHING;
+-- Track record (3.6.0, 37m-score.mjs): one value per metric and day, kept 800 days.
+CREATE TABLE IF NOT EXISTS ti.score (day date NOT NULL, metric text NOT NULL, value real NOT NULL, n int, detail jsonb, at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (day, metric));
+INSERT INTO ti.lease (job) VALUES ('score') ON CONFLICT DO NOTHING;
 -- 2026-11-18: pg_stat_statements is enabled on the production database (CREATE EXTENSION pg_stat_statements, as the
 -- owner) to rank the collector's reads by the Postgres transfer they cost (Free plan: 5 GB a month). It is left out of
 -- this file because PGlite, which the tests load this schema into, does not ship it.
