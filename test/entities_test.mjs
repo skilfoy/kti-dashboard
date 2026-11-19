@@ -127,6 +127,22 @@ ok(ent.find((e) => e.id === 'actor:G0007').n30 === 3 && ent.find((e) => e.id ===
 ok(edg.some((e) => e.a === 'actor:G0007' && e.b === 'malware:S0154' && e.n === 3 && e.p === 3 && e.an === 'APT28'), 'co-mention edge with names ' + JSON.stringify(edg[0]));
 ok(!edg.some((e) => e.a.startsWith('country:') && e.b.startsWith('country:')), 'no country-to-country edges');
 
+// Entries that share one seen_at to the microsecond (one insert statement) are read once each, across batches.
+{
+  const before = (await db.query(`SELECT count(*)::int AS n FROM ti.item`)).rows[0].n;
+  for (let i = 0; i < 7; i++) await db.query(`INSERT INTO ti.item (link, fp, feed, host, title, summary, published, category, lang, seen_at) VALUES ($1, $2, 'f', 'g.example', $3, '', now(), 'research', 'en', '2099-01-01 00:00:00.123456+00')`,
+    ['https://g.example/' + i, 'fpg' + i, 'APT28 note ' + i]);
+  const keep = M.ENTITY.BATCH; M.ENTITY.BATCH = 3;
+  const rb = await M.runJob('entities');
+  M.ENTITY.BATCH = keep;
+  ok(rb.ok && rb.by_source.item.read === 7 && (await db.query(`SELECT count(*)::int AS n FROM ti.mention WHERE link LIKE 'https://g.example/%'`)).rows[0].n === 7, 'one microsecond, seven entries, batches of three: each read once ' + JSON.stringify(rb.by_source));
+  const mk = (await db.query(`SELECT v FROM ti.kv WHERE k = 'entities:mark'`)).rows[0].v;
+  ok(/\.123456/.test(mk.item.at), 'the watermark keeps microseconds ' + mk.item.at);
+  await db.query(`DELETE FROM ti.mention WHERE link LIKE 'https://g.example/%'`); await db.query(`DELETE FROM ti.mdoc WHERE link LIKE 'https://g.example/%'`);
+  await db.query(`DELETE FROM ti.item WHERE link LIKE 'https://g.example/%'`);
+  await db.query(`UPDATE ti.kv SET v = jsonb_set(v, '{item}', $1::jsonb) WHERE k = 'entities:mark'`, [JSON.stringify({ at: (await db.query(`SELECT max(seen_at)::text AS s FROM ti.item`)).rows[0].s, link: (await db.query(`SELECT link FROM ti.item ORDER BY seen_at DESC, link DESC LIMIT 1`)).rows[0].link })]);
+  ok((await db.query(`SELECT count(*)::int AS n FROM ti.item`)).rows[0].n === before, 'fixture removed');
+}
 // A rerun reads nothing and writes nothing.
 const n0 = (await db.query(`SELECT count(*)::int AS n FROM ti.mention`)).rows[0].n;
 r = await M.runJob('entities');
