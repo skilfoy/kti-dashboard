@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.4.5 (19 November 2026)
+
+- Graph page, checked in a browser on live data:
+  - The co-mentioned table and the neighbourhood graph showed counts where names belong, because the entity card's `n` carried both. Co-mentions now report `entries` for the count.
+  - The network layouts drifted outside their frame. They are now held toward the centre and fitted to the frame once they settle.
+- ATT&CK tools with plain names ("route", "ftp", "Net", "Expand", "Tor") need a cue. A tool's single word stands alone only with an internal capital or a digit ("PsExec", "AdFind"). Gazetteer rules 4.
+- Collector 2026-11-19.8.
+
 ## 3.4.4 (19 November 2026)
 
 - Third precision pass, sampling the matched titles behind each top entity. Turla matched on "East Asia Summit" because "cybercrime" sat nearby. Milan's alias "James" matched a James Bond story because the summary said "actor". Industroyer's alias "Crash" matched "Hackers Remotely Crash Servers". "Land Rover" became the ATT&CK malware Rover, and a political column became the Frankenstein campaign.

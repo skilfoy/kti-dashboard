@@ -394,7 +394,7 @@ export async function entityCard(id, days = 90) {
   const e = ent[0] || { id, t: id.split(':')[0], n: id.split(':').slice(1).join(':'), names: '', m: {} };
   return {
     entity: { id: e.id, t: e.t, n: e.n, names: String(e.names || '').split(' | ').filter(Boolean).slice(0, 40), m: e.m || {} }, days, entries: mine, first_seen: tot[0].first, entries_window: N,
-    series, co_mentioned: nb.map((r) => ({ ...label(r.eid), n: r.n, p: r.p, last: r.last, npmi: npmi(r.n, mine, dfm.get(r.eid), N) })),
+    series, co_mentioned: nb.map((r) => ({ ...label(r.eid), entries: r.n, p: r.p, last: r.last, npmi: npmi(r.n, mine, dfm.get(r.eid), N) })),
     curated: rel.map((r) => ({ ...label(r.a === id ? r.b : r.a), rel: r.rel, basis: r.basis, dir: r.a === id ? 'out' : 'in' })),
     recent: docs,
   };

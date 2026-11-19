@@ -51,14 +51,16 @@
     const w = el.clientWidth || 900, h = height;
     const svg = d3.select(el).append('svg').attr('viewBox', [0, 0, w, h]).attr('width', '100%').attr('height', h).attr('role', 'img').attr('aria-label', `Graph of ${nodes.length} entities and ${links.length} links`);
     const g = svg.append('g');
-    svg.call(d3.zoom().scaleExtent([0.3, 6]).on('zoom', (ev) => g.attr('transform', ev.transform)));
+    const zoom = d3.zoom().scaleExtent([0.2, 6]).on('zoom', (ev) => g.attr('transform', ev.transform));
+    svg.call(zoom);
     const maxN = d3.max(nodes, (n) => n.size) || 1, r = d3.scaleSqrt().domain([0, maxN]).range([3, focus ? 16 : 22]);
     const maxE = d3.max(links, (l) => l.w) || 1;
     const s = d3.forceSimulation(nodes)
       .force('link', d3.forceLink(links).id((d) => d.id).distance((l) => 40 + 80 * (1 - Math.min(1, l.w / maxE))).strength(0.4))
       .force('charge', d3.forceManyBody().strength(focus ? -260 : -120))
       .force('collide', d3.forceCollide().radius((d) => r(d.size) + 3))
-      .force('center', d3.forceCenter(w / 2, h / 2));
+      .force('center', d3.forceCenter(w / 2, h / 2))
+      .force('x', d3.forceX(w / 2).strength(0.06)).force('y', d3.forceY(h / 2).strength(0.09));
     const link = g.append('g').attr('class', 'ti-glinks').selectAll('line').data(links).join('line')
       .attr('stroke-width', (l) => 0.6 + 3 * (l.w / maxE)).attr('stroke-dasharray', (l) => (l.curated ? '4 3' : null));
     link.append('title').text((l) => l.title);
@@ -75,6 +77,13 @@
     s.on('tick', () => {
       link.attr('x1', (l) => l.source.x).attr('y1', (l) => l.source.y).attr('x2', (l) => l.target.x).attr('y2', (l) => l.target.y);
       node.attr('transform', (d) => `translate(${d.x},${d.y})`);
+    });
+    // Once the layout settles, fit every node in the frame (with room for labels on the right).
+    s.on('end', () => {
+      const xs = nodes.map((d) => d.x), ys = nodes.map((d) => d.y);
+      const x0 = Math.min(...xs) - 30, x1 = Math.max(...xs) + 140, y0 = Math.min(...ys) - 30, y1 = Math.max(...ys) + 30;
+      const k = Math.min(2, 0.95 * Math.min(w / (x1 - x0), h / (y1 - y0)));
+      svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity.translate(w / 2 - k * (x0 + x1) / 2, h / 2 - k * (y0 + y1) / 2).scale(k));
     });
     return s;
   };
@@ -115,7 +124,7 @@
     const ser = c.series || [], max = Math.max(1, ...ser.map((x) => x.n));
     $('gc-series').innerHTML = ser.map((x) => `<span class="ti-sbar" style="height:${Math.max(4, Math.round((x.n / max) * 48))}px" title="${esc(x.day)}: ${x.n} entries, ${x.p} publishers"></span>`).join('');
     const nb = (c.co_mentioned || []).filter((x) => x.npmi > -0.2);
-    $('gc-nb').tBodies[0].innerHTML = nb.length ? nb.slice(0, 40).map((x) => `<tr data-pair="${esc(x.id)}" tabindex="0"><td><a href="#graph?id=${encodeURIComponent(x.id)}" data-eid="${esc(x.id)}">${esc(x.n)}</a></td><td>${esc(tname(x.t))}</td><td>${x.n}</td><td>${x.p}</td><td>${x.npmi}</td><td>${esc(day(x.last))}</td></tr>`).join('')
+    $('gc-nb').tBodies[0].innerHTML = nb.length ? nb.slice(0, 40).map((x) => `<tr data-pair="${esc(x.id)}" tabindex="0"><td><a href="#graph?id=${encodeURIComponent(x.id)}" data-eid="${esc(x.id)}">${esc(x.n)}</a></td><td>${esc(tname(x.t))}</td><td>${x.entries}</td><td>${x.p}</td><td>${x.npmi}</td><td>${esc(day(x.last))}</td></tr>`).join('')
       : '<tr><td colspan="6" class="ti-card-note">No co-mentions in the window.</td></tr>';
     const rels = c.curated || [], REL = { uses: ['uses', 'used by'], 'attributed-to': ['attributed to', 'attributed from'], affects: ['affects', 'affected by'], 'made-by': ['made by', 'makes'] };
     $('gc-rel').innerHTML = rels.length ? rels.slice(0, 80).map((x) => `<li>${esc((REL[x.rel] || [x.rel, x.rel])[x.dir === 'out' ? 0 : 1])} ${x.id.startsWith('country:') ? esc(x.n) : `<a href="#graph?id=${encodeURIComponent(x.id)}" data-eid="${esc(x.id)}">${esc(x.n)}</a>`} <span class="ti-dim">${esc(tname(x.t))}, ${esc(x.basis.toUpperCase() === 'NAME' ? 'by name' : x.basis.toUpperCase())}</span></li>`).join('')
@@ -123,8 +132,8 @@
     $('gc-recent').innerHTML = (c.recent || []).map(hit).join('') || '<li class="ti-card-note">No entries kept.</li>';
     // The entity's neighbourhood: its 24 strongest co-mentions and its curated relationships.
     const top = nb.slice(0, 24), cur = rels.filter((x) => !top.some((t) => t.id === x.id)).slice(0, 16);
-    const nodes = [{ id: e.id, n: e.n, t: e.t, size: Math.max(1, c.entries) }, ...top.map((x) => ({ id: x.id, n: x.n, t: x.t, size: x.n })), ...cur.map((x) => ({ id: x.id, n: x.n, t: x.t, size: 1 }))];
-    const lks = [...top.map((x) => ({ source: e.id, target: x.id, w: x.n * Math.max(0.05, x.npmi), title: `${x.n} entries, ${x.p} publishers, NPMI ${x.npmi}` })),
+    const nodes = [{ id: e.id, n: e.n, t: e.t, size: Math.max(1, c.entries) }, ...top.map((x) => ({ id: x.id, n: x.n, t: x.t, size: x.entries })), ...cur.map((x) => ({ id: x.id, n: x.n, t: x.t, size: 1 }))];
+    const lks = [...top.map((x) => ({ source: e.id, target: x.id, w: x.entries * Math.max(0.05, x.npmi), title: `${x.entries} entries, ${x.p} publishers, NPMI ${x.npmi}` })),
       ...cur.map((x) => ({ source: e.id, target: x.id, w: 1, curated: true, title: `${x.rel} (${x.basis})` }))];
     if (egoSim) egoSim.stop();
     egoSim = forceGraph($('gc-ego'), nodes, lks, { height: 380, labels: 30, focus: e.id });
