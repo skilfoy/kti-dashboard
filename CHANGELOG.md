@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.3.0 (19 November 2026)
+
+- Retired the sample organizational estate at Sean's instruction: the platform is a public piece and has no client or organization behind it. Removed the Residual risk page and its calculations, the `assets`, `controls` and `exposure_darkweb` datasets (sample rows on documentation IP space and invented coverage figures), the AutoRecon and darknet-mcp-server ingests, the live exposure monitor (`/api/exposure`, `live_exposure`) with its HIBP and GreyNoise health probes, method rules A3b, B8 and B9, and follow-ons FP-002 and FP-007. Defense page and method wording that assumed an organization's own rule inventory, visibility or estate now speaks to any defender. The tabs renumber from 7 (Actors).
+- Carry-forward datasets are now verticals, osint_tools, indicator_rules and chokepoints.
+- Collector 2026-11-19.2 (health probes only).
+
 ## 3.2.2 (19 November 2026)
 
 - The Neon console showed the project at 98.2% of its 5 GB monthly transfer while `data_transfer_bytes` read 3.23 GB. The allowance is shared by Postgres, object storage and Functions, and Function egress (what the function sends out, SQL request bodies included) is not in `data_transfer_bytes`. The runs' own `db.sent_kb` showed the sources job sending about 4.2 MB a run (19 MB an hour): every entry of every feed it read, summaries included, with ON CONFLICT dropping the ones already stored. The sources job was paused (its lease held) with Sean's approval on 19 November at 03:10 UTC.

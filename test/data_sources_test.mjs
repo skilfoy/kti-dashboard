@@ -19,7 +19,7 @@ const has = (reg, re) => errs(reg).some((e) => re.test(e));
 // The inputs the check compares against are the real ones.
 ok(C.datasets.length >= 60 && C.datasets.includes('kev') && C.datasets.includes('live_sec8k'), 'site.json datasets read from pipeline/datasets.py: ' + C.datasets.length);
 ok(['cables', 'gdelt', 'retention', 'sec8k'].every((j) => C.jobs.includes(j)), 'lease jobs read from neon/schema.sql: ' + C.jobs.join(','));
-ok(!F.health.includes('overpass') && F.health.includes('wikidata') && F.health.includes('greynoise') && F.health.length >= 30, 'health feed ids from the collector: ' + F.health.length);
+ok(!F.health.includes('overpass') && F.health.includes('wikidata') && !F.health.includes('greynoise') && !F.health.includes('hibp') && F.health.length >= 28, 'health feed ids from the collector: ' + F.health.length);
 ok(['gdelt_doc_api', 'marad_msci', 'nga_asam', 'nga_msi', 'ukmto'].every((g) => F.gaps.includes(g)) && !F.gaps.includes('greynoise'), 'known gaps from the collector: ' + F.gaps.join(','));
 ok(C.pages.includes('sources') && C.pages.includes('map'), 'page ids from public/index.html');
 
@@ -33,7 +33,7 @@ ok(REG.rows.length >= 90 && REG.rows.every((r) => r.licence), 'every row has a l
 { const r = clone(); r.rows = r.rows.filter((x) => !x.feeds.includes('ics_advisories')); ok(has(r, /dataset ics_advisories \(site\.json\) has no row/), 'a site.json dataset without a row fails'); }
 { const r = clone(); for (const x of r.rows) x.jobs = x.jobs.filter((j) => j !== 'cables'); ok(has(r, /lease job cables has no row/), 'a lease job without a row fails'); }
 { const r = clone(); r.rows.find((x) => x.id === 'marad').status = 'live'; ok(has(r, /known gap marad_msci \(KNOWN_GAPS\) has no known_gap row/), 'a documented gap not marked known_gap fails'); }
-{ const r = clone(); const x = r.rows.find((y) => y.id === 'hibp'); x.status = 'known_gap'; x.gap_note = 'x'; ok(has(r, /names hibp, which KNOWN_GAPS does not list/), 'a known_gap row the collector does not list fails'); }
+{ const r = clone(); const x = r.rows.find((y) => y.id === 'tranco'); x.status = 'known_gap'; x.gap_note = 'x'; ok(has(r, /names tranco, which KNOWN_GAPS does not list/), 'a known_gap row the collector does not list fails'); }
 { const r = clone(); r.rows[3].licence = ''; ok(has(r, /no licence/), 'a row without a licence fails'); }
 { const r = clone(); r.rows[0].feeds.push('kevv'); ok(has(r, /unknown dataset kevv/), 'a typo in a dataset id fails'); }
 { const r = clone(); r.rows[0].status = 'maybe'; ok(has(r, /status maybe not one of/), 'an unknown status fails'); }

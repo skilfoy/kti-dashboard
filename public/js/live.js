@@ -71,9 +71,6 @@
   });
 
 
-  // Exposure monitor: one summary row plus breach/leak/ip detail rows for the operator's own estate and suppliers.
-  loader('live_exposure', "Dark-web and breach exposure for the organization's own domains, suppliers and egress IPs, via the threat-feeds exposure monitor.");
-
   // Health is a record, not rows. Shape it into rows by kind: "upstream" (what the proxy reaches right now), "feed"
   // (the collector's 24-hour and 7-day uptime per upstream, checked every 30 minutes), "job" (collector runs) and one
   // "meta" row with DShield Infocon and check times.
@@ -483,8 +480,8 @@
     cisa_kev: 'The proxy KEV route; the KEV catalog here comes from the cisagov/kev-data mirror in the daily refresh', dshield: 'Scanning sources layer, Infocon', epss: 'EPSS leaders (Vulnerabilities)',
     feodo: 'C2 servers layer', gdelt_doc_api: 'Nothing on this page yet (planned theater volume baselines)', gdelt_exports: 'Conflict arcs and intensity',
     geojs: 'Geolocation fallback for the infrastructure layers', ip_api: 'Geolocation for the infrastructure layers',
-    greynoise: 'Exposure monitor (egress IPs)', hibp: 'Exposure monitor (breaches)', ioda: 'Internet outages layer',
-    ransomware_live: 'Leak-site claims (Ransomware), reported attacks layer, exposure monitor', threatfox: 'IOC endpoints layer, live IOCs', tor_exits: 'Exposure monitor (egress IPs)',
+    ioda: 'Internet outages layer',
+    ransomware_live: 'Leak-site claims (Ransomware), reported attacks layer', threatfox: 'IOC endpoints layer, live IOCs', tor_exits: 'Tor exit relays (IP lists)',
     lanes: 'Relationship temperatures (Theaters)', ofac_recent_actions: 'OFAC Recent Actions (Theaters)',
     urlhaus: 'Malware hosts layer', 'job:gdelt': 'Conflict arcs and intensity', 'job:infra': 'Infrastructure layers', 'job:health': 'This uptime record, Infocon',
     'job:ioda': 'Internet outages layer', 'job:snap': 'Last-good copies of the live feeds', 'job:retention': 'Database housekeeping',
@@ -497,28 +494,5 @@
   });
 
 
-  // ---- Exposure monitor ----
-  const expSummary = (rows) => (rows || []).find((r) => r.kind === 'summary') || { configured: false };
-
-  dash.calc('live_exposure_summary', {
-    title: 'Live exposure summary',
-    description: 'The exposure monitor header: whether it is configured, and counts of breaches, leak-site listings and flagged egress IPs for the organization and its suppliers.',
-    inputs: ['live_exposure'],
-    fn: (live_exposure) => [expSummary(live_exposure)],
-  });
-
-  dash.calc('live_exposure_rows', {
-    title: 'Live exposure detail',
-    description: 'The exposure monitor detail rows (breach, leak, ip), without the summary header, each given a stable id, for the residual-risk live panel.',
-    inputs: ['live_exposure'],
-    fn: (live_exposure) => (live_exposure || []).filter((r) => r.kind !== 'summary').map((r, i) => {
-      const what = r.kind === 'breach' ? `${r.title || r.name} (${r.of})` : r.kind === 'leak' ? `${r.victim} — ${r.group}` : r.ip;
-      const detail = r.kind === 'breach' ? `${TI_INT(r.pwn_count)} accounts, ${r.data_classes || ''}`.trim()
-        : r.kind === 'leak' ? `${r.role}, ${r.country || '—'}, ${r.sector || '—'}` : `${r.tor_exit === 'Yes' ? 'Tor exit; ' : ''}${r.feodo_c2 === 'Yes' ? 'Feodo C2; ' : ''}${r.threatfox_iocs ? r.threatfox_iocs + ' ThreatFox IOCs; ' : ''}GreyNoise ${r.greynoise}`;
-      const when = r.kind === 'breach' ? r.breach_date : r.kind === 'leak' ? (r.discovered || r.published) : (r.last_seen || '');
-      const flag = r.kind === 'breach' ? (r.passwords === 'Yes' ? 'Passwords' : r.role === 'supplier' ? 'Supplier' : '') : r.kind === 'leak' ? (r.role === 'supplier' ? 'Supplier' : 'Organization') : (r.flagged === 'Yes' ? 'Flagged' : '');
-      return { rid: r.kind + '-' + i, signal: r.kind, what, detail, when, flag };
-    }),
-  });
   function TI_INT(n) { return n == null ? '' : Number(n).toLocaleString('en-US'); }
 })();

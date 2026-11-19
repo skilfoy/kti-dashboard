@@ -1,6 +1,6 @@
 # Global threat intelligence
 
-An open-source threat intelligence platform at https://intel.kilfoycyber.com, reassessed daily: seventeen geopolitical theaters with ThreatCon levels and warning indicators, threat vectors calibrated per critical-infrastructure sector, exploited vulnerabilities with weaponization timing, ransomware and extortion activity, residual risk with dark-web and breach exposure, threat actors, threat-informed defense priorities, and a live world map. Every judgment cites dated items from named public sources graded on the Admiralty scale, and a deterministic validator decides what ships.
+An open-source threat intelligence platform at https://intel.kilfoycyber.com, reassessed daily: seventeen geopolitical theaters with ThreatCon levels and warning indicators, threat vectors calibrated per critical-infrastructure sector, exploited vulnerabilities with weaponization timing, ransomware and extortion activity, threat actors, threat-informed defense priorities, and a live world map. Every judgment cites dated items from named public sources graded on the Admiralty scale, and a deterministic validator decides what ships.
 
 Author: Sean Kilfoy.
 
@@ -33,7 +33,7 @@ The page in `public/` was written for a dashboard runtime; `public/runtime/dash.
 
 ## Open by design
 
-Every page, dataset and service route is public and readable from any origin: `/site.json` lists the datasets, `/data/<id>.json` serves each built one, and `/api/...` serves the live ones (the map's hosts with their addresses, on-demand enrichment through every analyzer, the exposure monitor). The one exception is `/api/admin`, the collector's control plane (run jobs, push code, read raw documents), which answers only on the project's `*.vercel.app` addresses behind Vercel Authentication (Standard Protection). Keep that protection on, and keep the Vercel project's name: the collector accepts this project's Vercel OIDC token by its owner, project and environment claims.
+Every page, dataset and service route is public and readable from any origin: `/site.json` lists the datasets, `/data/<id>.json` serves each built one, and `/api/...` serves the live ones (the map's hosts with their addresses, on-demand enrichment through every analyzer. The one exception is `/api/admin`, the collector's control plane (run jobs, push code, read raw documents), which answers only on the project's `*.vercel.app` addresses behind Vercel Authentication (Standard Protection). Keep that protection on, and keep the Vercel project's name: the collector accepts this project's Vercel OIDC token by its owner, project and environment claims.
 
 Secrets live only where they are used: the collector's keys in the Neon Function environment, the deploy token in the repository's Actions secrets. None is in this repository.
 

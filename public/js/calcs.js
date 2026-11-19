@@ -464,7 +464,7 @@ dash.calc('verification_summary', {
   },
 });
 
-// ---- Per-vertical calibration and residual risk (every vertical computed; the page shows the selected one) ----
+// ---- Per-vertical calibration (every vertical computed; the page shows the selected one) ----
 dash.calc('theater_calibrated', {
   title: 'Theater level by vertical',
   description: 'Each theater ThreatCon recomputed for every critical-infrastructure vertical: clamp(round(base x vertical weight), 1, 5). An analyst-set lens, not a measurement.',
@@ -502,98 +502,6 @@ dash.calc('vector_calibrated', {
     return out;
   },
 });
-
-dash.calc('asset_exposure', {
-  title: 'Owned assets matched to exploited CVEs',
-  description: 'Each asset from the AutoRecon inventory matched by vendor/product against KEV and the pre-KEV early-warning list; internet-facing assets with a match are the residual-risk surface.',
-  inputs: ['assets', 'kev', 'early_warning'],
-  fn: (assets, kev, early_warning) => {
-    const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-    const STOP = new Set(['data', 'center', 'secure', 'multiple', 'products', 'server', 'edition', 'subscription', 'series', 'switches', 'networks', 'inc', 'ltd', 'gmbh', 'the', 'and', 'os']);
-    // Distinctive product tokens: everything in product+cpe except the vendor word and generic words.
-    const distinct = (a) => {
-      const vend = norm(a.product).split(' ')[0];
-      return norm(a.product + ' ' + a.cpe).split(' ').filter((w) => w.length > 3 && w !== vend && !STOP.has(w));
-    };
-    const krows = kev.map((k) => ({ cve: k.cve, vendor: norm(k.vendor), product: norm(k.product), ransomware: k.ransomware, edge: k.edge_class }));
-    const erows = early_warning.map((e) => ({ cve: e.cve, vendor: norm(e.vendor), product: norm(e.product) }));
-    return assets.map((a) => {
-      const vend = norm(a.product).split(' ')[0];
-      const toks = distinct(a);
-      // Match requires the vendor AND a distinctive product token, both in the catalog row.
-      const hit = (r) => (r.vendor.includes(vend) || vend.includes(r.vendor.split(' ')[0])) && toks.some((t) => r.product.includes(t) || r.vendor.includes(t));
-      const kmatch = krows.filter(hit);
-      const ematch = erows.filter(hit);
-      const cves = [...new Set(kmatch.map((m) => m.cve).concat(ematch.map((m) => m.cve)))];
-      return {
-        host: a.host, ip: a.ip, product: a.product, version: a.version, exposure: a.exposure, site: a.site, sample: a.sample,
-        kev_cves: kmatch.length, ew_cves: ematch.length, total_cves: cves.length,
-        ransomware_linked: kmatch.some((m) => m.ransomware === 'Known') ? 'Yes' : 'No',
-        example_cve: (kmatch[0] || ematch[0] || {}).cve || '',
-        at_risk: a.exposure === 'Internet-facing' && cves.length > 0 ? 'Yes' : 'No',
-      };
-    });
-  },
-});
-
-dash.calc('residual_risk', {
-  title: 'Residual risk by vector and vertical',
-  description: 'Residual = inherent (vertical-calibrated vector level / 5) x exposure x (1 - control coverage). Exposure comes from the owned-asset match (exploitation, ransomware), the dark-web read (identity, fraud, insider), else a stated 0.6 default. Asset and control data are what turn the inherent read into residual risk (Thomas p178-183).',
-  inputs: ['vector_calibrated', 'controls', 'asset_exposure', 'exposure_darkweb'],
-  fn: (vector_calibrated, controls, asset_exposure, exposure_darkweb) => {
-    const cov = new Map(controls.map((c) => [c.vector_id, c]));
-    const facing = asset_exposure.filter((a) => a.exposure === 'Internet-facing');
-    const expExploit = facing.length ? facing.filter((a) => a.at_risk === 'Yes').length / facing.length : 0.5;
-    const stealer = (exposure_darkweb.find((e) => e.kind === 'Infostealer infections') || {}).metric || 0;
-    const creds = (exposure_darkweb.find((e) => e.kind === 'Leaked credentials') || {}).metric || 0;
-    const expIdentity = Math.max(0.3, Math.min(1, (stealer * 0.08) + (creds > 0 ? 0.45 : 0)));
-    const rwMention = (exposure_darkweb.find((e) => e.kind === 'Ransomware mention') || {}).metric || 0;
-    const rwShare = facing.length ? facing.filter((a) => a.ransomware_linked === 'Yes').length / facing.length : 0;
-    const r2 = (x) => Math.round(x * 100) / 100;
-    const expByVector = {
-      'V-EXP': [expExploit, `${facing.filter((a) => a.at_risk === 'Yes').length} of ${facing.length} internet-facing assets carry an exploited CVE`],
-      'V-RAN': rwMention
-        ? [1, `${rwMention} leak-site listing${rwMention === 1 ? '' : 's'} name the organization`]
-        : [Math.min(1, 0.3 + 0.5 * rwShare + (creds > 0 ? 0.2 : 0)), `0.3 floor + ransomware-linked facing share ${r2(rwShare)} + leaked credentials ${creds > 0 ? 'present' : 'absent'}`],
-      'V-IDN': [expIdentity, `${stealer} infostealer infections, ${creds} leaked credentials`],
-      'V-FRA': [Math.min(1, expIdentity * 0.9), 'identity exposure x 0.9'],
-      'V-INS': [Math.min(1, 0.4 + stealer * 0.05), `0.4 floor + ${stealer} infostealer infections x 0.05`],
-    };
-    const out = [];
-    for (const vc of vector_calibrated) {
-      const c = cov.get(vc.vector_id) || { coverage: 0.5, csf: '', basis: '' };
-      const [exposure, exposure_basis] = expByVector[vc.vector_id] || [0.6, 'default: no owned-asset or dark-web signal maps to this vector'];
-      const inherent = vc.calibrated / 5;
-      const residual = inherent * exposure * (1 - c.coverage);
-      out.push({
-        key: vc.vertical_id + '|' + vc.vector_id, vertical_id: vc.vertical_id, vector_id: vc.vector_id, vector: vc.vector,
-        inherent: Math.round(inherent * 100) / 100, exposure: Math.round(exposure * 100) / 100,
-        exposure_basis, coverage: c.coverage, csf: c.csf, residual: Math.round(residual * 100) / 100,
-        band: residual >= 0.4 ? 'High' : residual >= 0.2 ? 'Medium' : 'Low',
-      });
-    }
-    return out;
-  },
-});
-
-dash.calc('residual_summary', {
-  title: 'Residual-risk summary',
-  description: 'Owned internet-facing assets, how many carry an exploited CVE, and dark-web exposure counts, for the residual-risk header.',
-  inputs: ['asset_exposure', 'exposure_darkweb'],
-  fn: (asset_exposure, exposure_darkweb) => {
-    const facing = asset_exposure.filter((a) => a.exposure === 'Internet-facing');
-    return [{
-      assets: asset_exposure.length,
-      internet_facing: facing.length,
-      at_risk: facing.filter((a) => a.at_risk === 'Yes').length,
-      ransomware_linked: asset_exposure.filter((a) => a.ransomware_linked === 'Yes').length,
-      stealer: (exposure_darkweb.find((e) => e.kind === 'Infostealer infections') || {}).metric || 0,
-      creds: (exposure_darkweb.find((e) => e.kind === 'Leaked credentials') || {}).metric || 0,
-      sample: asset_exposure.some((a) => a.sample),
-    }];
-  },
-});
-
 
 // ---- Detection coverage by judgment (3.0) ----
 // Each judgment's technique scope: the ATT&CK techniques of its intrusion vector (the mapping below, from the vector's
