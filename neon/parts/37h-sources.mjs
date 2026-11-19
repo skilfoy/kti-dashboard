@@ -187,7 +187,8 @@ export async function search({ q = '', days = 30, category = '', region = '', li
       AND coalesce($1::text, $2::text, $6::text, $7::text, '') IS NOT NULL AND ${match}`;
     const [hits, facets, cats, days_] = await sqlTx([
       [`SELECT i.link, i.title, i.source, i.host, i.published, i.category, i.region, i.lang, ts_headline('simple', coalesce(i.summary, ''), ${rankExpr.q}, 'MaxWords=40, MinWords=15, StartSel=«, StopSel=»') AS snippet,
-          t.relevance, t.vector, t.theater, t.actors, t.why, t.verify, coalesce(t.cluster, t.link) AS story, ${rankExpr.rank} AS rank
+          t.relevance, t.vector, t.theater, t.actors, t.why, t.verify, coalesce(t.cluster, t.link) AS story, ${rankExpr.rank} AS rank,
+          (SELECT coalesce(jsonb_agg(jsonb_build_array(e.id, e.n, e.t) ORDER BY e.t, e.n), '[]'::jsonb) FROM ti.mention m JOIN ti.entity e ON e.id = m.eid WHERE m.link = i.link AND m.eid NOT LIKE 'country:%') AS entities
         FROM ti.item i LEFT JOIN ti.triage t ON t.link = i.link WHERE ${where}
         ORDER BY ${order} LIMIT ${limit} OFFSET ${offset}`, params],
       [`SELECT count(*)::int AS total, count(DISTINCT i.host)::int AS publishers, min(i.published) AS first_seen, max(i.published) AS last_seen FROM ti.item i WHERE ${where}`, params],

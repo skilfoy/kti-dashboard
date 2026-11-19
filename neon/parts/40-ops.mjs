@@ -278,6 +278,8 @@ export async function jobRetention() {
     [`DELETE FROM ti.ip_list WHERE checked_at < now() - interval '7 days'`],
     [`DELETE FROM ti.blog_item WHERE seen_at < now() - interval '30 days'`],
     [`DELETE FROM ti.enrich WHERE at < now() - interval '7 days'`],
+    [`DELETE FROM ti.mention WHERE published < now() - make_interval(days => $1)`, [ENTITY.KEEP_DAYS]],
+    [`DELETE FROM ti.mdoc WHERE published < now() - make_interval(days => $1)`, [ENTITY.KEEP_DAYS]],
     [`SELECT pg_database_size(current_database())::bigint AS bytes`],
   ]);
   return { db_bytes: r[r.length - 1][0] && r[r.length - 1][0].bytes, ms: Date.now() - t0 };

@@ -141,3 +141,11 @@ if os.path.exists(feeds_src):
     os.makedirs(os.path.join(a.out, "data"), exist_ok=True)
     json.dump(fr, open(os.path.join(a.out, "data", "feeds.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     print(f"feeds.json: {len(fr.get('feeds', []))} feeds")
+# The entity gazetteer (build_gazetteer.py) is a document, not a row dataset: published at /data/entity_gazetteer.json,
+# where the collector's entities job reads it, the same way.
+gaz_src = os.path.join(a.feeds, "entity_gazetteer.json")
+if os.path.exists(gaz_src):
+    gz = json.load(open(gaz_src, encoding="utf-8"))
+    os.makedirs(os.path.join(a.out, "data"), exist_ok=True)
+    json.dump(gz, open(os.path.join(a.out, "data", "entity_gazetteer.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+    print(f"entity_gazetteer.json: {len(gz.get('entities', []))} entities, {len(gz.get('edges', []))} curated edges")

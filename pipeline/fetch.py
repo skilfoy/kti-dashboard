@@ -77,6 +77,8 @@ many(pairs)
 # Second directory: enrichment and snapshots
 get(f"{GH}/t0sche/cvss-bt/main/cvss-bt.csv", os.path.join(RAW2, "cvss-bt.csv"), 400)
 get(f"{GH}/MISP/misp-galaxy/main/clusters/threat-actor.json", os.path.join(RAW2, "misp_threat_actor.json"), 120)
+# Malpedia malware families with synonyms (the MISP galaxy cluster), for the entity gazetteer (build_gazetteer.py)
+get(f"{GH}/MISP/misp-galaxy/main/clusters/malpedia.json", os.path.join(RAW2, "misp_malpedia.json"), 120)
 B = f"{GH}/Jam0k/Threat-Intelligence-Datasets/main"
 get(f"{B}/ransomware-leak-site-victims/data.jsonl", os.path.join(RAW2, "tc_victims.jsonl"), 200)
 get(f"{B}/threat-incident-clusters/data.jsonl", os.path.join(RAW2, "tc_incidents.jsonl"), 300)

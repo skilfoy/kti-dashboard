@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.4.0 (19 November 2026)
+
+- Entity graph. A gazetteer built daily in the site build (`pipeline/build_gazetteer.py`, published at `/data/entity_gazetteer.json`) holds about 7,900 entities with 11,100 names: ATT&CK groups, software and campaigns, MISP threat actors, Malpedia families (new source: the MISP galaxy Malpedia cluster, CC BY-SA 4.0), leak-site extortion groups, KEV vendors, products and CVEs, with 5,700 curated relationships. Same-thing entries collapse: a MISP actor into the ATT&CK group it cites or whose alias it bears, a leak-site group into the ATT&CK group or Malpedia family of its name.
+- The collector's new `entities` job (every slot, after the sources job) reads each collected entry and advisory once and stores the entities it names (`ti.mention`, with the entry in `ti.mdoc`, both kept 400 days). Matching is deterministic: multi-word and digit names in any case, single words only capitalized and, when common in general news (measured daily over the collection), beside a cue word; product names beside their vendor; countries only beside another entity.
+- `/api/graph` serves the summary (rising and new entities, the most named per type, the strongest co-mentions by entries times normalized PMI, curated relationships), an entity's card, the entries two entities share, and name lookup. The new Graph page (tab 8) draws the co-mention network and each entity's neighbourhood; search hits list the entities they name. TAXII 2.1 gains an entity graph collection with curated and observed (co-mention) relationships kept apart.
+- Removed the Oracle A1 launcher (`ocia1`, `37j-oci.mjs` and its data sources row) after Sean dropped Oracle on 19 November; the hosting decision is deferred and documented in the work tracker.
+- Collector 2026-11-19.3. Schema: `ti.entity`, `ti.erel`, `ti.mdoc`, `ti.mention`, keyset indexes on `ti.item` and `ti.advisory`, lease row `entities`.
+
 ## 3.3.0 (19 November 2026)
 
 - Retired the sample organizational estate at Sean's instruction: the platform is a public piece and has no client or organization behind it. Removed the Residual risk page and its calculations, the `assets`, `controls` and `exposure_darkweb` datasets (sample rows on documentation IP space and invented coverage figures), the AutoRecon and darknet-mcp-server ingests, the live exposure monitor (`/api/exposure`, `live_exposure`) with its HIBP and GreyNoise health probes, method rules A3b, B8 and B9, and follow-ons FP-002 and FP-007. Defense page and method wording that assumed an organization's own rule inventory, visibility or estate now speaks to any defender. The tabs renumber from 7 (Actors).

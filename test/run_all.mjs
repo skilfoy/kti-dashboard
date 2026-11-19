@@ -20,6 +20,8 @@ const steps = [
   ['citation verification', py, ['-I', 'pipeline/verify_citations.py', '--self-test']],
   ['citation repair queue', py, ['-I', 'pipeline/citation_queue.py', '--self-test']],
   ['source network builder', py, ['-I', 'pipeline/feeds_build.py', '--self-test']],
+  ['entity gazetteer builder', py, ['-I', 'pipeline/build_gazetteer.py', '--self-test']],
+  ...(has('@electric-sql/pglite') ? [['entity graph job and queries (PGlite)', process.execPath, ['test/entities_test.mjs', '.']]] : []),
   ...(has('@electric-sql/pglite') ? [['submarine cables job and route (PGlite)', process.execPath, ['test/cables_test.mjs', '.']]] : []),
   ['data sources registry', process.execPath, ['test/data_sources_test.mjs', '.']],
   ['collector auto-deploy', process.execPath, ['test/auto_deploy_test.mjs', '.']],

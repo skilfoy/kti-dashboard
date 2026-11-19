@@ -108,8 +108,22 @@ CREATE TABLE IF NOT EXISTS ti.report (id text PRIMARY KEY, q text NOT NULL, type
   body text, sources jsonb, model text, corpus jsonb, error text, created_at timestamptz NOT NULL DEFAULT now(), started_at timestamptz, done_at timestamptz);
 CREATE INDEX IF NOT EXISTS report_created ON ti.report (created_at);
 INSERT INTO ti.lease (job) VALUES ('sources'), ('reports') ON CONFLICT DO NOTHING;
--- Oracle A1 launcher (3.1.0).
-INSERT INTO ti.lease (job) VALUES ('ocia1') ON CONFLICT DO NOTHING;
+-- Entity graph (3.4.0, 37k-entities.mjs): the gazetteer's entities and curated relationships, the entries that name an
+-- entity (title and date, kept 400 days so the graph outlives the 45-day entry store) and one row per entity an entry names.
+CREATE TABLE IF NOT EXISTS ti.entity (id text PRIMARY KEY, t text NOT NULL, n text NOT NULL, names text NOT NULL DEFAULT '', m jsonb NOT NULL DEFAULT '{}'::jsonb, at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS entity_names_trgm ON ti.entity USING gin (names gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS entity_n_trgm ON ti.entity USING gin (n gin_trgm_ops);
+CREATE TABLE IF NOT EXISTS ti.erel (a text NOT NULL, b text NOT NULL, rel text NOT NULL, basis text NOT NULL, PRIMARY KEY (a, b, rel, basis));
+CREATE INDEX IF NOT EXISTS erel_b ON ti.erel (b);
+CREATE TABLE IF NOT EXISTS ti.mdoc (link text PRIMARY KEY, src text NOT NULL, feed text, host text, title text NOT NULL, published timestamptz NOT NULL, category text, at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS mdoc_published ON ti.mdoc (published);
+CREATE TABLE IF NOT EXISTS ti.mention (eid text NOT NULL, link text NOT NULL, published timestamptz NOT NULL, host text, via text, PRIMARY KEY (eid, link));
+CREATE INDEX IF NOT EXISTS mention_link ON ti.mention (link);
+CREATE INDEX IF NOT EXISTS mention_published ON ti.mention (published);
+CREATE INDEX IF NOT EXISTS mention_eid_published ON ti.mention (eid, published);
+CREATE INDEX IF NOT EXISTS item_seen ON ti.item (seen_at, link);
+CREATE INDEX IF NOT EXISTS advisory_seen ON ti.advisory (seen_at, link);
+INSERT INTO ti.lease (job) VALUES ('entities') ON CONFLICT DO NOTHING;
 -- 2026-11-18: pg_stat_statements is enabled on the production database (CREATE EXTENSION pg_stat_statements, as the
 -- owner) to rank the collector's reads by the Postgres transfer they cost (Free plan: 5 GB a month). It is left out of
 -- this file because PGlite, which the tests load this schema into, does not ship it.

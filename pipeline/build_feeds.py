@@ -6,7 +6,8 @@ Run: python3 -I pipeline/build_feeds.py WORK FEEDS [YYYY-MM-DD]
          every step runs with -I and nothing under WORK is executed.
   FEEDS  folder of built datasets. Start it from the previous build (the workflow restores it from its cache): a step
          that fails leaves that step's datasets as they were, and the failure is recorded in FEEDS/_build.json.
-Steps: fetch.py and build_data.py (KEV, CVE, ATT&CK, ICS, leak-site and media baselines), fetch_defense.py and
+Steps: fetch.py and build_data.py (KEV, CVE, ATT&CK, ICS, leak-site and media baselines), build_gazetteer.py (the entity
+gazetteer the collector's entities job matches against), fetch_defense.py and
 build_defense.py (threat-informed defense), fetch_weaponization.py and build_weaponization.py (PoC and weaponization
 dates; reads FEEDS/kev.json and FEEDS/early_warning.json, so it runs last).
 Exit status 1 when the core step (build_data.py) failed, so the workflow keeps the last good site.
@@ -28,13 +29,14 @@ for d in (WORK, FEEDS, RAW, RAW2, RAW3, RAW4):
 STEPS = [
     ("fetch", ["fetch.py", RAW, RAW2, DAY]),
     ("build_data", ["build_data.py", RAW, RAW2, FEEDS, DAY]),
+    ("build_gazetteer", ["build_gazetteer.py", RAW, RAW2, FEEDS, DAY]),
     ("fetch_defense", ["fetch_defense.py", RAW3]),
     ("build_defense", ["build_defense.py", RAW, RAW3, FEEDS, DAY]),
     ("fetch_weaponization", ["fetch_weaponization.py", RAW4, FEEDS]),
     ("build_weaponization", ["build_weaponization.py", RAW4, FEEDS, DAY]),
 ]
 # A build step needs its fetch; a failed fetch skips the build so yesterday's datasets stand.
-NEEDS = {"build_data": "fetch", "build_defense": "fetch_defense", "build_weaponization": "fetch_weaponization"}
+NEEDS = {"build_data": "fetch", "build_gazetteer": "build_data", "build_defense": "fetch_defense", "build_weaponization": "fetch_weaponization"}
 
 results = {}
 for name, (script, *args) in STEPS:
