@@ -29,6 +29,9 @@ import re
 import sys
 
 
+# Bump when a mode or ownership rule changes: the collector re-derives every mention under the new rules.
+RULES = 2
+
 
 def self_test():
     """Build from tiny fixtures and check the merges, name ownership and modes. python3 -I build_gazetteer.py --self-test"""
@@ -54,12 +57,16 @@ def self_test():
         {"uuid": "u1", "value": "APT 28", "meta": {"refs": ["https://attack.mitre.org/groups/G0007/"], "synonyms": ["Pawn Storm"], "country": "RU"}},
         {"uuid": "u2", "value": "Moonstone Sleet", "meta": {"synonyms": ["Lazarus Group"], "country": "KP"}},
         {"uuid": "u3", "value": "Charming Kitten", "meta": {"synonyms": ["Phosphorus"], "country": "IR"}},
+        {"uuid": "u4", "value": "n0n", "meta": {}},
+        {"uuid": "u5", "value": "Earth Lusca", "meta": {"synonyms": ["Chromium"]}},
     ]}
-    mp = {"values": [{"uuid": "m1", "value": "LockBit", "meta": {"synonyms": ["ABCD Ransomware"], "refs": ["https://malpedia.caad.fkie.fraunhofer.de/details/win.lockbit"]}}]}
+    mp = {"values": [{"uuid": "m1", "value": "LockBit", "meta": {"synonyms": ["ABCD Ransomware"], "refs": ["https://malpedia.caad.fkie.fraunhofer.de/details/win.lockbit"]}},
+                     {"uuid": "m2", "value": "Derusbi", "meta": {"synonyms": ["PHOTO", "Clean Up", "CleanUp"]}}]}
     rg = [{"group": "lockbit5", "status": "Active"}, {"group": "akira", "status": "Active"}]
-    kev = {"catalogVersion": "t", "count": 2, "vulnerabilities": [
+    kev = {"catalogVersion": "t", "count": 3, "vulnerabilities": [
         {"cveID": "CVE-2023-23397", "vendorProject": "Microsoft", "product": "Outlook", "knownRansomwareCampaignUse": "Unknown"},
-        {"cveID": "CVE-2024-3400", "vendorProject": "Palo Alto Networks", "product": "PAN-OS", "knownRansomwareCampaignUse": "Known"}]}
+        {"cveID": "CVE-2024-3400", "vendorProject": "Palo Alto Networks", "product": "PAN-OS", "knownRansomwareCampaignUse": "Known"},
+        {"cveID": "CVE-2025-6554", "vendorProject": "Google", "product": "Chromium", "knownRansomwareCampaignUse": "Unknown"}]}
     for path, obj in ((os.path.join(raw, "attack-current.json"), attack), (os.path.join(raw, "kev.json"), kev), (os.path.join(raw2, "misp_threat_actor.json"), ta),
                       (os.path.join(raw2, "misp_malpedia.json"), mp), (os.path.join(feeds, "ransomware_groups.json"), rg)):
         json.dump(obj, open(path, "w"))
@@ -81,6 +88,10 @@ def self_test():
         ("KEV vendor, product and CVE", names("product:microsoft:outlook").get("Outlook") == "v" and ["cve:CVE-2024-3400", "product:paloaltonetworks:panos", "affects", "kev"] in g["edges"]
          and E["cve:CVE-2024-3400"]["m"]["ransomware"] is True),
         ("ATT&CK description first sentence", E["actor:G0007"]["m"]["d"] == "APT28 is a group."),
+        ("everyday words need a cue", names("malware:mp:m2") == {"Derusbi": "s", "PHOTO": "w", "Clean Up": "w"} and names("actor:misp:u4") == {"n0n": "w"}),
+        ("distinctive names stand alone", names("extortion:lockbit5")["LockBit"] == "s" and names("actor:G0007")["Fancy Bear"] == "i"),
+        ("a KEV product name outranks another entity's alias", "Chromium" not in names("actor:misp:u5") and names("product:google:chromium").get("Chromium") == "v"),
+        ("rules version", g["rules"] == RULES),
     ]
     bad = [n for n, c in checks if not c]
     assert not bad, bad
@@ -123,6 +134,19 @@ sunrise swan sword tank target tempest thor thunder tiger titan torch tornado to
 typhoon unicorn union united valkyrie vampire vector velvet venom venus viking viper virtual vision volcano vortex vulture
 warrior wasp water wave web whale white wild wind winter wolf wood worm xenon yellow zero zeus zombie
 """.split())
+# Everyday words: a name made only of these and of COMMON words ("Clean Up", "Do Not", "Photo", "Silicon", "Global")
+# needs a cue word beside it. Measured on the first live run (19 November 2026), where such aliases from MISP and
+# Malpedia (Derusbi's "PHOTO", Sea Turtle's "SILICON", DONOT matching "do not") led the false matches.
+STOP = set("""
+a about after all also an and any app apps are as at back be best big book box but by calendar call can card case cash center centre chain chat
+clean cleanup client code college company control country data day do door down email every file files first for free from game games get go
+good government great group guard he health help her high his home house how if in industry is it its just key keys kit lab labs last law life
+link links login logon long low mail man market may message mobile money more my net not network new news next no note notes now of off office oil
+old on one online open or order our out over page party pay people phone photo photos plan police policy price program project report research
+rule rules safe school science search secure security server service services setup she sign silicon so start state story student supply system
+systems team test than that the then there these they this those time to too tool tools top trade trust two union university up update us user
+users very video was we web what when where who why will window windows with world year yes you your
+""".split())
 TOK = re.compile(r"[\w][\w.\-]*[\w]|[\w]", re.UNICODE)
 
 
@@ -143,14 +167,15 @@ def mode_for(name, etype):
     sq = squash(name)
     if len(sq) < 3:
         return None
-    if len(toks) >= 2 or re.search(r"\d", name):
-        return "i"
-    word = toks[0]
-    if len(sq) <= 4 or word.lower() in COMMON:
-        return "w"
-    if re.search(r"[a-z][A-Z]", word) or (word.isupper() and len(word) >= 5):
-        return "i"  # LockBit, BlackCat, QAKBOT: the internal capital or all-caps form makes the word distinctive
-    return "s"
+    plain = lambda t: t.lower() in COMMON or t.lower() in STOP or len(t) <= 2
+    if len(sq) <= 4:
+        return "w"  # "Play", "ZINC", "n0n"
+    if len(toks) >= 2:
+        # Two vivid words make a name ("Fancy Bear", "Sea Turtle"); everyday words do not ("Clean Up", "Do Not").
+        return "w" if all(t.lower() in STOP or len(t) <= 2 for t in toks) else "i"
+    if re.search(r"\d", name):
+        return "i"  # APT28, TA505 (also matched when written "APT 28")
+    return "w" if plain(toks[0]) else "s"  # an all-caps or camel-case word is still a word: "PHOTO", "CleanUp"
 
 
 def load(path, default=None):
@@ -388,7 +413,9 @@ for gid in [i for i, e in B.ent.items() if e["t"] == "extortion"]:
 # ---------------------------------------------------------------- names and modes
 owner = {}
 for key, ids in B.by_key.items():
-    live = sorted((i for i in ids if i in B.ent), key=lambda i: (0 if squash(B.ent[i]["n"]) == key else 1, PRIORITY.get(B.ent[i]["t"], 9), i))
+    # The entity whose own name it is comes first; then a KEV vendor or product name, which is a literal product name,
+    # over another entity's alias ("Chromium" is Google's browser, not Earth Lusca); then the type order.
+    live = sorted((i for i in ids if i in B.ent), key=lambda i: (0 if squash(B.ent[i]["n"]) == key else 1, 0 if B.ent[i]["t"] in ("vendor", "product") else 1, PRIORITY.get(B.ent[i]["t"], 9), i))
     if live:
         owner[key] = live[0]
 shadowed = 0
@@ -426,7 +453,7 @@ ids = {r["id"] for r in entities}
 edges = sorted({(a, b, r, s) for a, b, r, s in B.edges if a in ids and (b in ids or b.startswith("country:")) and a != b})
 
 doc = {
-    "version": 1, "date": DAY, "generated": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+    "version": 1, "rules": RULES, "date": DAY, "generated": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
     "sources": stats,
     "modes": {"i": "any case", "s": "capitalized single word", "w": "single word that needs a cue word beside it", "v": "product name that needs its vendor in the same entry"},
     "counts": {t: sum(1 for r in entities if r["t"] == t) for t in PRIORITY | {"cve": 9}}, "names": sum(len(r["a"]) for r in entities), "shadowed_names": shadowed,

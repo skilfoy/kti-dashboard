@@ -27,12 +27,16 @@ Each name carries a match mode:
 
 | Mode | Rule | Examples |
 |---|---|---|
-| `i` | Any case, anywhere. Used for names of two or more words, names with a digit, and camel-case or all-caps words. | Volt Typhoon, APT28 (also "APT 28"), LockBit |
-| `s` | A single plain word, counted only when capitalized. It also needs a cue word within three words when the collection shows it is common in general news. | Kimsuky, Akira |
-| `w` | A single word of four letters or fewer, or a common English word. Counted only with a cue word beside it. | Play, ZINC, Cuba |
+| `i` | Any case. Used for names of two or more words and names with a digit. A letters-only name matches exactly its own number of words. | Volt Typhoon, APT28 (also "APT 28") |
+| `s` | A single word (all-caps and camel-case included), counted only when capitalized. It also needs a cue word within three words when the collection shows it is common in general news. | Kimsuky, Akira, LockBit |
+| `w` | A name of four letters or fewer, a common English word, or a name made only of everyday words. Counted only with a cue word beside it. | Play, ZINC, Cuba, PHOTO, Clean Up |
 | `v` | A product name of one or two plain words, counted only when its vendor is named in the same entry. | Exchange Server beside Microsoft |
 
-- **Cue words** are ransomware, malware, hackers, group, gang, actor, APT, backdoor, stealer, loader, flaw, vulnerability, patch, exploit, zero-day, CVE, breach, campaign and similar.
+- **Cue words** are typed by entity:
+  - Threat names need a threat word: ransomware, malware, gang, group, hackers, actor, APT, backdoor, stealer, loader, botnet, affiliate, extortion, leak.
+  - Vendors and products need a vulnerability word: vulnerability, flaw, patch, zero-day, exploit, advisory, CVE, update, fix.
+  - Words that sit beside everything in a cyber headline (security, cyber, attack, campaign, operation) are not cues.
+- **Rules versions**: `RULES` in the builder and `MATCH_V` in the collector. A change of either makes the next run re-derive every mention.
 - **Ambiguity** is measured daily over the collection with `ts_stat`. A single-word name is ambiguous when it appears in 40 or more general-news entries (geopolitics, theater, maritime, think-tank, defense and government feeds). It is also ambiguous when it appears in at least 4 of them at more than twice its rate in the cyber feeds.
 - **Countries** are matched from country names, demonyms ("Russian", "North Korean") and exact-case forms ("US", "U.S.", "UK", "DPRK", "PRC"). They are kept only beside another entity, so the geopolitical stream gives cyber entities their country context without turning into a country index. A single word that is both a family and a country ("Cuba") is the family beside a cue word and the country otherwise.
 - **CVEs** are matched by pattern in any case. A CVE that is not in KEV becomes an entity on its first mention.

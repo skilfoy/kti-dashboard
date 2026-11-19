@@ -28,6 +28,9 @@ const GAZ = {
     { id: 'vendor:ivanti', t: 'vendor', n: 'Ivanti', a: [['Ivanti', 's']] },
     { id: 'product:microsoft:exchangeserver', t: 'product', n: 'Microsoft Exchange Server', a: [['Exchange Server', 'v'], ['Microsoft Exchange Server', 'i']], m: { vendor: 'vendor:microsoft' } },
     { id: 'product:ivanti:connectsecure', t: 'product', n: 'Ivanti Connect Secure', a: [['Connect Secure', 'v'], ['Ivanti Connect Secure', 'i']], m: { vendor: 'vendor:ivanti' } },
+    { id: 'extortion:global', t: 'extortion', n: 'Global', a: [['Global', 'w']] },
+    { id: 'malware:donot', t: 'malware', n: 'DONOT', a: [['DONOT', 'i']] },
+    { id: 'vendor:progress', t: 'vendor', n: 'Progress', a: [['Progress', 'w']] },
     { id: 'cve:CVE-2024-3400', t: 'cve', n: 'CVE-2024-3400', a: [['CVE-2024-3400', 'i']], m: { kev: '2024-04-12' } },
   ],
   edges: [['actor:G0007', 'malware:S0154', 'uses', 'attack'], ['product:microsoft:exchangeserver', 'vendor:microsoft', 'made-by', 'kev'], ['actor:G0007', 'country:RU', 'attributed-to', 'misp']],
@@ -80,6 +83,9 @@ const M = await import(path.join(ROOT, 'neon', 'collector.mjs'));
   ok(ids('Cuba talks: Cobalt Strike beacons found').join() === 'country:CU,malware:S0154', 'without a cue the capitalized word is the country');
   ok(ids('PAN-OS CVE-2024-3400 and cve-2025-0001 exploited').join() === 'cve:CVE-2024-3400,cve:CVE-2025-0001', 'CVE identifiers in any case, outside the gazetteer too');
   ok(ids('Agenda for the summit').join() === '' && ids('Qilin claims hospital').join() === 'extortion:qilin', 'an ambiguous alias of a group');
+  ok(ids('Global security threats rise in cyber attacks').join() === '' && ids('Global ransomware gang claims a hospital').join() === 'extortion:global', 'a threat name needs a threat cue, not a generic one');
+  ok(ids('Progress ransomware report').join() === '' && ids('Progress patches MOVEit flaw').join() === 'vendor:progress', 'a vendor name needs a vulnerability cue');
+  ok(ids('Do not click: DONOT targets Pakistan').join() === 'country:PK,malware:donot', 'a letters-only name matches only as one word');
   ok(M.entryText({ title: 'Qilin hits clinic - The Record', source: 'The Record', summary: 'x' }) === 'Qilin hits clinic . x', 'the aggregator publisher suffix is dropped');
 }
 {
@@ -170,12 +176,30 @@ r = await M.runJob('entities');
 ok(r.ok && r.gazetteer.via === 'bucket' && r.gazetteer.synced === false, 'the bucket copy serves, same content so no resync ' + JSON.stringify(r.gazetteer));
 siteUp = true;
 
+// New matching rules re-derive every mention: stored entries from the start, older documents from their titles.
+{
+  await db.query(`INSERT INTO ti.mdoc (link, src, host, title, published) VALUES ('https://old.example/1', 'item', 'old.example', 'Fancy Bear returns with Cobalt Strike', now() - interval '200 days')`);
+  await db.query(`INSERT INTO ti.mention (eid, link, published, host, via) VALUES ('vendor:microsoft', 'https://old.example/1', now() - interval '200 days', 'old.example', 'stale')`);
+  await db.query(`INSERT INTO ti.mdoc (link, src, host, title, published) VALUES ('https://old.example/2', 'item', 'old.example', 'Nothing to see here', now() - interval '200 days')`);
+  await db.query(`INSERT INTO ti.mention (eid, link, published, host, via) VALUES ('vendor:microsoft', 'https://old.example/2', now() - interval '200 days', 'old.example', 'stale')`);
+  const n0 = (await db.query(`SELECT count(*)::int AS n FROM ti.mention WHERE link NOT LIKE 'https://old.example/%'`)).rows[0].n;
+  GAZ.rules = 9; M.resetGazetteer();
+  const rr = await M.runJob('entities');
+  ok(rr.ok && rr.rederived && rr.rederived.to === M.MATCH_V + '.9' && rr.rederived.older_docs === 2 && rr.rederived.older_kept === 1, 'rederived on a rules change ' + JSON.stringify(rr.rederived));
+  const old1 = (await db.query(`SELECT eid FROM ti.mention WHERE link = 'https://old.example/1' ORDER BY eid`)).rows.map((x) => x.eid).join();
+  ok(old1 === 'actor:G0007,malware:S0154', 'an older document is matched again from its title ' + old1);
+  ok(!(await db.query(`SELECT 1 FROM ti.mdoc WHERE link = 'https://old.example/2'`)).rows.length && !(await db.query(`SELECT 1 FROM ti.mention WHERE link = 'https://old.example/2'`)).rows.length, 'an older document that names nothing under the new rules is dropped');
+  ok(rr.read >= 8 && (await db.query(`SELECT count(*)::int AS n FROM ti.mention WHERE link NOT LIKE 'https://old.example/%'`)).rows[0].n === n0, 'the stored entries are read again and give the same mentions');
+  const rr2 = await M.runJob('entities');
+  ok(rr2.ok && !rr2.rederived && rr2.read === 0, 'no second rederivation');
+}
+
 // ---------------------------------------------------------------- queries
 const card = await M.entityCard('actor:G0007');
 ok(card.entity.n === 'APT28' && card.entries === 3 && card.series.length >= 1, 'card: entity and series');
 ok(card.co_mentioned[0].id === 'malware:S0154' && card.co_mentioned[0].n === 3 && card.co_mentioned[0].t === 'malware', 'card: co-mentions ' + JSON.stringify(card.co_mentioned[0]));
 ok(card.curated.some((c) => c.id === 'malware:S0154' && c.rel === 'uses' && c.basis === 'attack' && c.dir === 'out') && card.curated.some((c) => c.id === 'country:RU' && c.rel === 'attributed-to'), 'card: curated relationships');
-ok(card.recent.length === 3 && card.recent[0].link === 'https://a.example/1' && card.recent.every((d) => d.title && d.via), 'card: recent entries newest first with the words that named it');
+ok(card.recent.length === 4 && card.recent[0].link === 'https://a.example/1' && card.recent[3].link === 'https://old.example/1' && card.recent.every((d) => d.title && d.via), 'card: recent entries newest first with the words that named it');
 ok((await M.entityCard('nonsense')).status === 400 && (await M.entityCard('actor:G9999')).status === 404, 'card: bad and unknown ids');
 const pair = await M.entityPair('actor:G0007', 'malware:S0154');
 ok(pair.shared === 3 && pair.curated.length === 1 && pair.entries[0].via_a && pair.entries[0].via_b, 'pair: shared entries and curated link');
