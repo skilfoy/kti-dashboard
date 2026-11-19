@@ -198,7 +198,7 @@ siteUp = true;
 // ---------------------------------------------------------------- queries
 const card = await M.entityCard('actor:G0007');
 ok(card.entity.n === 'APT28' && card.entries === 3 && card.series.length >= 1, 'card: entity and series');
-ok(card.co_mentioned[0].id === 'malware:S0154' && card.co_mentioned[0].n === 3 && card.co_mentioned[0].t === 'malware', 'card: co-mentions ' + JSON.stringify(card.co_mentioned[0]));
+ok(card.co_mentioned[0].id === 'malware:S0154' && card.co_mentioned[0].entries === 3 && card.co_mentioned[0].n === 'Cobalt Strike' && card.co_mentioned[0].t === 'malware', 'card: co-mentions ' + JSON.stringify(card.co_mentioned[0]));
 ok(card.curated.some((c) => c.id === 'malware:S0154' && c.rel === 'uses' && c.basis === 'attack' && c.dir === 'out') && card.curated.some((c) => c.id === 'country:RU' && c.rel === 'attributed-to'), 'card: curated relationships');
 ok(card.recent.length === 4 && card.recent[0].link === 'https://a.example/1' && card.recent[3].link === 'https://old.example/1' && card.recent.every((d) => d.title && d.via), 'card: recent entries newest first with the words that named it');
 ok((await M.entityCard('nonsense')).status === 400 && (await M.entityCard('actor:G9999')).status === 404, 'card: bad and unknown ids');

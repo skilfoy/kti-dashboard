@@ -30,7 +30,7 @@ import sys
 
 
 # Bump when a mode or ownership rule changes: the collector re-derives every mention under the new rules.
-RULES = 3
+RULES = 4
 
 
 def self_test():
@@ -440,6 +440,10 @@ for e in B.ent.values():
         # Other single-word aliases and families ("Krypton" and "Summit" for Turla, Malpedia's "Jason", "Glasses",
         # "Rover", leak-site "Payload" and "Beast") were the false matches of the second live pass: they need a cue.
         if md == "s" and e["t"] not in ("vendor", "product") and n not in e.get("vetted", set()):
+            md = "w"
+        # ATT&CK's tools are often system utilities with plain names ("route", "ftp", "Net", "Expand", "Tor"): a tool's
+        # single word stands alone only with an internal capital or a digit ("PsExec", "AdFind").
+        if md == "s" and e["t"] == "tool" and not re.search(r"[a-z][A-Z]|\d", n):
             md = "w"
         if e["t"] == "product" and md != "i":
             md = "v"
