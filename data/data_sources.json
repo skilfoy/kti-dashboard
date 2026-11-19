@@ -4657,6 +4657,32 @@
    "source_ids": [],
    "added": "2026-11-19",
    "reviewed": "2026-11-19"
+  },
+  {
+   "id": "track-record",
+   "name": "KTI track record (measured accuracy)",
+   "owner": "KTI",
+   "category": "Platform",
+   "feeds": [
+    "live_scorecard",
+    "page:method"
+   ],
+   "url": "https://github.com/skilfoy/kti-dashboard/blob/main/neon/parts/37m-score.mjs",
+   "access": "open",
+   "secret": null,
+   "licence": "The project's own measurements",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "hourly (the day's value is its last measurement)",
+   "health_feed": null,
+   "jobs": [
+    "score"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-19",
+   "reviewed": "2026-11-19"
   }
  ]
 }

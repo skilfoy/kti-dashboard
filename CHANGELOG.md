@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.6.0 (19 November 2026)
+
+- Track record. The new `score` job (hourly) measures the platform's accuracy from its own store and keeps each measure as a daily series (`ti.score`), so the record cannot be restated after the fact:
+  - KEV foresight: how many of the CVEs CISA listed since the collection began were named by an entry on an earlier day, and the median lead in days.
+  - Pre-KEV surge alerts (W-2B) and the advisory tier's KEV watchlist: the share whose CVE KEV listed afterwards, once 30 days old.
+  - The triage tier's vector and theater accuracy against the analyst's labels.
+  - The share of feeds answering and of collector runs succeeding.
+- A Track record card now opens the Method page. It puts these beside the analyst record already kept there (scored forecasts and mean Brier, lead precision, citations confirmed by an independent fetch), with each measure's value now, 7 and 30 days ago. It is published as the `live_scorecard` dataset.
+- Collector 2026-11-19.12. Schema: `ti.score`, lease row `score`.
+
 ## 3.5.1 (19 November 2026)
 
 - The first live watch run, at 21:23 UTC, opened 33 alerts across 7 of the 12 watches:

@@ -940,7 +940,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok((await call('/status', { headers: { 'x-ti-key': 'k'.repeat(48) } })).status === 200, 'operator key accepted when configured');
   const t = await call('/', { method: 'POST', headers: { 'x-neon-trigger-invocation-id': 'abc', 'content-type': 'application/json' }, body: JSON.stringify({ version: 1, trigger: { type: 'schedule' }, data: { scheduled_at: '2026-10-17T18:15:00Z' } }) });
   const tj = await t.json();
-  ok(t.status === 200 && tj.jobs.map((j) => j.job).join() === 'gdelt,health,ioda,sources,lists,leaksites,links,triageeval,entities,watch,reports', 'trigger plan at :15 ' + tj.jobs.map((j) => j.job));
+  ok(t.status === 200 && tj.jobs.map((j) => j.job).join() === 'gdelt,health,ioda,sources,lists,leaksites,links,triageeval,score,entities,watch,reports', 'trigger plan at :15 ' + tj.jobs.map((j) => j.job));
   const st = await (await call('/status', bearer(mint()))).json();
   ok(st.gdelt_files.files >= 288 && st.version === M.VERSION && st.runs.length > 0, 'status ' + JSON.stringify(st.gdelt_files));
   ok(JSON.stringify(M.plan(new Date('2026-10-17T18:34:00Z'))) === '["gdelt","infra","snap","sources","entities","watch","reports"]', 'sources in every slot, reports last');

@@ -145,4 +145,20 @@ ok(w2.items[0].new_partners.some((p) => p.id === 'malware:S0154') === false && w
 ok((await M.watchChanges('', day(1))).status === 400, 'ids required');
 ok(M.plan(new Date('2026-11-19T10:04:00Z')).join() === 'gdelt,infra,snap,sources,entities,watch,reports', 'watch runs after entities in every slot');
 
+// ---------------------------------------------------------------- track record (37m-score.mjs)
+{
+  ok(M.median([3, 1, 2]) === 2 && M.median([4, 1, 2, 3]) === 2.5 && M.median([]) === null, 'median');
+  // CVE-2026-2222 (a W-2B alert) is listed by KEV after its alert opened; the alert is aged past 30 days.
+  await db.query(`UPDATE ti.entity SET m = $1 WHERE id = 'cve:CVE-2026-2222'`, [JSON.stringify({ kev: day(0).slice(0, 10) })]);
+  await db.query(`UPDATE ti.alert SET opened_at = now() - interval '40 days' WHERE watch = 'W-2B'`);
+  await db.query(`INSERT INTO ti.feed (id, url, active, status, fails) VALUES ('a', 'https://a', true, 'ok', 0), ('b', 'https://b', true, 'unchanged', 0), ('c', 'https://c', true, 'error', 9)`);
+  const rs = await M.runJob('score');
+  const sd = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/scorecard.json.gz')).toString());
+  ok(rs.ok && sd.kev_foresight.kev_added === 2 && sd.kev_foresight.named_first === 2 && sd.kev_foresight.median_lead_days != null, 'KEV foresight: both KEV CVEs named first ' + JSON.stringify(sd.kev_foresight));
+  ok(sd.cve_surge_hits.mature === 1 && sd.cve_surge_hits.listed_after === 1 && sd.cve_surge_hits.share === 100, 'a surge alert whose CVE KEV listed later is a hit ' + JSON.stringify(sd.cve_surge_hits));
+  ok(sd.sources.active === 3 && sd.sources.answering === 2 && sd.sources.failing === 1 && sd.collector.runs_7d > 0, 'sources and collector shares');
+  ok(sd.rows.some((r) => r.metric === 'kev_foresight_share' && r.value === 100 && r.n === 2), 'the day\'s values are kept as a series');
+  const again = await M.runJob('score');
+  ok(again.ok && (await db.query(`SELECT count(*)::int AS n FROM ti.score WHERE metric = 'kev_foresight_share'`)).rows[0].n === 1, 'one value per metric and day');
+}
 console.log(`watch_test: ${pass} checks passed`);

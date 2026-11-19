@@ -980,6 +980,12 @@
 
   <section class="ti-page" id="method" role="tabpanel" aria-labelledby="tab-method" hidden>
     <template>
+      <div class="ti-card ti-section" id="method-track">
+        <h3 class="ti-h3">Track record</h3>
+        <p class="ti-card-note">How often the platform has been right, measured rather than claimed. The collector measures what its store holds: how many CVEs the collection named before CISA listed them in KEV, how many pre-KEV surge alerts and watchlist CVEs KEV later listed, the triage tier's agreement with the analyst's own labels, and the health of the collection. The analyst record adds the scored forecasts, the leads used and the citations an independent fetch confirmed. Every measure is kept as a daily series, so the record cannot be restated later; small samples are shown as counts. <a href="/api/context?type=scorecard">Data</a>.</p>
+        <div class="ti-tiles" id="track-tiles"></div>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-track" data-source="live_scorecard" data-row-key="metric"></table></div>
+      </div>
       <div class="ti-grid-wide ti-section">
         <div class="ti-card" id="method-approach">
           <h3 class="ti-h3">How this site reasons</h3>
@@ -1097,6 +1103,7 @@
 <script src="/js/defense.js"></script>
 <script src="/js/reqs.js"></script>
 <script src="/js/sources.js"></script>
+<script src="/js/track.js"></script>
 <script src="/js/method.js"></script>
 <script src="/js/search.js"></script>
 <script src="/js/graph.js"></script>

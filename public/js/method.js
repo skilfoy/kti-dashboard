@@ -43,6 +43,8 @@
     if (TI.intel) TI.intel.methodCards(sec);
     // Forecast record and change log (changes.js).
     if (TI.changes) TI.changes.method(sec);
+    // Track record (track.js).
+    if (TI.track) TI.track.method(sec);
     const tc = sec.querySelector('#tbl-conf');
     if (TI.tableState(tc, ['confidence'])) {
       TI.table(tc, TI.rows('confidence'), [

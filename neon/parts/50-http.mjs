@@ -16,8 +16,8 @@ Object.assign(JOBS, { sources: jobSources, reports: jobReports });
 Object.assign(LEASE_S, { sources: 240, reports: 900 });
 // Entity graph (3.4.0, 37k-entities.mjs): every slot, after the sources job, so an entry is in the graph within the slot
 // that collected it.
-Object.assign(JOBS, { entities: jobEntities, watch: jobWatch });
-Object.assign(LEASE_S, { entities: 240, watch: 180 });
+Object.assign(JOBS, { entities: jobEntities, watch: jobWatch, score: jobScore });
+Object.assign(LEASE_S, { entities: 240, watch: 180, score: 120 });
 export async function runJob(job, opts = {}) {
   const fn = JOBS[job];
   if (!fn) return { job, ok: false, error: 'unknown job' };
@@ -69,6 +69,8 @@ export function plan(at) {
     // One evaluation batch an hour until the gold set is scored; a complete evaluation makes no request. The operator
     // route answers within its own deadline and cannot hold a model request open, so the replay runs on the schedule.
     jobs.push('triageeval');
+    // The track record (37m-score.mjs) hourly; the day's value is its last measurement.
+    jobs.push('score');
   }
   if (m >= 45) jobs.push('retention', 'fires', 'maritime', 'sources', 'triage');
   jobs.push('entities', 'watch');
