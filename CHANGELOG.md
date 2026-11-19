@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.2.2 (19 November 2026)
+
+- The Neon console showed the project at 98.2% of its 5 GB monthly transfer while `data_transfer_bytes` read 3.23 GB. The allowance is shared by Postgres, object storage and Functions, and Function egress (what the function sends out, SQL request bodies included) is not in `data_transfer_bytes`. The runs' own `db.sent_kb` showed the sources job sending about 4.2 MB a run (19 MB an hour): every entry of every feed it read, summaries included, with ON CONFLICT dropping the ones already stored. The sources job was paused (its lease held) with Sean's approval on 19 November at 03:10 UTC.
+- The sources job now sends 12 characters of each entry's fingerprint, gets back the ones not stored, and inserts only those. Its result reports `entries` (read) and `new_entries` (sent).
+- Collector 2026-11-19.1.
+
 ## 3.2.1 (18 November 2026)
 
 - Measured after 3.2.0 (20:33 to 23:23 UTC): bucket reads 2.1 MB an hour (atlas 0.97, bundle 0.54, triage mirror 0.53, the A1 retrier's settings and bootstrap 0.05), query results 2.35 MB an hour (triage 0.86, of which one six-hourly full mirror refresh was 1.8 MB; sources 0.47; GDELT 0.43; infra 0.31). The meter rose about 5.9 MB an hour against the 6.2 MB an hour that 5 GB allows for the rest of November.

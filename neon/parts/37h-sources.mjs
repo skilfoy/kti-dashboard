@@ -118,7 +118,17 @@ export async function jobSources(opts = {}) {
   });
   const byLink = new Map();
   for (const i of items) if (!byLink.has(i.link)) byLink.set(i.link, i);
-  const rows = [...byLink.values()];
+  // Only entries whose fingerprint is not stored yet are sent (3.2.2). Until then every run sent every entry of every
+  // feed it read, summaries included, and let ON CONFLICT drop the known ones: about 4.2 MB of request body a run, which
+  // Neon counts as function egress against the plan's transfer. The check sends 12 characters of each fingerprint and
+  // gets back the new ones; a 48-bit prefix collision against the stored items would skip one new entry about once in a
+  // million runs.
+  const cand = [...byLink.values()], pre = [...new Set(cand.map((r) => r.fp.slice(0, 12)))], fresh = new Set();
+  for (let i = 0; i < pre.length; i += 5000) {
+    const got = await sql(`SELECT p FROM unnest(string_to_array($1, ',')) AS p EXCEPT SELECT left(fp, 12) FROM ti.item`, [pre.slice(i, i + 5000).join(',')]);
+    for (const r of got) fresh.add(r.p);
+  }
+  const rows = cand.filter((r) => fresh.has(r.fp.slice(0, 12)));
   const CH = 800;
   for (let i = 0; i < rows.length; i += CH)
     await sql(`INSERT INTO ti.item (link, fp, feed, source, host, title, summary, published, category, region, lang)
@@ -134,7 +144,7 @@ export async function jobSources(opts = {}) {
   const [n] = await sql(`SELECT count(*)::int AS items, count(*) FILTER (WHERE seen_at > now() - interval '24 hours')::int AS new_24h, count(DISTINCT host)::int AS publishers FROM ti.item`);
   await recordVolume([['source_items_24h', n.new_24h]]);
   const published = new Date().getUTCMinutes() % 30 < 15 || opts.holder === 'manual' ? await putDoc('sources', await sourcesDoc(reg)) : null;
-  return { due: due.length, read: upd.length, unread, ok: upd.length - failed, failed, healed, unchanged, entries: rows.length, items: n.items, new_24h: n.new_24h, publishers: n.publishers, published, ms: Date.now() - t0 };
+  return { due: due.length, read: upd.length, unread, ok: upd.length - failed, failed, healed, unchanged, entries: cand.length, new_entries: rows.length, items: n.items, new_24h: n.new_24h, publishers: n.publishers, published, ms: Date.now() - t0 };
 }
 export async function sourcesDoc(reg) {
   reg = reg || await sourceRegistry();

@@ -776,6 +776,12 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   await db.query(`UPDATE ti.feed SET next_at = now() - interval '1 minute'`);
   const s2 = await M.runJob('sources', { holder: 'manual' });
   ok(s2.ok && seenIfNone === 1 && s2.unchanged >= 1 && s2.failed === 0 && (await db.query(`SELECT count(*)::int AS n FROM ti.item`)).rows[0].n === items.length, 'a second read sends the stored ETag and adds no duplicate');
+  // A feed read again in full (no ETag) sends only the entries not stored yet (3.2.2).
+  ok(s1.new_entries === s1.entries && s1.entries > 0, 'a first read sends every entry ' + JSON.stringify({ e: s1.entries, n: s1.new_entries }));
+  await db.query(`UPDATE ti.feed SET next_at = now() - interval '1 minute', etag = NULL, last_modified = NULL`);
+  const s3 = await M.runJob('sources', { holder: 'manual' });
+  ok(s3.ok && s3.entries > 0 && s3.new_entries === 0 && (await db.query(`SELECT count(*)::int AS n FROM ti.item`)).rows[0].n === items.length && s3.db.sent_kb < s1.db.sent_kb,
+    'a full re-read sends no stored entry ' + JSON.stringify({ e: s3.entries, n: s3.new_entries, sent: s3.db.sent_kb, first: s1.db.sent_kb }));
   const sdoc = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/sources.json.gz')).toString());
   ok(sdoc.feeds === 4 && sdoc.feeds_ok === 4 && sdoc.healed === 2 && sdoc.rows.length === 4 && sdoc.rejected === 1, 'the source network document lists every feed and its healed route');
   // Search: whole words, prefixes, phrases; the triage label rides along.
