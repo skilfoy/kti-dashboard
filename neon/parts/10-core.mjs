@@ -27,7 +27,7 @@ import { createHash, createHmac, createPrivateKey, createPublicKey, generateKeyP
 import { request as httpsRequest } from 'node:https';
 import { gzipSync, gunzipSync, inflateRawSync } from 'node:zlib';
 
-export const VERSION = '2026-11-18.5';
+export const VERSION = '2026-11-19.2';
 const UA = 'threat-feeds-collector/1.0 (+https://github.com/skilfoy; OSINT dashboard collector)';
 const ENV = () => process.env;
 const BUCKET = () => ENV().TI_BUCKET || 'ti-docs';
@@ -229,14 +229,19 @@ export function buildGeo(topo, num2iso) {
   }
   return { index, memo: new Map() };
 }
+// One read per instance however many callers ask at once (the GDELT pool parses files concurrently); a failed read is
+// forgotten so the next caller tries again.
+let GEO_P = null;
 async function geo() {
   if (GEO) return GEO;
-  const [a, n] = await Promise.all([refGet('ref/countries-50m.json'), refGet('ref/num2iso.json')]);
-  if (!a || !n) throw new Error('reference geography missing from the bucket (ref/countries-50m.json, ref/num2iso.json)');
-  GEO = buildGeo(JSON.parse(a.buf.toString('utf8')), JSON.parse(n.buf.toString('utf8')));
-  return GEO;
+  return GEO_P || (GEO_P = (async () => {
+    const [a, n] = await Promise.all([refGet('ref/countries-50m.json'), refGet('ref/num2iso.json')]);
+    if (!a || !n) throw new Error('reference geography missing from the bucket (ref/countries-50m.json, ref/num2iso.json)');
+    GEO = buildGeo(JSON.parse(a.buf.toString('utf8')), JSON.parse(n.buf.toString('utf8')));
+    return GEO;
+  })().catch((e) => { GEO_P = null; throw e; }));
 }
-export function setGeo(g) { GEO = g; }
+export function setGeo(g) { GEO = g; GEO_P = null; }
 function inRing(x, y, ring) {
   let inside = false;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {

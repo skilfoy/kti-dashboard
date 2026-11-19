@@ -75,7 +75,7 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
   const h = clone();
   Object.assign(feed(h, 'feodo'), { ok: false, status: 503, failing_streak: 4, error: 'HTTP 503' });
   Object.assign(feed(h, 'epss'), { ok: false, status: 503, failing_streak: 3 });
-  feed(h, 'greynoise').failing_streak = 9;
+  feed(h, 'tranco').failing_streak = 9;
   const r = A.evaluate(h, NOW);
   ok(JSON.stringify(titles(r)) === '["Collector: feodo failing"]' && /failing streak of 4 checks/.test(r.problems[0].lines[0]), 'feed streak of 4 on a map feed only ' + titles(r));
   feed(h, 'feodo').failing_streak = 7;
@@ -94,12 +94,6 @@ const minAgo = (m) => new Date(NOW - m * 60000).toISOString();
   Object.assign(feed(h, 'gdelt_doc_api'), { status: 429, ok: false, state: 'down' });
   const r2 = A.evaluate(h, NOW);
   ok(!titles(r2).includes('Collector: ukmto answer changed') && titles(r2).includes('Collector: gdelt_doc_api answer changed'), 'state field wins when present');
-}
-// GreyNoise: retired from the documented gaps on 17 November 2026. It is no map feed either, so neither a recovery nor a
-// failing streak opens an issue; the exposure monitor reports its own lookups.
-{
-  const gn = (o) => { const h = clone(); Object.assign(feed(h, 'greynoise'), o); return titles(A.evaluate(h, NOW)); };
-  ok(!A.KNOWN_GAPS.greynoise && gn({}).length === 0 && gn({ ok: true, status: 200, uptime_24h: 98 }).length === 0 && gn({ ok: false, status: 429, failing_streak: 40 }).length === 0, 'greynoise: no gap, no issue');
 }
 {
   const h = clone();

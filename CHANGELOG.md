@@ -1,5 +1,24 @@
 # Changelog
 
+## 3.3.0 (19 November 2026)
+
+- Retired the sample organizational estate at Sean's instruction: the platform is a public piece and has no client or organization behind it. Removed the Residual risk page and its calculations, the `assets`, `controls` and `exposure_darkweb` datasets (sample rows on documentation IP space and invented coverage figures), the AutoRecon and darknet-mcp-server ingests, the live exposure monitor (`/api/exposure`, `live_exposure`) with its HIBP and GreyNoise health probes, method rules A3b, B8 and B9, and follow-ons FP-002 and FP-007. Defense page and method wording that assumed an organization's own rule inventory, visibility or estate now speaks to any defender. The tabs renumber from 7 (Actors).
+- Carry-forward datasets are now verticals, osint_tools, indicator_rules and chokepoints.
+- Collector 2026-11-19.2 (health probes only).
+
+## 3.2.2 (19 November 2026)
+
+- The Neon console showed the project at 98.2% of its 5 GB monthly transfer while `data_transfer_bytes` read 3.23 GB. The allowance is shared by Postgres, object storage and Functions, and Function egress (what the function sends out, SQL request bodies included) is not in `data_transfer_bytes`. The runs' own `db.sent_kb` showed the sources job sending about 4.2 MB a run (19 MB an hour): every entry of every feed it read, summaries included, with ON CONFLICT dropping the ones already stored. The sources job was paused (its lease held) with Sean's approval on 19 November at 03:10 UTC.
+- The sources job now sends 12 characters of each entry's fingerprint, gets back the ones not stored, and inserts only those. Its result reports `entries` (read) and `new_entries` (sent).
+- Collector 2026-11-19.1.
+
+## 3.2.1 (18 November 2026)
+
+- Measured after 3.2.0 (20:33 to 23:23 UTC): bucket reads 2.1 MB an hour (atlas 0.97, bundle 0.54, triage mirror 0.53, the A1 retrier's settings and bootstrap 0.05), query results 2.35 MB an hour (triage 0.86, of which one six-hourly full mirror refresh was 1.8 MB; sources 0.47; GDELT 0.43; infra 0.31). The meter rose about 5.9 MB an hour against the 6.2 MB an hour that 5 GB allows for the rest of November.
+- GDELT reads the world atlas only when a file arrives to be parsed (half the runs on 18 November found none), and concurrent callers share one atlas read. The triage mirror's full refresh is daily instead of six-hourly; the row count check and the verifier overlay already keep the mirror exact between refreshes.
+- Expected: about 0.7 MB an hour less, so about 5.2 MB an hour, and November near 4.7 GB.
+- Collector 2026-11-18.6.
+
 ## 3.2.0 (18 November 2026)
 
 - Transfer, storage side. Neon's transfer meter counts object storage reads as well as query results. The bucket's GET log for 07:08 to 17:24 UTC on 18 November held 86 MB, about three quarters of the meter's rise over those hours: the world atlas (28.7 MB, 38 reads at 756 KB), the code bundle (23.6 MB, 60 cold starts), the bundle's kept copy (14.9 MB, read back on every cold start to check it was there), the triage mirror (14.8 MB) and the triage evaluation set (2.6 MB). The 3.0.4 mirror had moved the triage window's reads from Postgres to the bucket at a third of the size, so it still saved transfer, though less than its note claimed.

@@ -252,8 +252,13 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(M.gdeltBackoffMs(1) === 900000 && M.gdeltBackoffMs(3) === 3600000 && M.gdeltBackoffMs(9) === 21600000, 'back-off doubles to six hours');
   const files = (await db.query(`SELECT status, count(*)::int AS n FROM ti.gdelt_file GROUP BY 1 ORDER BY 1`)).rows;
   ok(files.find((f) => f.status === 'missing').n === 2 && files.find((f) => f.status === 'ok').n === 286, 'file statuses ' + JSON.stringify(files));
+  // A run with no file to parse never reads the atlas (3.2.1): with the atlas gone from the bucket and none in memory, it
+  // still succeeds; the next run that parses a file reads it again.
+  const atlasKey = 'ti-docs/ref/countries-50m.json', atlasBuf = bucket.get(atlasKey);
+  bucket.delete(atlasKey); M.setGeo(null);
   const again = await M.runJob('gdelt', {});
-  ok(again.ok && again.processed === 0, 'incremental run finds nothing new');
+  ok(again.ok && again.processed === 0, 'incremental run finds nothing new, without reading the atlas ' + JSON.stringify(again.error || ''));
+  bucket.set(atlasKey, atlasBuf);
   // Recheck: a slot recorded missing by the earlier first-404 rule that GDELT now serves is recovered, a few per run.
   const lateSlot = stamp(new Date(latestD.getTime() - 50 * 900000));
   gdelt.set(lateSlot, gdelt.get(LATEST));
@@ -378,7 +383,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(JSON.stringify(h.known_gaps.slice().sort()) === JSON.stringify(GAPS) && !h.down.some((f) => GAPS.includes(f)) && h.down.includes('epss'),
     'known gaps kept out of the down list ' + JSON.stringify({ down: h.down, gaps: h.known_gaps }));
   const hd = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/health.json.gz')).toString());
-  ok(hd.rows.find((x) => x.kind === 'feed' && x.feed === 'epss').failing_streak === 1 && hd.rows.find((x) => x.feed === 'greynoise').ok === true, 'health doc');
+  ok(hd.rows.find((x) => x.kind === 'feed' && x.feed === 'epss').failing_streak === 1 && !hd.rows.some((x) => x.feed === 'greynoise' || x.feed === 'hibp'), 'health doc');
   ok(hd.rows.some((x) => x.kind === 'job' && x.job === 'gdelt'), 'health doc lists jobs');
   const fr = Object.fromEntries(hd.rows.filter((x) => x.kind === 'feed').map((x) => [x.feed, x]));
   ok(fr.marad_msci.state === 'known_gap' && fr.marad_msci.ok === false && /Akamai/.test(fr.marad_msci.gap) && fr.nga_msi.state === 'known_gap' && fr.nga_msi.ok === true
@@ -771,6 +776,12 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   await db.query(`UPDATE ti.feed SET next_at = now() - interval '1 minute'`);
   const s2 = await M.runJob('sources', { holder: 'manual' });
   ok(s2.ok && seenIfNone === 1 && s2.unchanged >= 1 && s2.failed === 0 && (await db.query(`SELECT count(*)::int AS n FROM ti.item`)).rows[0].n === items.length, 'a second read sends the stored ETag and adds no duplicate');
+  // A feed read again in full (no ETag) sends only the entries not stored yet (3.2.2).
+  ok(s1.new_entries === s1.entries && s1.entries > 0, 'a first read sends every entry ' + JSON.stringify({ e: s1.entries, n: s1.new_entries }));
+  await db.query(`UPDATE ti.feed SET next_at = now() - interval '1 minute', etag = NULL, last_modified = NULL`);
+  const s3 = await M.runJob('sources', { holder: 'manual' });
+  ok(s3.ok && s3.entries > 0 && s3.new_entries === 0 && (await db.query(`SELECT count(*)::int AS n FROM ti.item`)).rows[0].n === items.length && s3.db.sent_kb < s1.db.sent_kb,
+    'a full re-read sends no stored entry ' + JSON.stringify({ e: s3.entries, n: s3.new_entries, sent: s3.db.sent_kb, first: s1.db.sent_kb }));
   const sdoc = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/sources.json.gz')).toString());
   ok(sdoc.feeds === 4 && sdoc.feeds_ok === 4 && sdoc.healed === 2 && sdoc.rows.length === 4 && sdoc.rejected === 1, 'the source network document lists every feed and its healed route');
   // Search: whole words, prefixes, phrases; the triage label rides along.
@@ -893,8 +904,6 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(r2.ok && !r2.collapsed, 'without seven days of baseline nothing is called collapsed');
 }
 
-// GreyNoise: retired from the documented gaps on 17 November 2026 after a week of steady answers.
-ok(!M.KNOWN_GAPS.greynoise && M.feedState({ feed: 'greynoise', ok: true, status: 404 }) === 'up' && M.feedState({ feed: 'greynoise', ok: false, status: 429 }) === 'down', 'greynoise is no longer a gap');
 
 // Leases: a held lease skips.
 {

@@ -67,13 +67,12 @@
     <button class="ti-tab" role="tab" id="tab-vectors" data-page="vectors" aria-selected="false"><span class="ti-step">4</span>Vectors</button>
     <button class="ti-tab" role="tab" id="tab-vulnerabilities" data-page="vulnerabilities" aria-selected="false"><span class="ti-step">5</span>Vulnerabilities</button>
     <button class="ti-tab" role="tab" id="tab-ransomware" data-page="ransomware" aria-selected="false"><span class="ti-step">6</span>Ransomware</button>
-    <button class="ti-tab" role="tab" id="tab-residual" data-page="residual" aria-selected="false"><span class="ti-step">7</span>Residual risk</button>
-    <button class="ti-tab" role="tab" id="tab-actors" data-page="actors" aria-selected="false"><span class="ti-step">8</span>Actors</button>
-    <button class="ti-tab" role="tab" id="tab-defense" data-page="defense" aria-selected="false"><span class="ti-step">9</span>Defense</button>
-    <button class="ti-tab" role="tab" id="tab-requirements" data-page="requirements" aria-selected="false"><span class="ti-step">10</span>Requirements</button>
-    <button class="ti-tab" role="tab" id="tab-sources" data-page="sources" aria-selected="false"><span class="ti-step">11</span>Sources</button>
-    <button class="ti-tab" role="tab" id="tab-method" data-page="method" aria-selected="false"><span class="ti-step">12</span>Method</button>
-    <button class="ti-tab" role="tab" id="tab-search" data-page="search" aria-selected="false"><span class="ti-step">13</span>Search &amp; reports</button>
+    <button class="ti-tab" role="tab" id="tab-actors" data-page="actors" aria-selected="false"><span class="ti-step">7</span>Actors</button>
+    <button class="ti-tab" role="tab" id="tab-defense" data-page="defense" aria-selected="false"><span class="ti-step">8</span>Defense</button>
+    <button class="ti-tab" role="tab" id="tab-requirements" data-page="requirements" aria-selected="false"><span class="ti-step">9</span>Requirements</button>
+    <button class="ti-tab" role="tab" id="tab-sources" data-page="sources" aria-selected="false"><span class="ti-step">10</span>Sources</button>
+    <button class="ti-tab" role="tab" id="tab-method" data-page="method" aria-selected="false"><span class="ti-step">11</span>Method</button>
+    <button class="ti-tab" role="tab" id="tab-search" data-page="search" aria-selected="false"><span class="ti-step">12</span>Search &amp; reports</button>
   </nav>
 
   <!-- 1 BRIEF -->
@@ -183,7 +182,7 @@
     </div>
 
     <div class="ti-caveat ti-section" id="blind-spots">
-      <strong>Blind spots.</strong> Open sources only: no human sources, and residual risk depends on the asset and control data you connect. Insider activity is barely visible in open reporting, and zero-day exploitation appears only after disclosure. Leak-site counts show the victims who did not pay, so they understate the total and overstate groups that publish aggressively. Theaters without current reporting hold at their baseline and are flagged for collection. Party and adversary-controlled statements are graded D or lower or shown as claims.
+      <strong>Blind spots.</strong> Open sources only: no human sources, and every level is inherent threat, with no view of any one organization's assets or controls. Insider activity is barely visible in open reporting, and zero-day exploitation appears only after disclosure. Leak-site counts show the victims who did not pay, so they understate the total and overstate groups that publish aggressively. Theaters without current reporting hold at their baseline and are flagged for collection. Party and adversary-controlled statements are graded D or lower or shown as claims.
     </div>
   </section>
 
@@ -581,80 +580,6 @@
 
 
   <!-- RESIDUAL RISK -->
-  <section class="ti-page" id="residual" role="tabpanel" aria-labelledby="tab-residual" hidden>
-    <template>
-      <div class="ti-caveat ti-section" id="resid-banner" hidden><strong>Sample inputs.</strong> The asset inventory and dark-web read below are clearly-labeled sample rows on documentation IP space, so the mechanism is visible before the connectors are wired. The daily run replaces them with your authorized AutoRecon scan output and darknet-mcp-server monitoring results. The dashboard only reads results produced against assets you own or are authorized to test, and holds no scan launcher.</div>
-      <div class="ti-tiles" id="resid-tiles">
-        <div class="ti-tile"><div class="ti-tile-label">Owned assets</div><div class="ti-big" data-source="residual_summary" data-field="assets" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="residual_summary" data-field="internet_facing" data-row="0" data-fill data-fmt="int">—</span> internet-facing</div></div>
-        <div class="ti-tile"><div class="ti-tile-label">Internet-facing, exploited CVE present</div><div class="ti-big" data-source="residual_summary" data-field="at_risk" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="residual_summary" data-field="ransomware_linked" data-row="0" data-fill data-fmt="int">—</span> ransomware-linked</div></div>
-        <div class="ti-tile"><div class="ti-tile-label">Leaked credentials (dark web)</div><div class="ti-big" data-source="residual_summary" data-field="creds" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="residual_summary" data-field="stealer" data-row="0" data-fill data-fmt="int">—</span> infostealer infections</div></div>
-      </div>
-      <div class="ti-card ti-section" id="resid-chart-card">
-        <h3 class="ti-h3">Residual risk by vector <span class="ti-pir">follows the selected vertical</span></h3>
-        <p class="ti-card-note">Residual = inherent (vertical-calibrated vector level) x exposure (owned-asset match and dark-web read) x (1 - control coverage). Asset and control data are what turn the inherent read into residual risk (Thomas p178-183). Change the vertical in the header to recalibrate; hover a bar for the exposure basis.</p>
-        <div class="ti-chart" id="resid-chart" data-source="residual_risk"></div>
-      </div>
-      <div class="ti-card ti-section" id="resid-matrix-card">
-        <h3 class="ti-h3">Residual risk across every vertical</h3>
-        <p class="ti-card-note">Same estate and controls, each vertical's weights applied: the row for the selected vertical is outlined. Read across a row for where that sector's residual exposure concentrates, down a column for which sectors a vector hits hardest.</p>
-        <div class="ti-chart" id="resid-matrix" data-source="residual_risk verticals"></div>
-      </div>
-      <div class="ti-card ti-section" id="resid-assets">
-        <h3 class="ti-h3">Owned assets matched to exploited CVEs</h3>
-        <p class="ti-card-note">AutoRecon inventory joined by vendor and product against KEV and the pre-KEV early-warning list. Internet-facing assets with a match are the residual-risk surface. The join reads the product line and leaves version out, so a match flags exploited CVEs in that product for a version check against the advisory.</p>
-        <div class="ti-tbox"><table class="ti-table" id="tbl-assets" data-source="asset_exposure" data-row-key="host"></table></div>
-      </div>
-      <div class="ti-section ti-stack">
-        <div class="ti-card" id="resid-controls">
-          <h3 class="ti-h3">Control coverage</h3>
-          <p class="ti-card-note">NIST CSF 2.0 coverage per vector, owner-set (0 to 1); the residual column uses the selected vertical. Coverage values change by a reviewed commit to data/authored/controls.json.</p>
-          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-controls" data-source="controls" data-row-key="vector_id"></table></div>
-        </div>
-        <div class="ti-card" id="resid-exposure">
-          <h3 class="ti-h3">Dark-web exposure <span class="ti-pir">darknet-mcp-server</span></h3>
-          <p class="ti-card-note">Breach, infostealer, leak-site, paste and reputation reads for the organization's own domains and egress, from the darknet-mcp-server tools.</p>
-          <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-exposure" data-source="exposure_darkweb" data-row-key="kind"></table></div>
-        </div>
-      </div>
-      <div class="ti-card ti-section" id="resid-live" data-source="live_exposure_summary live_exposure_rows">
-        <h3 class="ti-h3">Live exposure monitor <span class="ti-pir">via threat-feeds</span></h3>
-        <p class="ti-card-note" id="resid-live-note">Pulled in your browser through the threat-feeds service: breaches of your domains (HIBP), leak-site listings that name you or a supplier (ransomware.live), and reputation of your egress IPs (Tor Project, abuse.ch, GreyNoise). It needs a watchlist; until one is set it returns nothing and the sample read above stands.</p>
-        <div class="ti-tools" id="resid-watchlist">
-          <label class="ti-ctl ti-ctl-inline"><span class="ti-ctl-lbl">Your domains</span><input class="ti-input ti-input-sm" id="resid-domains" type="text" placeholder="example.com" aria-label="Your domains"></label>
-          <label class="ti-ctl ti-ctl-inline"><span class="ti-ctl-lbl">Suppliers</span><input class="ti-input ti-input-sm" id="resid-vendors" type="text" placeholder="vendor1.com, vendor2.com" aria-label="Supplier domains"></label>
-          <label class="ti-ctl ti-ctl-inline"><span class="ti-ctl-lbl">Egress IPs</span><input class="ti-input ti-input-sm" id="resid-ips" type="text" placeholder="198.51.100.1" aria-label="Egress IPs"></label>
-          <button class="ti-chip" type="button" id="resid-watch-apply">Monitor</button>
-          <span class="ti-ctl-note" id="resid-watch-note"></span>
-        </div>
-        <div class="ti-tiles" id="resid-live-tiles" hidden>
-          <div class="ti-tile"><div class="ti-tile-label">Your breaches (HIBP)</div><div class="ti-big" data-source="live_exposure_summary" data-field="breaches" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="live_exposure_summary" data-field="breaches_pw" data-row="0" data-fill data-fmt="int">—</span> with passwords</div></div>
-          <div class="ti-tile"><div class="ti-tile-label">Your leak-site listings</div><div class="ti-big" data-source="live_exposure_summary" data-field="org_leaks" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="live_exposure_summary" data-field="org_leaks_year" data-row="0" data-fill data-fmt="int">—</span> in the last year</div></div>
-          <div class="ti-tile"><div class="ti-tile-label">Supplier leak-site listings</div><div class="ti-big" data-source="live_exposure_summary" data-field="supplier_leaks" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub"><span data-source="live_exposure_summary" data-field="suppliers_hit" data-row="0" data-fill data-fmt="int">—</span> suppliers named</div></div>
-          <div class="ti-tile"><div class="ti-tile-label">Egress IPs flagged</div><div class="ti-big" data-source="live_exposure_summary" data-field="ips_flagged" data-row="0" data-fill data-fmt="int">—</div><div class="ti-tile-sub">of <span data-source="live_exposure_summary" data-field="ips" data-row="0" data-fill data-fmt="int">—</span> checked</div></div>
-        </div>
-        <div class="ti-tbox ti-short" id="resid-live-box" hidden><table class="ti-table" id="tbl-resid-live" data-source="live_exposure_rows" data-row-key="rid"></table></div>
-      </div>
-      <div class="ti-card ti-section" id="resid-connectors">
-        <h3 class="ti-h3">How the connectors feed this page</h3>
-        <p class="ti-card-note">Both inputs are results about the organization's own estate. The page reads them; scanning and monitoring run in their own tools, under the operator's authorization.</p>
-        <div class="ti-grid-wide">
-          <dl class="ti-int">
-            <div class="ti-int-row"><dt>AutoRecon</dt><dd>Multi-threaded nmap-based enumeration of targets you own or are authorized to test. It writes per-target nmap XML under <span class="ti-mono">results/&lt;target&gt;/scans/xml/</span>.</dd></div>
-            <div class="ti-int-row"><dt>Ingest</dt><dd><span class="ti-mono">ingest_autorecon.py</span> reads that XML, keeps open ports with a service fingerprint, and joins each host to <span class="ti-mono">scope.csv</span> (address, exposure, site). Hosts missing from the scope file are dropped and listed.</dd></div>
-            <div class="ti-int-row"><dt>Feeds</dt><dd>The <span class="ti-mono">assets</span> dataset: host, port, service, product, version, CPE, exposure, site. The page joins product and CPE to KEV and the pre-KEV early-warning list.</dd></div>
-            <div class="ti-int-row"><dt>Moves</dt><dd>Exploitation exposure: the share of internet-facing services carrying an exploited CVE; ransomware exposure: the ransomware-linked share.</dd></div>
-          </dl>
-          <dl class="ti-int">
-            <div class="ti-int-row"><dt>darknet-mcp-server</dt><dd>Defensive monitoring tools run against the organization's own domains, accounts and egress IPs: <span class="ti-mono">breachList</span>, <span class="ti-mono">breachSearch</span>, <span class="ti-mono">stealer_domain</span>, <span class="ti-mono">ransomwareSearch</span>, <span class="ti-mono">intelx_phonebook</span>, <span class="ti-mono">greynoise_ip</span>, <span class="ti-mono">abuseipdb_check</span>, <span class="ti-mono">tor_search_onion</span>.</dd></div>
-            <div class="ti-int-row"><dt>Ingest</dt><dd><span class="ti-mono">ingest_darknet.py</span> reduces the saved tool results to counts, dates and categories. Credentials, passwords, machine names and email addresses never leave the script, and the validator rejects a row that carries one.</dd></div>
-            <div class="ti-int-row"><dt>Feeds</dt><dd>The <span class="ti-mono">exposure_darkweb</span> dataset: leaked credentials, infostealer infections, leak-site mentions, exposed selectors, flagged egress IPs, onion chatter.</dd></div>
-            <div class="ti-int-row"><dt>Moves</dt><dd>Identity and fraud exposure from stealer infections and leaked credentials; insider exposure from stealer infections; a leak-site mention lifts ransomware exposure directly.</dd></div>
-          </dl>
-        </div>
-      </div>
-    </template>
-  </section>
-
   <!-- 6 ACTORS -->
   <section class="ti-page" id="actors" role="tabpanel" aria-labelledby="tab-actors" hidden>
     <template>
@@ -725,7 +650,7 @@
   <!-- 9 DEFENSE -->
   <section class="ti-page" id="defense" role="tabpanel" aria-labelledby="tab-defense" hidden>
     <template>
-      <p class="ti-lede">Threat-informed defense for <span class="def-vname">the selected vertical</span>: the ATT&amp;CK techniques to defend first under this dashboard's threat model, where public detection and test content runs out, which telemetry and controls cover the most of it, and what to hunt and test next. Public content counts describe what Sigma, Elastic, Splunk and Atomic Red Team have published; the organization's own rule inventory and log coverage decide its real gaps (Bhardwaj p179-182).</p>
+      <p class="ti-lede">Threat-informed defense for <span class="def-vname">the selected vertical</span>: the ATT&amp;CK techniques to defend first under this dashboard's threat model, where public detection and test content runs out, which telemetry and controls cover the most of it, and what to hunt and test next. Public content counts describe what Sigma, Elastic, Splunk and Atomic Red Team have published; a defender's own rule inventory and log coverage decide its real gaps (Bhardwaj p179-182).</p>
       <div class="ti-tiles" id="def-tiles" data-source="defense_summary"></div>
       <div class="ti-grid-wide ti-section">
         <div class="ti-card" id="def-drivers-card">
@@ -736,7 +661,7 @@
         </div>
         <div class="ti-card" id="def-tactics-card">
           <h3 class="ti-h3">Public rule coverage by tactic, weighted by threat use</h3>
-          <p class="ti-card-note">Bar: the share of each tactic's threat use that falls on leaf techniques (sub-techniques, and techniques without any) with at least one Sigma, Elastic or Splunk rule. Tick: the share on techniques with an Atomic Red Team test. ATT&amp;CK read in reverse, as a map of where defenders have the least to start from (Arici 6.3.2). Reconnaissance and Resource Development happen outside the estate, where intelligence collection watches them.</p>
+          <p class="ti-card-note">Bar: the share of each tactic's threat use that falls on leaf techniques (sub-techniques, and techniques without any) with at least one Sigma, Elastic or Splunk rule. Tick: the share on techniques with an Atomic Red Team test. ATT&amp;CK read in reverse, as a map of where defenders have the least to start from (Arici 6.3.2). Reconnaissance and Resource Development happen outside a defender's network, where intelligence collection watches them.</p>
           <div class="ti-chart" id="def-tactics" data-source="defense_tactic_cov"></div>
         </div>
       </div>
@@ -766,20 +691,20 @@
           </div>
           <div class="ti-card" id="def-gaps-card">
             <h3 class="ti-h3">Blind-spot candidates <span class="ti-count" id="def-gaps-count"></span></h3>
-            <p class="ti-card-note">Techniques inside the estate with threat use of 0.15 or more that no public rule or no Atomic test carries. They need in-house detection engineering or a custom test; check them against the organization's own rule inventory first. Reconnaissance and Resource Development happen outside the estate and are watched through intelligence collection, so they are left out here.</p>
+            <p class="ti-card-note">Techniques inside a defender's network with threat use of 0.15 or more that no public rule or no Atomic test carries. They need in-house detection engineering or a custom test; check them against your own rule inventory first. Reconnaissance and Resource Development happen outside a defender's network and are watched through intelligence collection, so they are left out here.</p>
             <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-def-gaps" data-source="defense_priority" data-row-key="key"></table></div>
           </div>
         </div>
       </div>
       <div class="ti-card ti-section" id="def-actors-card">
         <h3 class="ti-h3">In-scope groups and public coverage of their playbooks <span class="ti-count" id="def-actors-count"></span></h3>
-        <p class="ti-card-note">Groups weighing 0.6 or more for <span class="def-vname"></span>: a stated nexus whose theater stands at ThreatCon 3 or more and whose ATT&amp;CK description or MISP entry names one of this vertical's sectors as a target (sector relevance, Tiepolo and Sorensen p573), or a financial motive meeting a Ransomware or Fraud vector at 3 or more. Beside each, the share of its ATT&amp;CK techniques inside the estate that a public rule or an Atomic test covers: overlaying a playbook on coverage shows which steps of its attack path would pass unseen (Bhardwaj p181-182). Pick a group for its first uncovered technique.</p>
+        <p class="ti-card-note">Groups weighing 0.6 or more for <span class="def-vname"></span>: a stated nexus whose theater stands at ThreatCon 3 or more and whose ATT&amp;CK description or MISP entry names one of this vertical's sectors as a target (sector relevance, Tiepolo and Sorensen p573), or a financial motive meeting a Ransomware or Fraud vector at 3 or more. Beside each, the share of its ATT&amp;CK techniques inside a defender's network that a public rule or an Atomic test covers: overlaying a playbook on coverage shows which steps of its attack path would pass unseen (Bhardwaj p181-182). Pick a group for its first uncovered technique.</p>
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-def-actors" data-source="defense_actor_cov" data-row-key="key"></table></div>
       </div>
       <div class="ti-grid-wide ti-section">
         <div class="ti-card" id="def-tele-card">
           <h3 class="ti-h3">Telemetry to collect first</h3>
-          <p class="ti-card-note">ATT&amp;CK v20 data components ranked by the summed priority of the top 100 techniques whose ATT&amp;CK detection analytics read them. This is the public half of a DeTT&amp;CT assessment; scoring the organization's own visibility for each component (-1 to 5 on completeness, timeliness, consistency and retention) turns it into a gap list (Bhardwaj p179-182).</p>
+          <p class="ti-card-note">ATT&amp;CK v20 data components ranked by the summed priority of the top 100 techniques whose ATT&amp;CK detection analytics read them. This is the public half of a DeTT&amp;CT assessment; scoring your own visibility for each component (-1 to 5 on completeness, timeliness, consistency and retention) turns it into a gap list (Bhardwaj p179-182).</p>
           <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-def-tele" data-source="defense_telemetry_rank" data-row-key="key"></table></div>
         </div>
         <div class="ti-card" id="def-cri-card">
@@ -1094,7 +1019,6 @@
 <script src="/js/vulns.js"></script>
 <script src="/js/weapon.js"></script>
 <script src="/js/ransomware.js"></script>
-<script src="/js/residual.js"></script>
 <script src="/js/actors.js"></script>
 <script src="/js/defense.js"></script>
 <script src="/js/reqs.js"></script>

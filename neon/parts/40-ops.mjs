@@ -9,9 +9,7 @@ const PROBES = [
   ['epss', 'https://api.first.org/data/v1/epss?envelope=false&limit=1'],
   ['ransomware_live', 'https://api.ransomware.live/v2/groups'],
   ['cisa_kev', 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json'],
-  ['hibp', 'https://haveibeenpwned.com/api/v3/breaches?domain=adobe.com'],
   ['tor_exits', 'https://check.torproject.org/torbulkexitlist'],
-  ['greynoise', 'https://api.greynoise.io/v3/community/8.8.8.8', [200, 404]],
   ['lanes', 'https://lanes.news/data/temperatures.csv'],
   ['ofac_recent_actions', 'https://ofac.treasury.gov/recent-actions'],
   ['threatcluster', 'https://threatcluster.io/api/darkweb/stats'],
@@ -39,20 +37,16 @@ export const KNOWN_GAPS = {
   ukmto: { expect: [403], note: "UKMTO's Cloudflare rule refuses cloud addresses with HTTP 403 (since 22 Oct 2026); never worked around" },
   nga_msi: { expect: [200, 206, 503], stale: true, note: 'NGA broadcast warnings: the newest warning listed in force was issued 2024-05-10, and since November 2026 the endpoint also answers HTTP 503 at times; the maritime job counts the list as stale and keeps it off the map' },
   gdelt_doc_api: { expect: [429], note: 'The GDELT DOC API rate-limits cloud egress (HTTP 429) and feeds no layer' },
-  // Intermittent: the free lookup sometimes answers (uptime about 80 percent), so a passing check reads "up" and the
-  // alert workflow reports a change only once the feed passes steadily (24-hour uptime of 95 percent or more). To lift
-  // it: set GREYNOISE_API_KEY as a Neon function variable, send it from the probe and the exposure lookups, then remove
-  // this entry and the matching one in .github/workflows/collector-alert.yml (runbook section 6).
 };
 export const KNOWN_GAP_VOLUME = { marad: 'marad_msci', asam: 'nga_asam', navwarn_security: 'nga_msi' };
 // Answer classes (3 November 2026). Some sources refuse cloud egress in more than one way: the GDELT DOC API alternates
-// between HTTP 429 and a timeout, and GreyNoise's free lookup answers 429. A 429, a timeout or a failed fetch (status 0)
+// between HTTP 429 and a timeout. A 429, a timeout or a failed fetch (status 0)
 // is one answer, "refused at cloud egress", so the gap holds while the answer stays in that class; any other answer, an
 // HTTP 200 among them, lifts it. An entry already defined above keeps its own note and fields.
 export const EGRESS_REFUSED = [429, 0];
 KNOWN_GAPS.gdelt_doc_api = { ...KNOWN_GAPS.gdelt_doc_api, expect: EGRESS_REFUSED, answer_class: 'refused at cloud egress (429, timeout or failed fetch)' };
-// GreyNoise left the documented gaps on 17 November 2026: its keyless lookup has answered cloud egress steadily since
-// 10 November. A key (GREYNOISE_API_KEY) is still sent when it is set.
+// The HIBP and GreyNoise probes left on 19 November 2026 with the exposure monitor they served (Sean: the platform is a
+// public piece with no organizational estate).
 // Open-data sources of the cables job (37e-cables.mjs): Overpass's status page and a one-line Wikidata SPARQL ASK, sent
 // with the same identifying User-Agent and an Accept header (overpass-api.de answers a bare request with HTTP 406).
 const OPEN_DATA_HEADERS = (accept) => () => ({ accept, 'user-agent': cableUserAgent(ENV().SEC_USER_AGENT || 'contact not set') });
@@ -60,10 +54,6 @@ const OPEN_DATA_HEADERS = (accept) => () => ({ accept, 'user-agent': cableUserAg
 // while the weekly cables job read the interpreter without trouble (8 and 15 November). That job's own run record is the
 // check; a failed run raises the collector alert.
 PROBES.push(['wikidata', WIKIDATA_SPARQL + '?format=json&query=' + encodeURIComponent('ASK {}'), [200, 206], OPEN_DATA_HEADERS('application/sparql-results+json')]);
-// GreyNoise: with GREYNOISE_API_KEY in the function environment the probe sends it (header "key"); without it the
-// keyless community lookup is used as before. The key lives only here, in the collector's Neon environment.
-export const greynoiseHeaders = () => (ENV().GREYNOISE_API_KEY ? { key: ENV().GREYNOISE_API_KEY, accept: 'application/json' } : { accept: 'application/json' });
-PROBES.find((p) => p[0] === 'greynoise')[3] = greynoiseHeaders;
 // up | down | known_gap for one feed check ({feed, ok, status}). A known-gap feed whose check passes while the gap
 // expects a refusal is "up" (the block lifted); one that fails with an unexpected answer is "down".
 export function feedState(c) {
