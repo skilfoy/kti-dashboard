@@ -35,6 +35,27 @@
       const sel = sec.querySelector('#cm-pir');
       if (sel.options.length === 1) for (const x of pirs) sel.append(h('option', { value: x.pir_id, text: x.pir_id }));
     }
+    const ta = sec.querySelector('#tbl-alerts');
+    if (TI.tableState(ta, ['live_alerts'])) {
+      const all = TI.rows('live_alerts') || [], f = sec.querySelector('#al-pir').value;
+      const rows = all.filter((r) => r.kind === 'alert').map((r) => {
+        const l = TI.list(r.links)[0] || {};
+        return { ...r, first_link: TI.obj(l).link || null, graph: /^(term:)/.test(r.subject) ? null : '#graph?id=' + encodeURIComponent(r.subject) };
+      });
+      const asel = sec.querySelector('#al-pir');
+      if (asel.options.length === 1) for (const x of [...new Set(rows.map((r) => r.pir))].sort()) asel.append(h('option', { value: x, text: x }));
+      TI.table(ta, rows, [
+        { field: 'opened_at', label: 'Opened', fmt: 'date', cls: 'ti-nowrap' },
+        { field: 'pir', label: 'PIR', cls: 'ti-nowrap' },
+        { field: 'headline', label: 'Alert', cls: 'ti-wrap', link: 'first_link' },
+        { field: 'subject_name', label: 'Entity', link: 'graph', hideSm: true },
+        { field: 'p', label: 'Publishers', num: true },
+        { field: 'last_at', label: 'Latest', fmt: 'date', hideSm: true },
+      ], { sort: 'opened_at', dir: 'desc', countEl: sec.querySelector('#al-count'), filter: (r) => !f || r.pir === f, empty: 'No alert in the last 30 days.' });
+      const ws = all.filter((r) => r.kind === 'watch');
+      sec.querySelector('#al-watches').textContent = ws.length ? 'Watches: ' + ws.map((w) => `${w.watch} (${w.pir}) ${w.title}${String(w.waits_for_baseline) === 'true' ? ', starts once the collection has a 14-day baseline' : ''}: ${w.alerts_30d}`).join('; ') + '.' : '';
+      sec.querySelector('#req-alerts-atom').href = '/api/alerts?format=atom' + (f ? '&pir=' + encodeURIComponent(f) : '');
+    }
     const tm = sec.querySelector('#tbl-matrix');
     if (TI.tableState(tm, ['collection_matrix'])) {
       const f = sec.querySelector('#cm-pir').value;
@@ -61,5 +82,5 @@
     }
   });
   dash.onData(() => TI.draw('requirements'));
-  TI.root.addEventListener('input', (ev) => { if (ev.target.id === 'cm-pir') TI.draw('requirements'); });
+  TI.root.addEventListener('input', (ev) => { if (ev.target.id === 'cm-pir' || ev.target.id === 'al-pir') TI.draw('requirements'); });
 })();

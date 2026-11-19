@@ -31,6 +31,8 @@ TYPES.news = { snap: 'news', freshMin: 150, store: true };
 TYPES.cables = { snap: 'cables', freshMin: 8 * 1440 + 120, store: true };
 // The entity graph's summary (3.4.0): rising and new entities, the most named per type and the strongest co-mentions.
 TYPES.entities = { snap: 'entities', freshMin: 120, store: true };
+// Standing watches and change alerts (3.5.0).
+TYPES.alerts = { snap: 'alerts', freshMin: 60, store: true };
 const CABLE_TERMS = { licence: 'ODbL-1.0', licence_url: 'https://opendatacommons.org/licenses/odbl/1-0/', attribution: '© OpenStreetMap contributors',
   attribution_url: 'https://www.openstreetmap.org/copyright', licence_note: '/open-data/cables-LICENSE.txt', coverage: 'partial' };
 function cablesGeojson(doc) {

@@ -28,7 +28,8 @@
     "page:vulnerabilities",
     "page:defense",
     "live_graph",
-    "page:graph"
+    "page:graph",
+    "live_alerts"
    ],
    "url": "https://github.com/cisagov/kev-data",
    "access": "open",
@@ -4623,6 +4624,33 @@
    "health_feed": null,
    "jobs": [
     "entities"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-19",
+   "reviewed": "2026-11-19"
+  },
+  {
+   "id": "standing-watches",
+   "name": "KTI standing watches and change alerts",
+   "owner": "KTI",
+   "category": "Platform",
+   "feeds": [
+    "live_alerts",
+    "page:requirements",
+    "page:graph"
+   ],
+   "url": "https://github.com/skilfoy/kti-dashboard/blob/main/docs/standing-watches.md",
+   "access": "open",
+   "secret": null,
+   "licence": "The project's own; alerts quote entry titles and link to their publishers, who own them",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every 15 minutes (after the entities job)",
+   "health_feed": null,
+   "jobs": [
+    "watch"
    ],
    "status": "live",
    "gap_note": "",

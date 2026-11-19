@@ -124,6 +124,14 @@ CREATE INDEX IF NOT EXISTS mention_eid_published ON ti.mention (eid, published);
 CREATE INDEX IF NOT EXISTS item_seen ON ti.item (seen_at, link);
 CREATE INDEX IF NOT EXISTS advisory_seen ON ti.advisory (seen_at, link);
 INSERT INTO ti.lease (job) VALUES ('entities') ON CONFLICT DO NOTHING;
+-- Standing watches (3.5.0, 37l-watch.mjs): one change alert per watch and subject; kept 120 days after its last entry.
+CREATE TABLE IF NOT EXISTS ti.alert (id text PRIMARY KEY, watch text NOT NULL, pir text, kind text NOT NULL, subject text NOT NULL, subject_name text, subject_type text, title text, headline text,
+  n int NOT NULL DEFAULT 0, p int NOT NULL DEFAULT 0, first_at timestamptz, last_at timestamptz, links jsonb NOT NULL DEFAULT '[]'::jsonb, detail jsonb NOT NULL DEFAULT '{}'::jsonb,
+  opened_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS alert_watch_subject ON ti.alert (watch, subject, last_at);
+CREATE INDEX IF NOT EXISTS alert_subject ON ti.alert (subject);
+CREATE INDEX IF NOT EXISTS alert_opened ON ti.alert (opened_at);
+INSERT INTO ti.lease (job) VALUES ('watch') ON CONFLICT DO NOTHING;
 -- 2026-11-18: pg_stat_statements is enabled on the production database (CREATE EXTENSION pg_stat_statements, as the
 -- owner) to rank the collector's reads by the Postgres transfer they cost (Free plan: 5 GB a month). It is left out of
 -- this file because PGlite, which the tests load this schema into, does not ship it.

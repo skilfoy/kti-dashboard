@@ -662,8 +662,16 @@
       <p class="ti-card-note" id="graph-sum" aria-live="polite">Loading…</p>
       <ul class="ti-gchips" id="graph-hits" hidden></ul>
     </div>
+    <div class="ti-card ti-section" id="graph-watch" hidden>
+      <h3 class="ti-h3">Your watchlist</h3>
+      <p class="ti-card-note">Entities you watch, kept in this browser only. Each visit shows what changed since the last one: new entries, entities named with them for the first time, CVEs added to KEV for a watched vendor or product, and change alerts. The feed link carries the list, so a feed reader follows it without an account.</p>
+      <ul class="ti-gchips" id="gw-list"></ul>
+      <p class="ti-card-note" id="gw-sum" aria-live="polite"></p>
+      <ol class="ti-hits" id="gw-events"></ol>
+      <div class="ti-ractions"><a class="ti-btn" id="gw-atom" href="#">Atom feed</a> <button type="button" class="ti-btn" id="gw-seen">Mark as read</button></div>
+    </div>
     <div class="ti-card ti-section" id="graph-card" hidden>
-      <div class="ti-rhead"><h2 class="ti-h2" id="gc-title"></h2><div class="ti-ractions"><button type="button" class="ti-btn" id="gc-copy">Copy link</button> <button type="button" class="ti-btn" id="gc-close">Close</button></div></div>
+      <div class="ti-rhead"><h2 class="ti-h2" id="gc-title"></h2><div class="ti-ractions"><button type="button" class="ti-btn" id="gc-watch" aria-pressed="false">Watch</button> <button type="button" class="ti-btn" id="gc-copy">Copy link</button> <button type="button" class="ti-btn" id="gc-close">Close</button></div></div>
       <p class="ti-card-note" id="gc-meta"></p>
       <div class="ti-sbars" id="gc-series" aria-hidden="true"></div>
       <div class="ti-grid-wide">
@@ -820,6 +828,13 @@
         <div class="ti-tbox"><table class="ti-table" id="tbl-pirs" data-source="pirs" data-row-key="pir_id"></table></div>
       </div>
       <div class="ti-card ti-section" id="req-detail"></div>
+      <div class="ti-card ti-section" id="req-alerts">
+        <h3 class="ti-h3">Change alerts <span class="ti-pir">machine, unreviewed</span></h3>
+        <p class="ti-card-note">Standing watches turn each requirement's elements of information into rules over the entity graph and CISA KEV, evaluated every 15 minutes: state-attributed actors named with financial or critical-infrastructure targets, extortion groups with financial victims, KEV additions with how many days earlier the collection named the CVE, CVEs outside KEV reported by three or more publishers, identity-abuse techniques, and takedowns, arrests and sanctions. Alerts come from entry titles and are leads to read, not findings. <a id="req-alerts-atom" href="/api/alerts?format=atom">Atom feed</a>.</p>
+        <div class="ti-tools"><select class="ti-select" id="al-pir" aria-label="Requirement"><option value="">All requirements</option></select><span class="ti-count" id="al-count"></span></div>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-alerts" data-source="live_alerts" data-row-key="id"></table></div>
+        <p class="ti-card-note" id="al-watches"></p>
+      </div>
       <div class="ti-card ti-section" id="req-matrix">
         <h3 class="ti-h3">Collection matrix</h3>
         <p class="ti-card-note">Requirement to source traceability (Arici 2.1.2). Gap and planned rows are where collection is missing.</p>

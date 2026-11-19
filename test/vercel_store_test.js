@@ -25,6 +25,9 @@ const docs = {
   'snap-epss': { source: 'FIRST EPSS', generated: iso(20), count: 1, rows: [{ cve: 'CVE-1', epss: 0.9 }] },
   'snap-threatfox': { source: 'abuse.ch ThreatFox', generated: iso(20), count: 2, rows: [{ id: '1' }, { id: '2' }] },
   'snap-lanes': { source: 'Lanes News open data', type: 'lanes', generated: iso(30), latest_date: '2026-10-06', count: 1, rows: [{ conflict: 'russia-ukraine', t7: 0.7 }] },
+  alerts: { source: 'KTI standing watches', generated: iso(5), rows: [{ kind: 'watch', watch: 'W-2A', pir: 'PIR-2' }, { kind: 'alert', id: 'A-1', watch: 'W-2A', pir: 'PIR-2', subject: 'cve:CVE-2026-1111',
+    headline: 'CVE-2026-1111 added to CISA KEV <Ivanti> & more', title: 'CVE added to CISA KEV', opened_at: iso(30), links: [{ link: 'https://a.example/1', title: 'T', host: 'a.example' }] },
+    { kind: 'alert', id: 'A-2', watch: 'W-7A', pir: 'PIR-7', subject: 'actor:G1015', headline: 'Scattered Spider arrests', opened_at: iso(60), links: [] }] },
   'snap-ofac': { source: 'OFAC', type: 'ofac', generated: iso(400), count: 1, rows: [{ id: '20261001', title: 'Old stored action' }] },
 };
 const state = { collectorDown: false, upstreamDown: new Set(), seenAuth: [], puts: [], cyberEmpty: false, enrichUrls: [] };
@@ -40,6 +43,7 @@ global.fetch = async (url, opts = {}) => {
     if (p.startsWith('/doc/')) { const d = docs[decodeURIComponent(p.slice(5))]; return d ? resp(200, zlib.gzipSync(Buffer.from(JSON.stringify(d))), { 'x-doc-modified': 'now' }) : resp(404, { error: 'missing' }); }
     if (p === '/run') return resp(200, { jobs: [{ job: JSON.parse(opts.body).job, ok: true }] });
     if (p === '/status') return resp(200, { version: 'v', runs: [] });
+    if (p === '/watch') { state.watchUrl = u; return resp(200, { since: iso(100), ids: ['actor:G1015'], items: [{ id: 'actor:G1015', n: 'Scattered Spider' }], events: [{ at: iso(10), entity: 'actor:G1015', entity_name: 'Scattered Spider', kind: 'entry', title: 'Arrest', link: 'https://b.example/2', host: 'b.example', via: 'Scattered Spider' }] }); }
     if (p === '/enrich') {
       state.enrichUrls.push(u);
       return resp(200, { ok: true, type: 'hash', q: 'a'.repeat(64), at: iso(0), results: [{ analyzer: 'hashlookup', label: 'CIRCL hashlookup', ok: true, data: { known: false } },
@@ -75,7 +79,7 @@ function call(file, query, headers = { 'x-vercel-oidc-token': 'test.oidc.token' 
   const handler = require(path.join(TF, 'api', file));
   const qs = new URLSearchParams(query).toString();
   return new Promise((resolve) => {
-    const res = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, status(c) { this.code = c; return this; }, send(b) { resolve({ code: this.code, headers: this.headers, body: JSON.parse(b) }); }, end() { resolve({ code: this.code }); } };
+    const res = { headers: {}, setHeader(k, v) { this.headers[k] = v; }, status(c) { this.code = c; return this; }, send(b) { let body = null; try { body = JSON.parse(b); } catch { /* Atom and other text */ } resolve({ code: this.code, headers: this.headers, body, raw: String(b) }); }, end() { resolve({ code: this.code }); } };
     handler({ method, query, headers, url: '/api/' + file.replace('.js', '') + (qs ? '?' + qs : '') }, res);
   });
 }
@@ -274,5 +278,16 @@ function call(file, query, headers = { 'x-vercel-oidc-token': 'test.oidc.token' 
   ok(['203.0.113.9', '198.51.100.4', '185.220.101.7'].every((ip) => r.body.nodes.some((n) => n[1] === ip)), 'public threatmap carries every address');
   r = await call('index.js', { route: 'enrich', type: 'hash', q: 'a'.repeat(64) }, undefined, PUBLIC);
   ok(r.code === 200 && !/keyless/.test(state.enrichUrls.at(-1)) && r.body.results.length === 3, 'public enrichment reads every analyzer');
+  // Standing watches (3.5.0): alerts as JSON filtered by PIR and as Atom; a visitor's watchlist relayed to the collector.
+  r = await call('index.js', { route: 'alerts', pir: 'pir-2' }, undefined, PUBLIC);
+  ok(r.code === 200 && r.body.rows.filter((x) => x.kind === 'alert').length === 1 && r.body.rows.some((x) => x.kind === 'watch'), 'alerts filtered by PIR, watches kept');
+  r = await call('index.js', { route: 'alerts', format: 'atom' }, undefined, PUBLIC);
+  ok(r.code === 200 && /^<\?xml/.test(r.raw) && (r.raw.match(/<entry>/g) || []).length === 2 && r.raw.includes('&lt;Ivanti&gt; &amp; more') && /application\/atom\+xml/.test(r.headers['Content-Type']), 'alerts as an Atom feed, escaped');
+  r = await call('index.js', { route: 'watch', ids: 'actor:G1015,not an id', since: '2026-11-01T00:00:00Z' }, undefined, PUBLIC);
+  ok(r.code === 200 && /ids=actor%3AG1015&days=30&since=2026-11-01/.test(state.watchUrl) && r.body.events.length === 1, 'watchlist relayed with valid ids only ' + state.watchUrl);
+  r = await call('index.js', { route: 'watch', ids: 'actor:G1015', format: 'atom' }, undefined, PUBLIC);
+  ok(r.code === 200 && r.raw.includes('<title>KTI watchlist: Scattered Spider</title>') && r.raw.includes('Scattered Spider: Arrest'), 'watchlist as an Atom feed');
+  r = await call('index.js', { route: 'watch', ids: 'nope' }, undefined, PUBLIC);
+  ok(r.code === 400, 'watchlist needs entity ids');
   console.log(`PASS ${pass} checks`);
 })().catch((e) => { console.error(e); process.exit(1); });

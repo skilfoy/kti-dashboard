@@ -16,8 +16,8 @@ Object.assign(JOBS, { sources: jobSources, reports: jobReports });
 Object.assign(LEASE_S, { sources: 240, reports: 900 });
 // Entity graph (3.4.0, 37k-entities.mjs): every slot, after the sources job, so an entry is in the graph within the slot
 // that collected it.
-Object.assign(JOBS, { entities: jobEntities });
-Object.assign(LEASE_S, { entities: 240 });
+Object.assign(JOBS, { entities: jobEntities, watch: jobWatch });
+Object.assign(LEASE_S, { entities: 240, watch: 180 });
 export async function runJob(job, opts = {}) {
   const fn = JOBS[job];
   if (!fn) return { job, ok: false, error: 'unknown job' };
@@ -71,7 +71,7 @@ export function plan(at) {
     jobs.push('triageeval');
   }
   if (m >= 45) jobs.push('retention', 'fires', 'maritime', 'sources', 'triage');
-  jobs.push('entities');
+  jobs.push('entities', 'watch');
   jobs.push('reports');
   return jobs;
 }
@@ -229,6 +229,10 @@ export default {
       }
       if (req.method === 'GET' && path.startsWith('/report/')) { const r = await getReport(path.slice(8)); return r ? json(r) : json({ error: 'not found' }, 404); }
       if (req.method === 'GET' && path === '/reports') return json({ reports: await listReports(url.searchParams.get('limit')) });
+      if (req.method === 'GET' && path === '/watch') {
+        const r = await watchChanges(url.searchParams.get('ids'), url.searchParams.get('since'), url.searchParams.get('days'));
+        return json(r, r.status && r.error ? r.status : 200);
+      }
       if (req.method === 'GET' && path === '/graph') {
         const sp = url.searchParams, days = sp.get('days');
         const r = sp.get('id') ? await entityCard(sp.get('id'), days) : sp.get('a') ? await entityPair(sp.get('a'), sp.get('b'), days) : sp.get('q') ? await entitySearch(sp.get('q'), sp.get('t') || '', sp.get('limit'))

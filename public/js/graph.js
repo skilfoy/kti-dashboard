@@ -114,6 +114,8 @@
     if (state.open !== id) return;
     if (!r.ok) { $('gc-title').textContent = id; $('gc-meta').textContent = r.status === 404 ? 'The collection has not named this entity yet.' : 'Not available: ' + (r.j.error || 'HTTP ' + r.status); for (const x of ['gc-series', 'gc-rel', 'gc-recent', 'gc-ego']) $(x).innerHTML = ''; $('gc-nb').tBodies[0].innerHTML = ''; return; }
     const c = r.j, e = c.entity, m = e.m || {};
+    state.openName = e.n;
+    $('gc-watch').setAttribute('aria-pressed', String(watched(e.id))); $('gc-watch').textContent = watched(e.id) ? 'Watching' : 'Watch';
     $('gc-title').innerHTML = `<span class="ti-gdot" style="background:${tcol(e.t)}"></span>${esc(e.n)} <span class="ti-pir">${esc(tname(e.t))}</span>`;
     const links = [m.url && `<a href="${esc(safeUrl(m.url))}" rel="noopener" target="_blank">ATT&amp;CK ${esc(m.attack || '')}</a>`, m.malpedia && `<a href="${esc(safeUrl(m.malpedia))}" rel="noopener" target="_blank">Malpedia</a>`,
       e.t === 'cve' && `<a href="https://www.cve.org/CVERecord?id=${encodeURIComponent(e.n)}" rel="noopener" target="_blank">CVE record</a>`, m.kev && `in CISA KEV since ${esc(m.kev)}`,
@@ -149,6 +151,44 @@
     $('gc-pair').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
 
+  // ------------------------------------------------------------ the visitor's watchlist (this browser only)
+  const WKEY = 'kti.watchlist';
+  const wl = {
+    mem: null,
+    get() {
+      let o = wl.mem;
+      try { const raw = localStorage.getItem(WKEY); if (raw) o = JSON.parse(raw); } catch { /* storage refused: the in-page copy */ }
+      o = o || {};
+      return { ids: Array.isArray(o.ids) ? o.ids.slice(0, 25) : [], names: o.names || {}, seen: o.seen || null };
+    },
+    set(o) { try { localStorage.setItem(WKEY, JSON.stringify(o)); } catch { /* storage refused: the list lasts this page view */ } wl.mem = o; },
+  };
+  const watched = (id) => wl.get().ids.includes(id);
+  const toggleWatch = (id, name) => {
+    const o = wl.get();
+    if (o.ids.includes(id)) { o.ids = o.ids.filter((x) => x !== id); delete o.names[id]; } else if (o.ids.length < 25) { o.ids.push(id); o.names[id] = name; if (!o.seen) o.seen = new Date(Date.now() - 7 * 864e5).toISOString(); }
+    wl.set(o);
+    drawWatch();
+  };
+  const drawWatch = async () => {
+    const o = wl.get(), card = $('graph-watch');
+    card.hidden = !o.ids.length;
+    if (state.open) { $('gc-watch').setAttribute('aria-pressed', String(watched(state.open))); $('gc-watch').textContent = watched(state.open) ? 'Watching' : 'Watch'; }
+    if (!o.ids.length) return;
+    $('gw-list').innerHTML = o.ids.map((id) => `<li><a class="ti-gchip" href="#graph?id=${encodeURIComponent(id)}" data-eid="${esc(id)}"><span class="ti-gdot" style="background:${tcol(id.split(':')[0])}"></span>${esc(o.names[id] || id)}</a></li>`).join('');
+    const ids = encodeURIComponent(o.ids.join(','));
+    $('gw-atom').href = `/api/watch?ids=${ids}&format=atom`;
+    $('gw-sum').textContent = 'Checking…';
+    const r = await fetch(`/api/watch?ids=${ids}${o.seen ? '&since=' + encodeURIComponent(o.seen) : ''}`).then((x) => x.json().then((j) => ({ ok: x.ok, j }))).catch((e) => ({ ok: false, j: { error: String(e) } }));
+    if (!r.ok) { $('gw-sum').textContent = 'The watchlist is not available: ' + (r.j.error || 'no answer'); $('gw-events').innerHTML = ''; return; }
+    const ev = r.j.events || [], kinds = { entry: 0, new_partner: 0, kev: 0, alert: 0 };
+    for (const e of ev) kinds[e.kind] = (kinds[e.kind] || 0) + 1;
+    $('gw-sum').textContent = ev.length ? `Since ${day(r.j.since)}: ${kinds.entry} entries, ${kinds.new_partner} first co-mentions, ${kinds.kev} KEV additions, ${kinds.alert} change alerts.` : `Nothing new since ${day(r.j.since)}.`;
+    $('gw-events').innerHTML = ev.slice(0, 40).map((e) => e.kind === 'entry'
+      ? `<li><a href="${esc(safeUrl(e.link))}" rel="noopener" target="_blank">${esc(e.title)}</a> <span class="ti-dim">${esc(e.entity_name)} · ${esc(e.host || '')} · ${esc(day(e.at))}</span></li>`
+      : `<li><strong>${esc({ new_partner: 'New link', kev: 'KEV', alert: 'Alert' }[e.kind] || e.kind)}:</strong> ${e.partner ? `<a href="#graph?id=${encodeURIComponent(e.partner)}" data-eid="${esc(e.partner)}">${esc(e.title)}</a>` : esc(e.title)} <span class="ti-dim">${esc(day(e.at))}</span></li>`).join('');
+  };
+
   // ------------------------------------------------------------ lookup
   let timer = null;
   const lookup = async (q, open) => {
@@ -170,6 +210,8 @@
     wired = true;
     $('graph-form').addEventListener('submit', (e) => { e.preventDefault(); lookup($('graph-q').value, true); });
     $('graph-q').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => lookup($('graph-q').value, false), 250); });
+    $('gc-watch').addEventListener('click', () => { if (state.open) toggleWatch(state.open, state.openName || state.open); });
+    $('gw-seen').addEventListener('click', () => { const o = wl.get(); o.seen = new Date().toISOString(); wl.set(o); drawWatch(); });
     $('gc-close').addEventListener('click', () => { $('graph-card').hidden = true; state.open = null; setHash(null); });
     $('gc-copy').addEventListener('click', () => { const u = location.origin + '/#graph?id=' + encodeURIComponent(state.open || ''); (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => { $('gc-copy').textContent = 'Link copied'; setTimeout(() => ($('gc-copy').textContent = 'Copy link'), 2000); }).catch(() => prompt('Entity link', u)); });
     const page = $('graph');
@@ -183,6 +225,7 @@
     });
     page.addEventListener('keydown', (e) => { const p = e.target.closest && e.target.closest('tr[data-pair]'); if (p && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openPair(p.getAttribute('data-pair')); } });
     overview();
+    drawWatch();
   };
   const fromHash = () => { const m = /^#graph\?id=([^&]+)/.exec(location.hash); if (m) openEntity(decodeURIComponent(m[1])); };
   TI.page('graph', () => { wire(); fromHash(); });

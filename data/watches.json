@@ -1,0 +1,195 @@
+{
+ "version": 1,
+ "description": "Standing watches: the machine half of the priority intelligence requirements. The collector's watch job evaluates each one every 15 minutes over the entity graph (titles of the entries that name an entity) and the KEV catalog, and opens a change alert when a watch fires. Alerts are leads: the daily reassessment opens the entries and cites the publishers. Watches name public threat entities and topics only, never an organization's assets.",
+ "terms": {
+  "financial": "bank|banks|banking|payment|payments|fintech|financial|swift|credit union|crypto exchange|insurer|insurance|brokerage|wealth management|stock exchange",
+  "critical": "critical infrastructure|energy|power grid|grid|electric|electricity|water|telecom|telecoms|telecommunications|pipeline|pipelines|seaport|shipping|utility|utilities|oil|gas|nuclear|rail|railway|airport|airports|hospital|hospitals",
+  "identity": "vishing|help ?desk|helpdesk|service desk|mfa|multi-factor|sim swap|sim-swap|sim swapping|deepfake|deepfakes|it workers?|account takeover|social engineering|callback phishing|okta|sso",
+  "disruption": "takedown|taken down|seized|seizes|seizure|arrest|arrested|arrests|indict|indicted|indictment|charged|charges|sanction|sanctions|sanctioned|extradited|extradition|sentenced|dismantle|dismantled|disrupted|disrupts|guilty|bounty|reward"
+ },
+ "term_labels": {
+  "financial": "financial-sector terms",
+  "critical": "critical-infrastructure terms",
+  "identity": "identity-abuse terms",
+  "disruption": "takedown, arrest, indictment or sanction terms"
+ },
+ "watches": [
+  {
+   "id": "W-1A",
+   "pir": "PIR-1",
+   "kind": "entity_terms",
+   "title": "State-attributed actor named with financial-sector targeting",
+   "select": {
+    "types": [
+     "actor",
+     "extortion"
+    ],
+    "nexus": [
+     "RU",
+     "CN",
+     "IR",
+     "KP"
+    ]
+   },
+   "terms": "financial",
+   "min_publishers": 1,
+   "window_days": 7
+  },
+  {
+   "id": "W-1B",
+   "pir": "PIR-1",
+   "kind": "entity_terms",
+   "title": "Criminal actor named with financial-sector victims",
+   "select": {
+    "types": [
+     "actor",
+     "extortion",
+     "malware"
+    ]
+   },
+   "terms": "financial",
+   "min_publishers": 2,
+   "window_days": 7
+  },
+  {
+   "id": "W-1C",
+   "pir": "PIR-1",
+   "kind": "first_seen",
+   "title": "Actor or extortion group named by the collection for the first time",
+   "select": {
+    "types": [
+     "actor",
+     "extortion"
+    ]
+   },
+   "min_publishers": 2,
+   "baseline": true
+  },
+  {
+   "id": "W-2A",
+   "pir": "PIR-2",
+   "kind": "kev_added",
+   "title": "CVE added to CISA KEV",
+   "window_days": 7
+  },
+  {
+   "id": "W-2B",
+   "pir": "PIR-2",
+   "kind": "cve_surge",
+   "title": "CVE outside KEV reported by three or more publishers in 72 hours",
+   "min_publishers": 3,
+   "window_hours": 72
+  },
+  {
+   "id": "W-3A",
+   "pir": "PIR-3",
+   "kind": "entity_terms",
+   "title": "Extortion group named with a financial-services victim",
+   "select": {
+    "types": [
+     "extortion"
+    ]
+   },
+   "terms": "financial",
+   "min_publishers": 1,
+   "window_days": 7
+  },
+  {
+   "id": "W-3B",
+   "pir": "PIR-3",
+   "kind": "surge",
+   "title": "Extortion group named far more often than its baseline",
+   "select": {
+    "types": [
+     "extortion"
+    ]
+   },
+   "min_publishers": 3,
+   "z": 3,
+   "baseline": true
+  },
+  {
+   "id": "W-5A",
+   "pir": "PIR-5",
+   "kind": "entity_terms",
+   "title": "State-attributed actor named with critical-infrastructure targeting",
+   "select": {
+    "types": [
+     "actor"
+    ],
+    "nexus": [
+     "RU",
+     "CN",
+     "IR",
+     "KP"
+    ]
+   },
+   "terms": "critical",
+   "min_publishers": 1,
+   "window_days": 7
+  },
+  {
+   "id": "W-5B",
+   "pir": "PIR-5",
+   "kind": "entity_category",
+   "title": "Government or CERT publication naming a state-attributed actor",
+   "select": {
+    "types": [
+     "actor"
+    ],
+    "nexus": [
+     "RU",
+     "CN",
+     "IR",
+     "KP"
+    ]
+   },
+   "categories": [
+    "government"
+   ],
+   "min_publishers": 1,
+   "window_days": 7
+  },
+  {
+   "id": "W-6A",
+   "pir": "PIR-6",
+   "kind": "terms",
+   "title": "Identity-abuse and fraud technique in the news",
+   "terms": "identity",
+   "min_publishers": 3,
+   "window_days": 3
+  },
+  {
+   "id": "W-6B",
+   "pir": "PIR-6",
+   "kind": "entity_terms",
+   "title": "Actor named with an identity-abuse technique",
+   "select": {
+    "types": [
+     "actor",
+     "extortion"
+    ]
+   },
+   "terms": "identity",
+   "min_publishers": 1,
+   "window_days": 7
+  },
+  {
+   "id": "W-7A",
+   "pir": "PIR-7",
+   "kind": "entity_terms",
+   "title": "Takedown, arrest, indictment or sanction naming a threat entity",
+   "select": {
+    "types": [
+     "actor",
+     "extortion",
+     "malware",
+     "tool"
+    ]
+   },
+   "terms": "disruption",
+   "min_publishers": 2,
+   "window_days": 7
+  }
+ ]
+}
