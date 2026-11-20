@@ -431,7 +431,7 @@ export async function jobTriage() {
   // Newest first within each kind (blog, advisory, news), the kinds taken in turn, so the news volume cannot starve the
   // CTI blogs and advisories of labelling.
   const cand = await sql(`SELECT link, kind, source, title, published, cves FROM (SELECT c.*, row_number() OVER (PARTITION BY c.kind ORDER BY c.published DESC) AS rn FROM (
-      SELECT i.link, i.category AS kind, coalesce(nullif(i.source, ''), i.host) AS source, i.title, i.published, '[]'::jsonb AS cves FROM ti.item i WHERE i.published > now() - make_interval(hours => $1)
+      SELECT i.link, i.category AS kind, coalesce(nullif(i.source, ''), i.host) AS source, coalesce(i.title_en, i.title) AS title, i.published, '[]'::jsonb AS cves FROM ti.item i WHERE i.published > now() - make_interval(hours => $1)
       UNION ALL SELECT a.link, 'advisory', a.feed, a.title, COALESCE(a.published, a.seen_at), a.cves FROM ti.advisory a WHERE COALESCE(a.published, a.seen_at) > now() - make_interval(hours => $1)) c
     WHERE NOT EXISTS (SELECT 1 FROM ti.triage t WHERE t.link = c.link)) x ORDER BY rn, published DESC LIMIT $2`, [TRIAGE.WINDOW_H, TRIAGE.POOL]);
   const [{ n: waiting }] = await sql(`SELECT (SELECT count(*) FROM ti.item WHERE published > now() - make_interval(hours => $1)) + (SELECT count(*) FROM ti.advisory WHERE COALESCE(published, seen_at) > now() - make_interval(hours => $1))

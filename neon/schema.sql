@@ -150,6 +150,17 @@ CREATE TABLE IF NOT EXISTS ti.foresight (id bigserial PRIMARY KEY, theater_id te
   futures jsonb, failures jsonb NOT NULL DEFAULT '[]'::jsonb, calls jsonb NOT NULL DEFAULT '[]'::jsonb, prompt_v int, created_at timestamptz NOT NULL DEFAULT now());
 CREATE INDEX IF NOT EXISTS foresight_theater ON ti.foresight (theater_id, created_at);
 INSERT INTO ti.lease (job) VALUES ('foresight') ON CONFLICT DO NOTHING;
+-- Non-English collection (3.10.0, 37q-translate.mjs): an English title for entries in other languages, the model that
+-- wrote it and when, and failed attempts (a title is left after two). Translated titles are searched through their own
+-- expression index and read by the entities job in tr_at order.
+ALTER TABLE ti.item ADD COLUMN IF NOT EXISTS title_en text;
+ALTER TABLE ti.item ADD COLUMN IF NOT EXISTS tr_model text;
+ALTER TABLE ti.item ADD COLUMN IF NOT EXISTS tr_at timestamptz;
+ALTER TABLE ti.item ADD COLUMN IF NOT EXISTS tr_fail smallint NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS item_tr ON ti.item (tr_at, link) WHERE tr_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS item_tr_pending ON ti.item (seen_at) WHERE lang <> 'en' AND title_en IS NULL;
+CREATE INDEX IF NOT EXISTS item_tsv_en ON ti.item USING gin (to_tsvector('simple', coalesce(title_en, ''))) WHERE title_en IS NOT NULL;
+INSERT INTO ti.lease (job) VALUES ('translate') ON CONFLICT DO NOTHING;
 -- 2026-11-18: pg_stat_statements is enabled on the production database (CREATE EXTENSION pg_stat_statements, as the
 -- owner) to rank the collector's reads by the Postgres transfer they cost (Free plan: 5 GB a month). It is left out of
 -- this file because PGlite, which the tests load this schema into, does not ship it.
