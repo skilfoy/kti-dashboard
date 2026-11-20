@@ -161,6 +161,18 @@ r = await M.runJob('entities');
 ok(r.read === 1, 'an entry at the watermark instant is read');
 ok((await db.query(`SELECT eid FROM ti.mention WHERE link = 'https://z.example/9' ORDER BY eid`)).rows.map((x) => x.eid).join() === 'actor:G0034,country:UA', 'Sandworm Team and Ukraine');
 
+// A Russian entry matches nothing on its own title; once the translate job stores an English title (3.10.0) the
+// translated source reads it, records the mention and keeps the English title on the entry document.
+await db.query(`INSERT INTO ti.item (link, fp, feed, host, title, summary, published, category, lang, seen_at) VALUES ('https://ru.example/1', 'fpru', 'f', 'ru.example', 'Группировка вымогателей атаковала банк', '', now(), 'cyber-news', 'ru', now() + interval '1 second')`);
+r = await M.runJob('entities');
+ok(r.read === 1 && !(await db.query(`SELECT 1 FROM ti.mention WHERE link = 'https://ru.example/1'`)).rows.length, 'the untranslated Russian title matches nothing ' + JSON.stringify(r.by_source) + JSON.stringify((await db.query(`SELECT eid FROM ti.mention WHERE link = 'https://ru.example/1'`)).rows));
+await db.query(`UPDATE ti.item SET title_en = 'Sandworm Team attacked a bank in Ukraine', tr_model = 'm:free', tr_at = now() WHERE link = 'https://ru.example/1'`);
+r = await M.runJob('entities');
+ok(r.by_source.translated && r.by_source.translated.read === 1 && (await db.query(`SELECT eid FROM ti.mention WHERE link = 'https://ru.example/1' ORDER BY eid`)).rows.map((x) => x.eid).join() === 'actor:G0034,country:UA', 'the translated title is matched ' + JSON.stringify(r.by_source));
+ok((await db.query(`SELECT title, src FROM ti.mdoc WHERE link = 'https://ru.example/1'`)).rows[0].title === 'Sandworm Team attacked a bank in Ukraine', 'the entry document carries the English title');
+r = await M.runJob('entities');
+ok(r.by_source.translated.read === 0, 'the translated watermark holds');
+
 // Site down: the bucket copy (pushed by the operator) serves; without it the job fails and says why.
 siteUp = false;
 r = await M.runJob('entities');
@@ -216,6 +228,6 @@ const s1 = await M.entitySearch('fancy');
 ok(s1.hits[0] && s1.hits[0].id === 'actor:G0007', 'search by alias ' + JSON.stringify(s1.hits[0]));
 const s2 = await M.entitySearch('exchange', 'product');
 ok(s2.hits.length === 1 && s2.hits[0].id === 'product:microsoft:exchangeserver', 'search by type');
-ok(M.plan(new Date('2026-11-19T10:04:00Z')).join() === 'gdelt,infra,snap,sources,entities,watch,foresight,reports' && M.plan(new Date('2026-11-19T10:49:00Z')).slice(-5).join() === 'triage,cyphys,entities,watch,reports', 'entities in every slot, after the sources and triage');
+ok(M.plan(new Date('2026-11-19T10:04:00Z')).join() === 'gdelt,infra,snap,sources,translate,entities,watch,foresight,reports' && M.plan(new Date('2026-11-19T10:49:00Z')).slice(-5).join() === 'triage,cyphys,entities,watch,reports', 'entities in every slot, after the sources and triage');
 
 console.log(`entities_test: ${pass} checks passed`);

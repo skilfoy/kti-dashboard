@@ -211,6 +211,10 @@ const SOURCES_SQL = {
   item: `SELECT link, title, summary, source, host, feed, category, published, seen_at, seen_at::text AS mark_at FROM ti.item WHERE (seen_at, link) > ($1::timestamptz, $2::text) ORDER BY seen_at, link LIMIT $3`,
   advisory: `SELECT link, title, '' AS summary, NULL AS source, NULL AS host, feed, 'vulnerability' AS category, coalesce(published, seen_at) AS published, cves, seen_at, seen_at::text AS mark_at
     FROM ti.advisory WHERE (seen_at, link) > ($1::timestamptz, $2::text) ORDER BY seen_at, link LIMIT $3`,
+  // Non-English entries again, on their English titles once the translate job (37q-translate.mjs) has stored one, in
+  // the order it stored them. The entry document keeps the English title.
+  translated: `SELECT link, title_en AS title, '' AS summary, source, host, feed, category, published, tr_at AS seen_at, tr_at::text AS mark_at
+    FROM ti.item WHERE tr_at IS NOT NULL AND (tr_at, link) > ($1::timestamptz, $2::text) ORDER BY tr_at, link LIMIT $3`,
 };
 export async function jobEntities(opts = {}) {
   const t0 = Date.now(), deadline = t0 + Math.min(ENTITY.BUDGET_MS, opts.budgetMs || ENTITY.BUDGET_MS);
@@ -239,7 +243,7 @@ export async function jobEntities(opts = {}) {
         for (const c of Array.isArray(r.cves) ? r.cves : []) if (/^CVE-\d{4}-\d{4,7}$/i.test(c)) f.set('cve:' + String(c).toUpperCase(), String(c).toUpperCase());
         if (!f.size) continue;
         const host = r.host || hostOf(r.link), pub = r.published || r.seen_at;
-        docs.push({ link: r.link, src, feed: r.feed, host, title: String(r.title || '').slice(0, 400), published: pub, category: r.category });
+        docs.push({ link: r.link, src: src === 'translated' ? 'item' : src, feed: r.feed, host, title: String(r.title || '').slice(0, 400), published: pub, category: r.category });
         for (const [eid, via] of f) {
           ments.push({ eid, link: r.link, published: pub, host, via: String(via).slice(0, 80) });
           if (!G.ents.has(eid) || eid.startsWith('country:')) fresh.add(eid);
@@ -247,7 +251,8 @@ export async function jobEntities(opts = {}) {
       }
       const st = [];
       if (docs.length) st.push([`INSERT INTO ti.mdoc (link, src, feed, host, title, published, category) SELECT link, src, feed, host, title, published, category
-        FROM jsonb_to_recordset($1::jsonb) AS x(link text, src text, feed text, host text, title text, published timestamptz, category text) ON CONFLICT (link) DO NOTHING`, [docs]]);
+        FROM jsonb_to_recordset($1::jsonb) AS x(link text, src text, feed text, host text, title text, published timestamptz, category text)
+        ON CONFLICT (link) DO ${src === 'translated' ? 'UPDATE SET title = EXCLUDED.title' : 'NOTHING'}`, [docs]]);
       if (ments.length) st.push([`INSERT INTO ti.mention (eid, link, published, host, via) SELECT eid, link, published, host, via
         FROM jsonb_to_recordset($1::jsonb) AS x(eid text, link text, published timestamptz, host text, via text) ON CONFLICT DO NOTHING`, [ments]]);
       // CVEs outside KEV and countries are entities the gazetteer does not list: they are added on first mention.

@@ -1,5 +1,30 @@
 # Changelog
 
+## 3.10.0 (20 November 2026)
+
+- **Language per entry.** Every entry now carries the language of its own title and summary (`detectLang`, 37q-translate.mjs), identified by script and, for Latin text, by function words and particular letters. It covers 26 languages and falls back to the feed's tag. Previously the tag was the feed's, from five scripts: Japanese was stored as zh, Ukrainian as ru, Urdu as ar, and German, French, Spanish, Hebrew and Hindi query feeds as en. `pipeline/feeds_build.py` uses the same rules for feed tags, and `test/fixtures/lang_samples.json` keeps the two in step.
+- **Title translation.** The new `translate` job runs in every slot that reads sources, between `sources` and `entities`. It translates non-English titles of the last 48 hours, cyber first, in batches of 40 on the reports' free models, with 200 requests a day. A translation is stored in `ti.item.title_en` only when:
+  - each line is answered once;
+  - the text is mostly Latin letters;
+  - the length is plausible;
+  - CVE ids and long numbers are kept;
+  - it differs from a non-Latin source.
+
+  A title that fails twice is left untranslated.
+- **Uses of the English titles:**
+  - the entities job reads them as a third source, and entry documents carry the English title;
+  - triage labels the English title;
+  - search matches it through `item_tsv_en`, and the Search page leads with the translation, marked, with the original beside it;
+  - the Sources page gives the day's languages and the translated share.
+- **New sources in their own language** (validated by the registry rebuild):
+  - 5 national CERTs and agencies (JPCERT/CC, CERT Polska, BSI, INCIBE-CERT, NCSC-NL);
+  - 15 security outlets;
+  - 23 theater press feeds (BBC World Service and DW language services, Yonhap, NHK, Liberty Times, Ynet), each with its theater;
+  - 9 more cyber queries on Google News;
+  - 21 Google News theater queries in the theaters' own languages (`gnews_topics_theater_lang`).
+  - Core feed rows may carry a theater id.
+- Collector 2026-11-20.3. Schema: `ti.item` gains `title_en`, `tr_model`, `tr_at` and `tr_fail`, with the indexes `item_tr`, `item_tr_pending` and `item_tsv_en`, and the lease row `translate`.
+
 ## 3.9.0 (20 November 2026)
 
 - Threatcasting. The new `foresight` job runs in the :04 slot and drafts one theater at ThreatCon 4 or above at a time, at most eight sets a day. It writes three futures over six months: escalation, continuation and de-escalation (Suryavanshi ch10).
