@@ -72,7 +72,10 @@
       const h = g[0], also = [...new Set(g.slice(1).map((x) => x.source || x.host))].filter(Boolean);
       const chips = [CATS[h.category] || h.category, h.theater && h.theater !== 'T-GLB' ? h.theater : '', h.vector || '', h.relevance != null ? 'triage: ' + relLabel(h.relevance) : ''].filter(Boolean);
       const snip = String(h.snippet || '').replace(/«/g, '\u0001').replace(/»/g, '\u0002');
-      return `<li class="ti-hit${h.relevance >= 2 ? ' ti-hit-hot' : ''}"><div class="ti-hit-t"><a href="${esc(safeUrl(h.link))}" target="_blank" rel="noopener noreferrer">${hl(h.title, ts, 400)}</a></div>
+      // A non-English entry leads with its machine translation; the original title follows (3.10.0).
+      const tr = h.title_en && h.lang && h.lang !== 'en';
+      return `<li class="ti-hit${h.relevance >= 2 ? ' ti-hit-hot' : ''}"><div class="ti-hit-t"><a href="${esc(safeUrl(h.link))}" target="_blank" rel="noopener noreferrer"${tr ? ` lang="en"` : h.lang && h.lang !== 'en' ? ` lang="${esc(h.lang)}"` : ''}>${hl(tr ? h.title_en : h.title, ts, 400)}</a></div>
+        ${tr ? `<div class="ti-hit-o"><span class="ti-tag" title="Machine translation of the publisher's title, unreviewed">translated from ${esc(h.lang)}</span> <span lang="${esc(h.lang)}">${esc(String(h.title).slice(0, 300))}</span></div>` : ''}
         <div class="ti-hit-m">${esc(h.source || h.host || '')} · ${esc(day(h.published))} <span class="ti-dim">(${esc(ago(h.published))})</span>${also.length ? ` · also carried by ${esc(also.slice(0, 5).join(', '))}${also.length > 5 ? ' and ' + (also.length - 5) + ' more' : ''}` : ''}</div>
         ${snip.trim() ? `<div class="ti-hit-s">${esc(snip).replace(/\u0001/g, '<mark>').replace(/\u0002/g, '</mark>')}</div>` : ''}
         <div class="ti-hit-c">${chips.map((c) => `<span class="ti-tag">${esc(c)}</span>`).join('')}${TI.list(h.entities).slice(0, 8).map((e) => Array.isArray(e) ? ` <a class="ti-tag ti-tag-ent" href="#graph?id=${encodeURIComponent(e[0])}" title="Open ${esc(e[1])} in the entity graph">${esc(e[1])}</a>` : '').join('')}${h.why ? ` <span class="ti-dim">${esc(h.why)}</span>` : ''}</div></li>`;

@@ -143,7 +143,7 @@ ok(w.events.some((e) => e.kind === 'kev') && w.events.some((e) => e.kind === 'en
 const w2 = await M.watchChanges('actor:G0007', day(30));
 ok(w2.items[0].new_partners.some((p) => p.id === 'malware:S0154') === false && w2.items[0].entries === 3, 'partners: only co-mentions in the entries (none here)');
 ok((await M.watchChanges('', day(1))).status === 400, 'ids required');
-ok(M.plan(new Date('2026-11-19T10:04:00Z')).join() === 'gdelt,infra,snap,sources,entities,watch,foresight,reports', 'watch runs after entities in every slot');
+ok(M.plan(new Date('2026-11-19T10:04:00Z')).join() === 'gdelt,infra,snap,sources,translate,entities,watch,foresight,reports', 'watch runs after entities in every slot');
 
 // ---------------------------------------------------------------- track record (37m-score.mjs)
 {

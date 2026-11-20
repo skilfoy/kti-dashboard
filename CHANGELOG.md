@@ -1,11 +1,56 @@
 # Changelog
 
-## 3.9.1 (20 November 2026)
+## 3.10.4 (20 November 2026)
 
 - Maritime: NGA's Maritime Safety Information portal has answered every API request with HTTP 503 and a maintenance page since November, and MARAD and UKMTO still refuse the collector, so every maritime run since 3 November failed with "no source answered". While the broadcast-warning API does not answer, the job now reads the same warnings from NGA's daily memoranda: one plain-text file per area (NAVAREA IV and XII, HYDROLANT, HYDROPAC, HYDROARC), linked from the maintenance page. The memoranda go through the same categories, positions, theaters and staleness check as the API. A file that is not plain text, such as the maintenance page, is not read as warnings. The NAVWARN source record names the memoranda read and the API's status.
 - Triage: `particle-ai/particle-1:free` no longer leads the model list. In the 48 hours to 20 November it failed 43 of 102 requests, 25 of them at the 75-second deadline. ERNIE 5.5 Flash and Nemotron 3.5 Super now lead, with the free router last.
 - Triage: the labelling budget now bounds the run. A batch or a plain retry is sent only when a full request deadline still fits inside the 200-second labelling budget, and the credited tier's verifier only when its request fits inside 240 seconds. Before this, the budget only gated the start of a batch, and runs reached 344 seconds and delayed the :49 jobs after them. A run that stops for time records `time_budget_spent`.
-- Collector 2026-11-20.3.
+- Collector 2026-11-20.6.
+
+## 3.10.3 (20 November 2026)
+
+- Translation: an HTTP 429 now passes the batch to the next free model instead of ending the run. Two of the first four runs met a 429 on the first model and translated nothing more. The run stops on a 429 only when every model answers one, and on 401 or 402 at once. Up to four models are tried a batch.
+- Collector 2026-11-20.5.
+
+## 3.10.2 (20 November 2026)
+
+- Translation timing, from the first live run. That run translated 80 of 80 titles cleanly, and the translated source produced 5 mentions. But it ran 285 seconds against a 110-second budget, because three models were each tried for up to 65 seconds on the third batch. It also counted those timeouts as failures against 40 titles.
+  - Each request now gets what is left of the run (at most 75 seconds), and none starts with less than 20 seconds left. Requests ask for low reasoning effort and a 6,000-token answer.
+  - A batch counts a failure against its titles only when a model answered and nothing readable came back. Timeouts, refusals and the run's own deadline count nothing. The 40 miscounted titles were reset.
+- `orChat` takes request overrides.
+- Collector 2026-11-20.4.
+
+## 3.10.1 (20 November 2026)
+
+- Source registry rebuild, from the first rebuild with the native-language sources (863 to 919 feeds):
+  - **Language services.** The three-feeds-a-host cap had dropped 13 BBC World Service and DW language services as "fourth feed of one host", and with them the existing BBC News (World) feed. Those hosts now count each language service as its own publication, and the cap never drops a core feed.
+  - **Transient failures.** A feed the last registry kept that meets only a transient failure (no answer, HTTP 429 or a 5xx) is carried over for one rebuild and marked `carried`. The rebuild had dropped r/netsec, r/blueteamsec and r/threatintel on a 429.
+  - **Branch names.** Rebuild branches carry the time, so a second rebuild on one day does not collide with the first.
+
+## 3.10.0 (20 November 2026)
+
+- **Language per entry.** Every entry now carries the language of its own title and summary (`detectLang`, 37q-translate.mjs), identified by script and, for Latin text, by function words and particular letters. It covers 26 languages and falls back to the feed's tag. Previously the tag was the feed's, from five scripts: Japanese was stored as zh, Ukrainian as ru, Urdu as ar, and German, French, Spanish, Hebrew and Hindi query feeds as en. `pipeline/feeds_build.py` uses the same rules for feed tags, and `test/fixtures/lang_samples.json` keeps the two in step.
+- **Title translation.** The new `translate` job runs in every slot that reads sources, between `sources` and `entities`. It translates non-English titles of the last 48 hours, cyber first, in batches of 40 on the reports' free models, with 200 requests a day. A translation is stored in `ti.item.title_en` only when:
+  - each line is answered once;
+  - the text is mostly Latin letters;
+  - the length is plausible;
+  - CVE ids and long numbers are kept;
+  - it differs from a non-Latin source.
+
+  A title that fails twice is left untranslated.
+- **Uses of the English titles:**
+  - the entities job reads them as a third source, and entry documents carry the English title;
+  - triage labels the English title;
+  - search matches it through `item_tsv_en`, and the Search page leads with the translation, marked, with the original beside it;
+  - the Sources page gives the day's languages and the translated share.
+- **New sources in their own language** (validated by the registry rebuild):
+  - 5 national CERTs and agencies (JPCERT/CC, CERT Polska, BSI, INCIBE-CERT, NCSC-NL);
+  - 15 security outlets;
+  - 23 theater press feeds (BBC World Service and DW language services, Yonhap, NHK, Liberty Times, Ynet), each with its theater;
+  - 9 more cyber queries on Google News;
+  - 21 Google News theater queries in the theaters' own languages (`gnews_topics_theater_lang`).
+  - Core feed rows may carry a theater id.
+- Collector 2026-11-20.3. Schema: `ti.item` gains `title_en`, `tr_model`, `tr_at` and `tr_fail`, with the indexes `item_tr`, `item_tr_pending` and `item_tsv_en`, and the lease row `translate`.
 
 ## 3.9.0 (20 November 2026)
 

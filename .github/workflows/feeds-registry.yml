@@ -47,7 +47,7 @@ jobs:
           OLD: ${{ steps.decide.outputs.old }}
           NEW: ${{ steps.decide.outputs.new }}
         run: |
-          br="feeds-registry-$(date -u +%Y%m%d)"
+          br="feeds-registry-$(date -u +%Y%m%d-%H%M)"
           git config user.name "kti-bot"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "$br"; git add data/feeds.json
           git commit -m "Source network registry: $OLD to $NEW feeds (weekly rebuild)"

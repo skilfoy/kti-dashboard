@@ -326,6 +326,14 @@
         { field: 'items', label: 'Entries', num: true, fmt: 'int' },
       ], { sort: 'vendor', empty: 'No feeds were read.' });
     }
+    // Non-English entries (3.10.0): the languages of the last 24 hours and how many titles the translate job has put
+    // into English, from the collector's translate:status.
+    const translationLine = (m) => {
+      const t = TI.obj(m.translation), langs = TI.list(t.langs_24h).filter((l) => l && l.lang && l.lang !== 'en');
+      if (!langs.length) return '';
+      const n = langs.reduce((a, l) => a + (+l.n || 0), 0), tr = langs.reduce((a, l) => a + (+l.translated || 0), 0);
+      return `In the last 24 hours ${int(n)} entries arrived in ${langs.length} other languages (${langs.slice(0, 10).map((l) => `${l.lang} ${int(l.n)}`).join(', ')}); ${int(tr)} carry a machine translation of the title, checked before it is stored and used for search, entity matching and triage. `;
+    };
     // Source network (3.0): every feed the collector reads, its state, and how a failing feed was healed.
     const tn = sec.querySelector('#tbl-network');
     if (tn && TI.tableState(tn, ['live_sources'])) {
@@ -334,7 +342,7 @@
       setCount(sec, 'network-asof', fresh(m));
       note(sec, 'network-sum', `${int(m.feeds)} feeds (${Object.entries(cats).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${int(v)} ${k}`).join(', ')}); ${int(m.feeds_ok)} answered at their last read, `,
         `${int(m.healed)} through a healed route (${Object.entries(via).filter(([k]) => k && k !== 'null' && k !== 'primary').map(([k, v]) => `${k} ${int(v)}`).join(', ') || 'none'}). `,
-        `${int(m.items_24h)} entries in 24 hours and ${int(m.items_45d)} in 45 days, from ${int(m.publishers)} publishers, all searchable on the Search page. `, m.method || '', ' ', m.terms || '');
+        `${int(m.items_24h)} entries in 24 hours and ${int(m.items_45d)} in 45 days, from ${int(m.publishers)} publishers, all searchable on the Search page. `, translationLine(m), m.method || '', ' ', m.terms || '');
       TI.table(tn, kindRows('live_sources', 'feed'), [
         { field: 'name', label: 'Feed', link: 'url', cls: 'ti-wrap' },
         { field: 'category', label: 'Category' },

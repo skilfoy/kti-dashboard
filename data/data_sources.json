@@ -4763,6 +4763,32 @@
    "source_ids": [],
    "added": "2026-11-20",
    "reviewed": "2026-11-20"
+  },
+  {
+   "id": "title-translation",
+   "name": "KTI title translation for non-English entries (free hosted models, deterministic checks)",
+   "owner": "KTI",
+   "category": "Platform",
+   "feeds": [
+    "live_sources",
+    "page:sources"
+   ],
+   "url": "https://github.com/skilfoy/kti-dashboard/blob/main/neon/parts/37q-translate.mjs",
+   "access": "open",
+   "secret": null,
+   "licence": "Machine translations of the publishers' own titles, shown beside the original and linked to it",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every slot before the entities job: up to 160 titles a run, 200 requests a day",
+   "health_feed": null,
+   "jobs": [
+    "translate"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-20",
+   "reviewed": "2026-11-20"
   }
  ]
 }

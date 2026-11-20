@@ -145,6 +145,12 @@ Send a short summary (SendUserMessage when available): this run's change-log eve
 - A proposed indicator in a future is a suggestion only. Add it to theater_indicators and indicator_rules yourself if it earns a place; the job never writes either.
 - Futures carry no probability. Forecasts with probabilities stay in the judgments and the outcome ledger.
 
+## 8h. Non-English collection (3.10.0)
+
+- Entries carry their own language. The `translate` job puts non-English titles into English with free models, checked before they are stored. Search, entity matching and triage use the English title. Details: docs/non-english.md.
+- In section 2, cite a non-English item by its original title and link. Where its English rendering matters to the judgment, say that the translation is a machine translation. If the reading turns on the translation, check it against the original or a second source first.
+- A new native-language source enters through data/sources/core.json and the registry rebuild (feeds-registry workflow, weekly or on dispatch), which keeps only feeds that answer.
+
 ## 8. Site, service and collector operations (outside the daily run)
 - Layout: `public/` is the static site (page, runtime, styles, vendored d3; `public/data` and `public/site.json` are built, never committed); `api/` and `lib/` are the threat-feeds service (Vercel functions); `neon/` is the collector; `pipeline/` builds the data; `data/authored/` is the analyst-authored data; `test/` holds the offline, browser and smoke tests.
 - Domain: intel.kilfoycyber.com is a CNAME at Squarespace (kilfoycyber.com's DNS host) to the Vercel target the workflow's "Attach the public domain" step reports; the step attaches the domain to the project if it is missing.

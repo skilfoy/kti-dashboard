@@ -537,3 +537,4 @@ mark { background: color-mix(in srgb, var(--ti-elev) 40%, transparent); color: i
 .ti-fs-list { margin: 2px 0 4px; padding-left: 1.2em; font-size: var(--cds-font-size-caption); }
 .ti-fs-met { color: var(--color-fg-muted); }
 .ti-fs-met.ti-fs-met { font-variant-numeric: tabular-nums; }
+.ti-hit-o { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 2px 0; }
