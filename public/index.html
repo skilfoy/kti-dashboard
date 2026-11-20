@@ -192,7 +192,7 @@
     <template>
       <div class="ti-section" id="map-sec">
         <h2 class="ti-h2">World threat map <span class="ti-pir">PIR-4</span></h2>
-        <p class="ti-lede">One picture of the kinetic and cyber situation. Theaters sit at their locations, colored by ThreatCon calibrated for the selected vertical. Live layers add reported botnet C2 servers, ThreatFox IOC endpoints, DShield scanning sources and URLhaus malware hosts by IP geolocation, cyberattacks disclosed in the press at the victim's country, GDELT armed-conflict arcs from the actor's location to the action, IODA internet disruptions and, on request, attributed state-nexus targeting. Hover anything for its record, click for the source, and use Replay to re-run the last 24 hours in reported order.</p>
+        <p class="ti-lede">One picture of the kinetic and cyber situation. Theaters sit at their locations, colored by ThreatCon calibrated for the selected vertical. Live layers add reported botnet C2 servers, ThreatFox IOC endpoints, DShield scanning sources and URLhaus malware hosts by IP geolocation, cyberattacks disclosed in the press at the victim's country, GDELT armed-conflict arcs from the actor's location to the action, IODA internet disruptions and, on request, attributed state-nexus targeting and the submarine cables OpenStreetMap maps (partial coverage). Hover anything for its record, click for the source, and use Replay to re-run the last 24 hours in reported order.</p>
         <div class="ti-tools" role="group" aria-label="Country shading">
           <span class="ti-tool-lbl">Shade:</span>
           <button class="ti-chip" type="button" id="map-theater" aria-pressed="true">Theater level</button>
@@ -211,6 +211,7 @@
           <button class="ti-chip ti-chip-out" type="button" id="map-outages" aria-pressed="true">Internet outages</button>
           <button class="ti-chip ti-chip-fire" type="button" id="map-fires" aria-pressed="true" title="NASA FIRMS VIIRS thermal anomalies in the kinetic theaters, last 24 hours">Thermal anomalies</button>
           <button class="ti-chip ti-chip-att" type="button" id="map-attrib" aria-pressed="false">Attribution arcs</button>
+          <button class="ti-chip ti-chip-cab" type="button" id="map-cables" aria-pressed="false" title="Submarine cables and landing stations from OpenStreetMap, partial coverage, updated weekly. © OpenStreetMap contributors (ODbL)">Submarine cables</button>
         </div>
         <div class="ti-tools" role="group" aria-label="Live layer options">
           <span class="ti-tool-lbl">Options:</span>

@@ -300,21 +300,21 @@
    variants are lighter so they read on dark ground, and wall mode always runs dark. */
 .ti {
   --pew-c2: #c92a3a; --pew-ioc: #d9661f; --pew-src: #b58700; --pew-url: #7446d4; --pew-out: #0a8799; --pew-mass: #a3168f;
-  --pew-cn: #c2185b; --pew-ru: #1f68d1; --pew-ir: #2b8f44; --pew-kp: #8a3fb0; --pew-oth: #7d7a72; --pew-atk: #4f8a10; --pew-fire: #d9480f;
+  --pew-cn: #c2185b; --pew-ru: #1f68d1; --pew-ir: #2b8f44; --pew-kp: #8a3fb0; --pew-oth: #7d7a72; --pew-atk: #4f8a10; --pew-fire: #d9480f; --pew-cab: #4d6a8a;
 }
 @media (prefers-color-scheme: dark) {
   .ti:not([data-theme="light"]) {
     --pew-c2: #ff5a64; --pew-ioc: #ff9748; --pew-src: #f5c840; --pew-url: #b08cff; --pew-out: #40cfe0; --pew-mass: #ff58d5;
-    --pew-cn: #ff6f9f; --pew-ru: #63a3ff; --pew-ir: #63d27f; --pew-kp: #c88af0; --pew-oth: #a8a59c; --pew-atk: #a8e05f; --pew-fire: #ff8a3d;
+    --pew-cn: #ff6f9f; --pew-ru: #63a3ff; --pew-ir: #63d27f; --pew-kp: #c88af0; --pew-oth: #a8a59c; --pew-atk: #a8e05f; --pew-fire: #ff8a3d; --pew-cab: #8fb0d4;
   }
 }
 .ti[data-theme="dark"], .ti .ti-pew-card.ti-wall {
   --pew-c2: #ff5a64; --pew-ioc: #ff9748; --pew-src: #f5c840; --pew-url: #b08cff; --pew-out: #40cfe0; --pew-mass: #ff58d5;
-  --pew-cn: #ff6f9f; --pew-ru: #63a3ff; --pew-ir: #63d27f; --pew-kp: #c88af0; --pew-oth: #a8a59c; --pew-atk: #a8e05f; --pew-fire: #ff8a3d;
+  --pew-cn: #ff6f9f; --pew-ru: #63a3ff; --pew-ir: #63d27f; --pew-kp: #c88af0; --pew-oth: #a8a59c; --pew-atk: #a8e05f; --pew-fire: #ff8a3d; --pew-cab: #8fb0d4;
 }
 .ti[data-theme="light"] {
   --pew-c2: #c92a3a; --pew-ioc: #d9661f; --pew-src: #b58700; --pew-url: #7446d4; --pew-out: #0a8799; --pew-mass: #a3168f;
-  --pew-cn: #c2185b; --pew-ru: #1f68d1; --pew-ir: #2b8f44; --pew-kp: #8a3fb0; --pew-oth: #7d7a72; --pew-atk: #4f8a10; --pew-fire: #d9480f;
+  --pew-cn: #c2185b; --pew-ru: #1f68d1; --pew-ir: #2b8f44; --pew-kp: #8a3fb0; --pew-oth: #7d7a72; --pew-atk: #4f8a10; --pew-fire: #d9480f; --pew-cab: #4d6a8a;
 }
 .ti-h4 { font-size: var(--cds-font-size-caption); font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); margin: var(--cds-gap-md) 0 var(--cds-gap-xs); text-transform: uppercase; letter-spacing: 0.04em; }
 .ti-select-sm { padding: 1px 6px; font-size: var(--cds-font-size-caption); max-width: 15rem; }
@@ -325,6 +325,7 @@
 .ti-chip-url::before { background: var(--pew-url); } .ti-chip-flow::before { background: var(--ti-crit); border-radius: 1px; height: 3px; width: 12px; vertical-align: 2px; }
 .ti-chip-out::before { background: none; border: 2px solid var(--pew-out); width: 6px; height: 6px; } .ti-chip-att::before { background: none; border-top: 2px dashed var(--pew-ru); border-radius: 0; height: 0; width: 12px; vertical-align: 3px; }
 .ti-chip-fire::before { background: var(--pew-fire); border-radius: 0; width: 6px; height: 6px; }
+.ti-chip-cab::before { content: ''; display: inline-block; margin-right: 5px; background: var(--pew-cab); border-radius: 1px; height: 2px; width: 12px; vertical-align: 3px; opacity: 0.35; }
 .ti-chip-atk::before { background: var(--pew-atk); border-radius: 1px; width: 7px; height: 7px; transform: rotate(45deg); }
 .ti-chip[aria-pressed="true"]::before { opacity: 1; }
 

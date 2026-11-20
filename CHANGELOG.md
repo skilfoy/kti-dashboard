@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.8.1 (20 November 2026)
+
+- Map: a Submarine cables layer, off by default. It draws the collector's weekly OpenStreetMap snapshot of submarine cables and landing stations (`/api/context?type=cables&format=geojson`), which the page reads only the first time the layer is switched on.
+- Cables sit beneath every other layer as thin lines in their own colour, with landing stations as hollow points. Hovering a cable names it and shows its OSM operator and, where one Wikidata item matched by exact name, the owners, length and service or inception year. Clicking it highlights the whole cable and links the OpenStreetMap way and the Wikidata item.
+- Every view of the layer says that coverage is partial, and the chip, tooltip and legend carry "© OpenStreetMap contributors" (ODbL), with the legend linking OSM's copyright page.
+- The layer draws on the flat map only. With the globe on, its HUD row says so.
+- No collector or service change.
 ## 3.8.0 (19 November 2026)
 
 - Sigma detection drafts. The new `sigma` job runs in the :34 slot and drafts at most one subject an hour and six a day. A subject is a malware family, tool, actor, campaign, extortion brand or CVE that three or more publishers named in 14 days, with a research entry. A free hosted model writes up to three rules from up to five of the subject's entry pages.

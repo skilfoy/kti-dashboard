@@ -67,8 +67,10 @@ attribution "© OpenStreetMap contributors" is also in the data sources page's a
 3. Run `/api/admin?op=run&job=cables` once rather than waiting for Sunday, and check the run detail (counts, mirror,
    Wikidata matches).
 
-## Follow-on: the map layer
+## The map layer (3.8.1)
 
-The live map (`public/js/pew.js`) draws points and arcs on a canvas with per-layer toggles. A cable layer needs
-polyline projection, hit-testing on lines and a new toggle, which is more than a small change, so it is a follow-on:
-default off, with "© OpenStreetMap contributors" on the layer control.
+The live map (`public/js/pew.js`) has a Submarine cables layer, off by default. The first time it is switched on, the
+page reads `/api/context?type=cables&format=geojson` once. Each stored part is projected and cut where the projection
+jumps across the map edge. The cables are drawn beneath the other layers, with hollow landing stations, and hit-tested
+per segment. The chip, tooltip and legend carry "© OpenStreetMap contributors" (ODbL), and the tooltip says that
+coverage is partial. The globe view does not draw the layer.
