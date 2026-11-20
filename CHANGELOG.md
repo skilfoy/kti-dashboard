@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.10.3 (20 November 2026)
+
+- Translation: an HTTP 429 now passes the batch to the next free model instead of ending the run. Two of the first four runs met a 429 on the first model and translated nothing more. The run stops on a 429 only when every model answers one, and on 401 or 402 at once. Up to four models are tried a batch.
+- Collector 2026-11-20.5.
+
 ## 3.10.2 (20 November 2026)
 
 - Translation timing, from the first live run. That run translated 80 of 80 titles cleanly, and the translated source produced 5 mentions. But it ran 285 seconds against a 110-second budget, because three models were each tried for up to 65 seconds on the third batch. It also counted those timeouts as failures against 40 titles.

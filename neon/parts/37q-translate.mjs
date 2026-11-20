@@ -129,7 +129,7 @@ export async function translateBatch(rows, opts = {}, deadline = Date.now() + TR
   const chat = opts.chat || orChat, models = opts.models || (await reportModels());
   const user = rows.map((r, n) => `${n + 1}\t[${r.lang}]\t${String(r.title).replace(/\s+/g, ' ').slice(0, 300)}`).join('\n');
   const calls = [];
-  for (const model of models.slice(0, 3)) {
+  for (const model of models.slice(0, 4)) {
     const left = deadline - Date.now();
     if (left < TR.MIN_CALL_MS) return { done: null, calls, stop: 'run time spent', answered: calls.some((c) => c.ok) };
     if (!opts.chat && !(await trBudget(1))) return { done: null, calls, stop: 'daily allowance spent' };
@@ -137,7 +137,10 @@ export async function translateBatch(rows, opts = {}, deadline = Date.now() + TR
       { reasoning: { effort: 'low', exclude: true }, max_tokens: TR.MAX_TOKENS, temperature: 0.1 });
     const call = { model, ok: a.ok, status: a.status || null, error: a.ok ? null : String(a.error || '').slice(0, 120) };
     calls.push(call);
-    if ([401, 402, 429].includes(a.status)) return { done: null, calls, stop: `endpoint answered HTTP ${a.status}` };
+    // A refused key or balance stops the run. A 429 is often one upstream provider's limit on one free model
+    // (20 November 2026: two of three runs met one on the first model), so the next model is tried.
+    if ([401, 402].includes(a.status)) return { done: null, calls, stop: `endpoint answered HTTP ${a.status}` };
+    if (a.status === 429) continue;
     if (!a.ok) continue;
     let got;
     try { got = parseTranslations(a.msg.content, rows.length); } catch (e) { call.error = 'unreadable answer: ' + e.message; continue; }
@@ -149,6 +152,7 @@ export async function translateBatch(rows, opts = {}, deadline = Date.now() + TR
     });
     return { done, calls, model };
   }
+  if (calls.length && calls.every((c) => c.status === 429)) return { done: null, calls, stop: 'every model answered HTTP 429' };
   return { done: null, calls, stop: 'no model answered with readable JSON', answered: calls.some((c) => c.ok) };
 }
 export async function jobTranslate(opts = {}) {
