@@ -138,6 +138,13 @@ Send a short summary (SendUserMessage when available): this run's change-log eve
 - Drafts are leads for detection engineering, never evidence. In section 2, use a draft only to point at the publisher's own reporting, which is what gets cited. Never publish a draft as tested content.
 - A rejected rule stays on the page with its reasons. A wrong acceptance is fixed in the checker (37o-sigma.mjs), with a test case, through a reviewed commit. Never delete the row to hide it.
 
+## 8g. Threatcasting futures and signposts (3.9.0)
+
+- The `foresight` job gives each theater at ThreatCon 4 or above three futures over six months, drafted by a free model and accepted by deterministic checks. Each future's signposts are indicators of that theater. The Theaters page shows them under "Futures and signposts". Details: docs/threatcasting.md.
+- In the daily reassessment, keep indicator states current: the futures' reading and watch W-4B follow them. A W-4B alert is a prompt to review the indicator and its item. It never confirms a future.
+- A proposed indicator in a future is a suggestion only. Add it to theater_indicators and indicator_rules yourself if it earns a place; the job never writes either.
+- Futures carry no probability. Forecasts with probabilities stay in the judgments and the outcome ledger.
+
 ## 8. Site, service and collector operations (outside the daily run)
 - Layout: `public/` is the static site (page, runtime, styles, vendored d3; `public/data` and `public/site.json` are built, never committed); `api/` and `lib/` are the threat-feeds service (Vercel functions); `neon/` is the collector; `pipeline/` builds the data; `data/authored/` is the analyst-authored data; `test/` holds the offline, browser and smoke tests.
 - Domain: intel.kilfoycyber.com is a CNAME at Squarespace (kilfoycyber.com's DNS host) to the Vercel target the workflow's "Attach the public domain" step reports; the step attaches the domain to the project if it is missing.

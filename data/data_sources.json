@@ -4736,6 +4736,33 @@
    "source_ids": [],
    "added": "2026-11-19",
    "reviewed": "2026-11-19"
+  },
+  {
+   "id": "threatcasting",
+   "name": "KTI threatcasting futures and signposts (free hosted model, deterministic checks)",
+   "owner": "KTI",
+   "category": "Platform",
+   "feeds": [
+    "live_foresight",
+    "page:theaters"
+   ],
+   "url": "https://github.com/skilfoy/kti-dashboard/blob/main/neon/parts/37p-foresight.mjs",
+   "access": "open",
+   "secret": null,
+   "licence": "The project's own drafts, written from the site's authored theater assessments and cited items",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "one theater an hour at most (at :04), eight sets a day; a theater is redrafted when its level or indicator states change, at most daily, or after 7 days",
+   "health_feed": null,
+   "jobs": [
+    "foresight",
+    "watch"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-20",
+   "reviewed": "2026-11-20"
   }
  ]
 }

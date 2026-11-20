@@ -147,7 +147,7 @@ watches_src = os.path.join(os.path.dirname(os.path.abspath(a.authored)), "watche
 if os.path.exists(watches_src):
     wd = json.load(open(watches_src, encoding="utf-8"))
     pir_ids = {r["pir_id"] for r in (load_json(os.path.join(a.authored, "pirs.json")) or [])}
-    kinds = {"entity_terms", "entity_category", "terms", "kev_added", "cve_surge", "first_seen", "surge", "coincidence"}
+    kinds = {"entity_terms", "entity_category", "terms", "kev_added", "cve_surge", "first_seen", "surge", "coincidence", "signpost"}
     for w in wd.get("watches", []):
         if w.get("pir") not in pir_ids or w.get("kind") not in kinds or (w.get("terms") and w["terms"] not in wd.get("terms", {})):
             sys.exit(f"data/watches.json: watch {w.get('id')} names an unknown PIR, kind or term list")

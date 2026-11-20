@@ -18,6 +18,7 @@
     { "source": "/api/alerts", "destination": "/api/index?route=alerts" },
     { "source": "/api/watch", "destination": "/api/index?route=watch" },
     { "source": "/api/sigma", "destination": "/api/index?route=sigma" },
+    { "source": "/api/foresight", "destination": "/api/index?route=foresight" },
     { "source": "/api/report", "destination": "/api/index?route=report" },
     { "source": "/taxii2", "destination": "/api/index?route=taxii&path=" },
     { "source": "/taxii2/", "destination": "/api/index?route=taxii&path=" },

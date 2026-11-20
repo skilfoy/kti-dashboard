@@ -102,6 +102,12 @@
    "min_signals": 2
   },
   {
+   "id": "W-4B",
+   "pir": "PIR-4",
+   "kind": "signpost",
+   "title": "Warning indicator named as a threatcasting signpost changed state"
+  },
+  {
    "id": "W-3B",
    "pir": "PIR-3",
    "kind": "surge",
