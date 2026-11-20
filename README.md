@@ -14,7 +14,8 @@ GitHub (skilfoy/kti-dashboard, private)
   api/ lib/             threat-feeds: the site's live-data service (Vercel functions)
   neon/                 the collector (a Neon Function every 15 minutes, with Postgres and a bucket); its entities job
                         builds the entity graph over everything collected (docs/entity-graph.md); its sigma job
-                        drafts Sigma rules from current reporting under deterministic checks (docs/sigma-drafts.md)
+                        drafts Sigma rules from current reporting under deterministic checks (docs/sigma-drafts.md); its
+                        foresight job threatcasts each high-level theater's futures and signposts (docs/threatcasting.md)
   .github/workflows/    Site: build, test, deploy; Collector alerts and Reassessment watch: issues without a model;
                         Collector deploy: build and approval gate
 

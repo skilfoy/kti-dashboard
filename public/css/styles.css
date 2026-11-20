@@ -521,3 +521,19 @@ mark { background: color-mix(in srgb, var(--ti-elev) 40%, transparent); color: i
 /* Sigma drafts (Defense page): the selected rule's YAML. */
 .ti-sigma-detail { margin-top: var(--cds-pad-sm); }
 .ti-code { margin: var(--cds-pad-sm) 0 0; max-height: 28rem; overflow: auto; white-space: pre; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--cds-font-size-caption); color: var(--color-fg); background: var(--color-bg); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-sm); }
+/* Threatcasting futures (Theaters page). */
+.ti-fs-reading { margin: 0 0 var(--cds-pad-sm); }
+.ti-fs-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--cds-pad-sm); }
+@media (max-width: 900px) { .ti-fs-grid { grid-template-columns: 1fr; } }
+.ti-fs-col { border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-sm); min-width: 0; }
+.ti-fs-col.ti-fs-lean { border-color: var(--color-fg-muted); box-shadow: inset 3px 0 0 var(--color-fg-muted); }
+.ti-fs-kind { font-size: var(--cds-font-size-caption); text-transform: uppercase; letter-spacing: .04em; color: var(--color-fg-muted); }
+.ti-fs-name { margin: 4px 0; font-size: 1rem; }
+.ti-fs-text { margin: 0 0 6px; }
+.ti-fs-cast { display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; margin: 0 0 6px; font-size: var(--cds-font-size-caption); }
+.ti-fs-cast dt { color: var(--color-fg-muted); }
+.ti-fs-cast dd { margin: 0; }
+.ti-fs-h { margin-top: 6px; font-weight: 600; font-size: var(--cds-font-size-caption); }
+.ti-fs-list { margin: 2px 0 4px; padding-left: 1.2em; font-size: var(--cds-font-size-caption); }
+.ti-fs-met { color: var(--color-fg-muted); }
+.ti-fs-met.ti-fs-met { font-variant-numeric: tabular-nums; }

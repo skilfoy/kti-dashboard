@@ -1,11 +1,35 @@
 # Changelog
 
-## 3.8.2 (20 November 2026)
+## 3.9.1 (20 November 2026)
 
 - Maritime: NGA's Maritime Safety Information portal has answered every API request with HTTP 503 and a maintenance page since November, and MARAD and UKMTO still refuse the collector, so every maritime run since 3 November failed with "no source answered". While the broadcast-warning API does not answer, the job now reads the same warnings from NGA's daily memoranda: one plain-text file per area (NAVAREA IV and XII, HYDROLANT, HYDROPAC, HYDROARC), linked from the maintenance page. The memoranda go through the same categories, positions, theaters and staleness check as the API. A file that is not plain text, such as the maintenance page, is not read as warnings. The NAVWARN source record names the memoranda read and the API's status.
 - Triage: `particle-ai/particle-1:free` no longer leads the model list. In the 48 hours to 20 November it failed 43 of 102 requests, 25 of them at the 75-second deadline. ERNIE 5.5 Flash and Nemotron 3.5 Super now lead, with the free router last.
 - Triage: the labelling budget now bounds the run. A batch or a plain retry is sent only when a full request deadline still fits inside the 200-second labelling budget, and the credited tier's verifier only when its request fits inside 240 seconds. Before this, the budget only gated the start of a batch, and runs reached 344 seconds and delayed the :49 jobs after them. A run that stops for time records `time_budget_spent`.
-- Collector 2026-11-20.2.
+- Collector 2026-11-20.3.
+
+## 3.9.0 (20 November 2026)
+
+- Threatcasting. The new `foresight` job runs in the :04 slot and drafts one theater at ThreatCon 4 or above at a time, at most eight sets a day. It writes three futures over six months: escalation, continuation and de-escalation (Suryavanshi ch10).
+- Each future follows Vanatta and Johnson's threatcasting frame:
+  - a threatcast: person, place, activity, the adversary's view, enabling conditions and effects;
+  - a backcast of three to six milestones from the horizon to now;
+  - preparedness actions for any reader in the sector;
+  - cited items;
+  - signposts: indicators of the theater with the state the future expects, plus up to three proposed indicators that are never added automatically.
+- The inputs are the site's theaters, indicators and items, with bucket copies as the fallback.
+- A set is accepted only through deterministic checks:
+  - one future of each kind;
+  - signposts that belong to the theater and fit the future's direction;
+  - escalation and de-escalation futures that pull apart;
+  - three or more signposts per future;
+  - cited items drawn from those supplied;
+  - no first person, no reader's organisation, and no probability.
+- A failing set gets one repair round. A set that still fails is kept as rejected, with the reasons.
+- A theater is redrafted when its level or indicator states change (at most daily), or after 7 days.
+- The reading counts the signposts the analyst's current indicator states meet. A future leads only with two met and a 0.2 margin. The reading is never a forecast.
+- Watch W-4B (kind `signpost`, PIR-4) opens a change alert when a signpost indicator's state moves. The alert names the futures whose signpost the new state meets.
+- The Theaters page gains a "Futures and signposts" card for the selected theater, showing the measured proposal beside each signpost where the warning rules measure it. The card is published as the `live_foresight` dataset and at `/api/foresight`.
+- Collector 2026-11-20.2. Schema: `ti.foresight`, lease row `foresight`.
 
 ## 3.8.1 (20 November 2026)
 
