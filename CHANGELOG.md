@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.10.1 (20 November 2026)
+
+- Source registry rebuild, from the first rebuild with the native-language sources (863 to 919 feeds):
+  - **Language services.** The three-feeds-a-host cap had dropped 13 BBC World Service and DW language services as "fourth feed of one host", and with them the existing BBC News (World) feed. Those hosts now count each language service as its own publication, and the cap never drops a core feed.
+  - **Transient failures.** A feed the last registry kept that meets only a transient failure (no answer, HTTP 429 or a 5xx) is carried over for one rebuild and marked `carried`. The rebuild had dropped r/netsec, r/blueteamsec and r/threatintel on a 429.
+  - **Branch names.** Rebuild branches carry the time, so a second rebuild on one day does not collide with the first.
+
 ## 3.10.0 (20 November 2026)
 
 - **Language per entry.** Every entry now carries the language of its own title and summary (`detectLang`, 37q-translate.mjs), identified by script and, for Latin text, by function words and particular letters. It covers 26 languages and falls back to the feed's tag. Previously the tag was the feed's, from five scripts: Japanese was stored as zh, Ukrainian as ru, Urdu as ar, and German, French, Spanish, Hebrew and Hindi query feeds as en. `pipeline/feeds_build.py` uses the same rules for feed tags, and `test/fixtures/lang_samples.json` keeps the two in step.
