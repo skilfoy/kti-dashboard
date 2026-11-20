@@ -86,6 +86,10 @@ ok(st.given_up === 1 && st.langs_24h.some((l) => l.lang === 'ru' && l.translated
 await item('https://ko/1', '국내 금융기관 해킹 사이버공격으로 서비스 장애', 'ko', 'topic-cyber', 1);
 const r4 = await M.runJob('translate', { chat: async () => ({ ok: true, msg: { content: 'Sorry, I cannot help.' } }), models: ['a:free', 'b:free'] });
 ok(r4.stop === 'no model answered with readable JSON' && r4.calls.length === 2 && (await db.query(`SELECT tr_fail FROM ti.item WHERE link = 'https://ko/1'`)).rows[0].tr_fail === 1, 'unreadable answers: each model tried, the line counted ' + JSON.stringify(r4).slice(0, 300));
+const r4b = await M.runJob('translate', { chat: async () => ({ ok: false, status: 0, error: 'deadline passed' }), models: ['a:free', 'b:free'] });
+ok(r4b.stop === 'no model answered with readable JSON' && (await db.query(`SELECT tr_fail FROM ti.item WHERE link = 'https://ko/1'`)).rows[0].tr_fail === 1, 'timeouts count nothing against the titles ' + JSON.stringify(r4b).slice(0, 200));
+const late = await M.translateBatch([{ link: 'x', title: 'Хакеры', lang: 'ru' }], { chat, models: ['m:free'] }, Date.now() + 5000);
+ok(late.stop === 'run time spent' && late.calls.length === 0, 'no request starts without enough of the run left');
 const r5 = await M.runJob('translate', { chat: async () => ({ ok: false, status: 429, error: 'rate limited' }), models: ['a:free'] });
 ok(r5.stop === 'endpoint answered HTTP 429' && (await db.query(`SELECT tr_fail FROM ti.item WHERE link = 'https://ko/1'`)).rows[0].tr_fail === 1, 'a rate limit stops the run and counts nothing against the titles');
 // The daily allowance (real budget path, no injected chat).

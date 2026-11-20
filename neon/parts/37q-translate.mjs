@@ -15,7 +15,7 @@
 //    - for a non-Latin source, text that differs from the source.
 //    A title that fails twice is left untranslated. The entities job reads translated titles as a third source (by
 //    tr_at), triage labels the English title, and search matches it.
-export const TR = { WINDOW_H: 48, BATCH: 40, BATCHES: 4, DAILY: 200, MAX_FAILS: 2, BUDGET_MS: 110000, CALL_MS: 60000, PROMPT_V: 1 };
+export const TR = { WINDOW_H: 48, BATCH: 40, BATCHES: 4, DAILY: 200, MAX_FAILS: 2, BUDGET_MS: 120000, CALL_MS: 75000, MIN_CALL_MS: 20000, MAX_TOKENS: 6000, PROMPT_V: 1 };
 
 // --- language identification -----------------------------------------------------------------------------------------------
 const LATIN_LANGS = {
@@ -123,13 +123,18 @@ export async function pendingTitles(limit, skip = []) {
     ORDER BY CASE WHEN category IN ('vulnerability', 'government', 'research', 'cyber-news', 'topic-cyber', 'community') THEN 0 WHEN category IN ('topic-theater', 'geopolitics', 'defense', 'maritime', 'think-tank') THEN 1 ELSE 2 END,
       seen_at DESC LIMIT $3::int`, [TR.MAX_FAILS, TR.WINDOW_H, limit, JSON.stringify(skip)]);
 }
-export async function translateBatch(rows, opts = {}) {
+// A batch stops at the run's deadline: each request gets what is left of it (at most CALL_MS), and no request starts with
+// less than MIN_CALL_MS left. Translation needs little reasoning, so requests ask for low effort and a short answer.
+export async function translateBatch(rows, opts = {}, deadline = Date.now() + TR.BUDGET_MS) {
   const chat = opts.chat || orChat, models = opts.models || (await reportModels());
   const user = rows.map((r, n) => `${n + 1}\t[${r.lang}]\t${String(r.title).replace(/\s+/g, ' ').slice(0, 300)}`).join('\n');
   const calls = [];
   for (const model of models.slice(0, 3)) {
+    const left = deadline - Date.now();
+    if (left < TR.MIN_CALL_MS) return { done: null, calls, stop: 'run time spent', answered: calls.some((c) => c.ok) };
     if (!opts.chat && !(await trBudget(1))) return { done: null, calls, stop: 'daily allowance spent' };
-    const a = await chat(model, [{ role: 'system', content: TR_SYS }, { role: 'user', content: user }], null, TR.CALL_MS);
+    const a = await chat(model, [{ role: 'system', content: TR_SYS }, { role: 'user', content: user }], null, Math.min(TR.CALL_MS, left - 5000),
+      { reasoning: { effort: 'low', exclude: true }, max_tokens: TR.MAX_TOKENS, temperature: 0.1 });
     const call = { model, ok: a.ok, status: a.status || null, error: a.ok ? null : String(a.error || '').slice(0, 120) };
     calls.push(call);
     if ([401, 402, 429].includes(a.status)) return { done: null, calls, stop: `endpoint answered HTTP ${a.status}` };
@@ -144,7 +149,7 @@ export async function translateBatch(rows, opts = {}) {
     });
     return { done, calls, model };
   }
-  return { done: null, calls, stop: 'no model answered with readable JSON' };
+  return { done: null, calls, stop: 'no model answered with readable JSON', answered: calls.some((c) => c.ok) };
 }
 export async function jobTranslate(opts = {}) {
   const t0 = Date.now();
@@ -152,17 +157,18 @@ export async function jobTranslate(opts = {}) {
   const out = { batches: 0, sent: 0, translated: 0, failed: 0, reasons: {}, calls: [], stop: null };
   // A title tried in this run waits for the next one (and, as models fail over, perhaps another model).
   const tried = [];
-  for (let b = 0; b < TR.BATCHES && Date.now() - t0 < TR.BUDGET_MS; b++) {
+  for (let b = 0; b < TR.BATCHES && Date.now() - t0 < TR.BUDGET_MS - TR.MIN_CALL_MS; b++) {
     const rows = await pendingTitles(TR.BATCH, tried);
     tried.push(...rows.map((r) => r.link));
     if (!rows.length) break;
-    const r = await translateBatch(rows, opts);
+    const r = await translateBatch(rows, opts, t0 + TR.BUDGET_MS);
     out.calls.push(...r.calls);
     out.batches++; out.sent += rows.length;
     if (!r.done) {
       out.stop = r.stop;
-      // Lines a model could not answer at all count as a failure, so one poison title cannot hold the queue.
-      if (r.stop === 'no model answered with readable JSON') await sql(`UPDATE ti.item SET tr_fail = tr_fail + 1 WHERE link = ANY(ARRAY(SELECT jsonb_array_elements_text($1::jsonb)))`, [rows.map((x) => x.link)]);
+      // When a model answered but nothing readable came back, the lines count a failure, so one poison title cannot
+      // hold the queue. Timeouts, refusals and the run's own deadline say nothing about the titles and count nothing.
+      if (r.answered) await sql(`UPDATE ti.item SET tr_fail = tr_fail + 1 WHERE link = ANY(ARRAY(SELECT jsonb_array_elements_text($1::jsonb)))`, [rows.map((x) => x.link)]);
       break;
     }
     const ok = r.done.filter((d) => d.ok), bad = r.done.filter((d) => !d.ok);
