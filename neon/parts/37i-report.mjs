@@ -87,9 +87,9 @@ async function reportBudget() {
   await kvPut('report:budget', { day, used: used + 1, cap: REPORT.DAILY_CAP });
   return true;
 }
-async function orChat(model, messages, tools, ms = REPORT.CALL_MS) {
+async function orChat(model, messages, tools, ms = REPORT.CALL_MS, extra = {}) {
   const key = ENV().OPENROUTER_API_KEY || ENV().TI_TRIAGE_KEY;
-  const body = { model, messages, temperature: 0.3, max_tokens: REPORT.MAX_TOKENS, reasoning: { effort: tools ? 'low' : 'medium', exclude: true }, ...(tools ? { tools, tool_choice: 'auto' } : {}) };
+  const body = { model, messages, temperature: 0.3, max_tokens: REPORT.MAX_TOKENS, reasoning: { effort: tools ? 'low' : 'medium', exclude: true }, ...(tools ? { tools, tool_choice: 'auto' } : {}), ...extra };
   const r = await Promise.race([
     get(REPORT.ENDPOINT, { method: 'POST', as: 'json', timeout: ms, body: JSON.stringify(body),
       headers: { authorization: 'Bearer ' + key, 'content-type': 'application/json', 'http-referer': 'https://intel.kilfoycyber.com', 'x-title': 'KTI agentic reports' } }),

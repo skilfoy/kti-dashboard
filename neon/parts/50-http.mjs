@@ -17,7 +17,7 @@ Object.assign(LEASE_S, { sources: 240, reports: 900 });
 // Entity graph (3.4.0, 37k-entities.mjs): every slot, after the sources job, so an entry is in the graph within the slot
 // that collected it.
 Object.assign(JOBS, { entities: jobEntities, watch: jobWatch, score: jobScore, cyphys: jobCyphys, sigma: jobSigma, foresight: jobForesight, translate: jobTranslate });
-Object.assign(LEASE_S, { entities: 240, watch: 180, score: 120, cyphys: 120, sigma: 330, foresight: 330, translate: 150 });
+Object.assign(LEASE_S, { entities: 240, watch: 180, score: 120, cyphys: 120, sigma: 330, foresight: 330, translate: 160 });
 export async function runJob(job, opts = {}) {
   const fn = JOBS[job];
   if (!fn) return { job, ok: false, error: 'unknown job' };

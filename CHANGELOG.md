@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.10.2 (20 November 2026)
+
+- Translation timing, from the first live run. That run translated 80 of 80 titles cleanly, and the translated source produced 5 mentions. But it ran 285 seconds against a 110-second budget, because three models were each tried for up to 65 seconds on the third batch. It also counted those timeouts as failures against 40 titles.
+  - Each request now gets what is left of the run (at most 75 seconds), and none starts with less than 20 seconds left. Requests ask for low reasoning effort and a 6,000-token answer.
+  - A batch counts a failure against its titles only when a model answered and nothing readable came back. Timeouts, refusals and the run's own deadline count nothing. The 40 miscounted titles were reset.
+- `orChat` takes request overrides.
+- Collector 2026-11-20.4.
+
 ## 3.10.1 (20 November 2026)
 
 - Source registry rebuild, from the first rebuild with the native-language sources (863 to 919 feeds):
