@@ -67,7 +67,7 @@ attribution "© OpenStreetMap contributors" is also in the data sources page's a
 3. Run `/api/admin?op=run&job=cables` once rather than waiting for Sunday, and check the run detail (counts, mirror,
    Wikidata matches).
 
-## The map layer (3.8.1)
+## The map layer (3.8.2)
 
 The live map (`public/js/pew.js`) has a Submarine cables layer, off by default. The first time it is switched on, the
 page reads `/api/context?type=cables&format=geojson` once. Each stored part is projected and cut where the projection
