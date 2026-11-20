@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.8.1 (20 November 2026)
+
+- Sigma drafts, from the first four live attempts:
+  - A repair answer that drops rules no longer erases them. Accepted rules stay accepted, and rejected rules keep their reasons plus "dropped by the model in the repair round". The outcome now follows the final record: two attempts had been stored as rejected with no rules.
+  - Backslashes that a model doubled in a Windows path are folded once before the checks and the YAML. A UNC prefix and Sigma's wildcard escapes are left alone.
+  - The specificity check now knows platform artefacts that name the runtime, never the threat: JVM crash logs (hs_err_pid), interpreter and server processes, and bare system folders and common discovery commands.
+  - The Defense card's count reads "1 subject".
+- Collector 2026-11-20.1.
+
 ## 3.8.0 (19 November 2026)
 
 - Sigma detection drafts. The new `sigma` job runs in the :34 slot and drafts at most one subject an hour and six a day. A subject is a malware family, tool, actor, campaign, extortion brand or CVE that three or more publishers named in 14 days, with a research entry. A free hosted model writes up to three rules from up to five of the subject's entry pages.

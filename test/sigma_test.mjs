@@ -111,6 +111,20 @@ const good = {
   const svc = M.checkRule({ ...good, logsource: { product: 'windows', service: 'security' }, detection: { selection: { EventID: '4657', ObjectName: 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run', ObjectValueName: 'GhostUpdate' }, condition: 'selection' } }, ctx);
   ok(!svc.ok && svc.failures.some((f) => /field ObjectValueName is not a/.test(f)) && !svc.failures.some((f) => /values not found.*EventID/.test(f)), 'service log sources check fields; event ids are exempt from grounding ' + JSON.stringify(svc.failures));
 }
+// ---------------------------------------------------------------- generic artefacts, doubled backslashes, the repair record
+{
+  const t = M.groundText('The JVM wrote hs_err_pid4242.log and java.exe exited. GhostLoader masquerades from "C:\\Windows \\" with a trailing space.');
+  const crash = M.checkRule({ ...good, logsource: { category: 'file_event', product: 'windows' }, detection: { selection: { 'TargetFilename|contains': 'hs_err_pid', 'TargetFilename|endswith': '.log' }, condition: 'selection' } }, { ...ctx, text: t });
+  ok(!crash.ok && crash.failures.some((f) => /no grounded value specific/.test(f)), 'a JVM crash log is a platform artefact, never a threat-specific value');
+  ok(M.unescapeValue('C:\\\\Windows \\\\') === 'C:\\Windows \\' && M.unescapeValue('\\\\server\\share') === '\\\\server\\share' && M.unescapeValue('\\\\\\\\srv\\\\x') === '\\\\srv\\x' && M.unescapeValue('a\\\\*') === 'a\\\\*', 'doubled backslashes fold once; UNC prefixes and wildcard escapes stay');
+  const dbl = M.checkRule({ ...good, detection: { selection: { 'Image|endswith': '\\\\update_helper.exe', 'ImageLoaded|endswith': '\\\\Libraries\\\\ghostsvc.dll' }, filter_main: { 'ImageLoaded|startswith': 'C:\\\\Windows\\\\System32\\\\' }, condition: 'selection and not filter_main' } }, ctx);
+  ok(dbl.ok && dbl.rule.detection.selection['ImageLoaded|endswith'] === '\\Libraries\\ghostsvc.dll', 'a double-escaped rule is stored with single backslashes ' + JSON.stringify(dbl.failures));
+  const A = M.checkRule(good, ctx), B = M.checkRule({ ...good, title: 'GhostLoader Something Invented For The Test', detection: { selection: { 'Image|endswith': '\\nothere.exe' }, condition: 'selection' } }, ctx);
+  const merged = M.mergeRounds([A, B], []);
+  ok(merged.length === 2 && merged[0].ok && !merged[1].ok && merged[1].failures.includes('dropped by the model in the repair round'), 'a repair answer with no rules keeps the accepted rule and the rejected rule with its reasons');
+  const merged2 = M.mergeRounds([A, B], [A]);
+  ok(merged2.length === 2 && merged2.filter((c) => c.ok).length === 1, 'an accepted rule the repair kept is not counted twice');
+}
 // ---------------------------------------------------------------- YAML, and pySigma when it is installed
 const yamls = [];
 {

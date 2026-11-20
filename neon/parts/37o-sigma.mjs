@@ -57,7 +57,12 @@ const SIGMA_GENERIC = new Set(['cmd.exe', 'powershell.exe', 'pwsh.exe', 'rundll3
   '/bin/bash', '/bin/sh', '/usr/bin/curl', '/usr/bin/wget', 'python', 'python3', 'bash', 'curl', 'wget', 'powershell', '\\appdata\\', '\\appdata\\roaming\\', '\\appdata\\local\\temp\\',
   '\\temp\\', '\\programdata\\', '\\users\\public\\', '\\windows\\temp\\', '\\windows\\system32\\', 'c:\\windows\\system32\\', 'http://', 'https://', '-encodedcommand', '-enc',
   '-noprofile', '-windowstyle hidden', 'invoke-expression', 'downloadstring', 'frombase64string', 'hkcu\\software\\microsoft\\windows\\currentversion\\run',
-  'hklm\\software\\microsoft\\windows\\currentversion\\run', '\\currentversion\\run', '/tmp/', '/dev/shm/', 'get', 'post', '.php', '.jsp', '.aspx', '/api/']);
+  'hklm\\software\\microsoft\\windows\\currentversion\\run', '\\currentversion\\run', '/tmp/', '/dev/shm/', 'get', 'post', '.php', '.jsp', '.aspx', '/api/',
+  // runtimes, servers and their ordinary artefacts: a crash log or a worker process names the platform, never the threat
+  'hs_err_pid', 'java.exe', 'javaw.exe', 'w3wp.exe', 'httpd.exe', 'nginx.exe', 'tomcat9.exe', 'node.exe', 'python.exe', 'pythonw.exe', 'php-cgi.exe', 'sqlservr.exe',
+  'nginx', 'httpd', 'apache2', 'tomcat', 'catalina', 'java', 'node', 'perl', 'ruby', '/usr/bin/python', '/usr/bin/perl', '/bin/zsh', 'mozilla/5.0', 'user-agent',
+  'c:\\windows', 'c:\\windows\\', 'c:\\program files', 'c:\\programdata', 'c:\\users', 'system32', 'syswow64', 'windows\\temp', 'appdata\\local', 'appdata\\roaming',
+  'base64', 'whoami', 'ipconfig', 'systeminfo', 'tasklist', 'net user', 'net group', 'nslookup', 'ping', 'cmd /c', 'powershell -', '/bin/sh -c', 'chmod +x']);
 
 // Filter selections (named filter*, Sigma's convention for exclusions) may also rest on standard install locations,
 // which no report prints but every exclusion of a signed system binary needs.
@@ -140,6 +145,15 @@ const specificValue = (v) => {
   return f.some((x) => x.length >= 8 && !SIGMA_GENERIC.has(x) && !SIGMA_GENERIC.has(x.split(/[\\/]/).pop()));
 };
 
+// Models often double every backslash in a Windows path (JSON escaping applied twice). Pairs are folded to one,
+// keeping Sigma's own escapes before a wildcard.
+export function unescapeValue(v) {
+  // Doubling is systematic: when any backslash pair follows the start, every pair is folded once (a doubled UNC
+  // prefix of four becomes two). A pair only at the start is a UNC prefix and stays.
+  if (!/\\\\(?![*?])/.test(v.slice(2))) return v;
+  return v.replace(/\\\\(?![*?])/g, '\\');
+}
+
 // --- one rule ---------------------------------------------------------------------------------------------------------------
 // ctx: { text (groundText of the sources), sources: n, techniques: Set of ATT&CK ids, tactics: Set of tactic slugs }.
 // Returns { ok, failures: [..], rule (normalised) }.
@@ -184,7 +198,7 @@ export function checkRule(r, ctx) {
         if (!list.length) { fail.push(`field ${key} in ${name} has no value`); continue; }
         if (list.length > 25) fail.push(`field ${key} in ${name} has more than 25 values`);
         if (mods.includes('all') && list.length < 2) fail.push(`the all modifier on ${field} needs two or more values`);
-        const vals = list.map((x) => (NUMERIC.has(field) && /^\d+$/.test(String(x).trim()) ? +String(x).trim() : String(x)));
+        const vals = list.map((x) => (NUMERIC.has(field) && /^\d+$/.test(String(x).trim()) ? +String(x).trim() : unescapeValue(String(x))));
         for (const v of vals) {
           if (typeof v === 'number') continue;
           if (v.length > 300) fail.push(`a value of ${field} is longer than 300 characters`);
@@ -350,6 +364,19 @@ async function sigmaBudget() {
   await kvPut('sigma:budget', { day, used: used + 1, cap: SIGMA.DAILY });
   return true;
 }
+// The record after a repair round: every rule of the second answer, plus the first answer's accepted rules the second
+// dropped (an accepted rule stays accepted), plus its rejected rules the second neither kept nor corrected, so a
+// rejection's reasons survive a model that answers the repair with nothing.
+const ruleKey = (c) => (c.rule ? c.rule.title.toLowerCase() : '');
+export function mergeRounds(first, second) {
+  const out = second.slice(), titles = new Set(second.map(ruleKey));
+  const ids = new Set(second.filter((c) => c.ok && c.rule).map((c) => JSON.stringify([c.rule.logsource, c.rule.detection])));
+  for (const c of first) {
+    if (c.ok && c.rule && !ids.has(JSON.stringify([c.rule.logsource, c.rule.detection]))) out.push(c);
+    else if (!c.ok && !titles.has(ruleKey(c))) out.push({ ...c, failures: [...c.failures, 'dropped by the model in the repair round'] });
+  }
+  return out.slice(0, SIGMA.MAX_RULES * 2);
+}
 export async function draftSubject(cand, opts = {}) {
   const t0 = Date.now(), ref = opts.ref || (await attackRef());
   const entries = opts.entries || (await sigmaEntries(cand.eid));
@@ -377,12 +404,13 @@ export async function draftSubject(cand, opts = {}) {
   };
   answer = await ask();
   if (!answer) return { ...base, outcome: 'error', reason: 'no model answered with readable JSON', rules: [], sources: src.map(({ text, ...s }) => s), calls };
-  let checked = answer.rules.map((r) => checkRule(r, ctx));
-  if (checked.some((c) => !c.ok)) {
-    const why = checked.map((c, i) => (c.ok ? `rule ${i + 1}: accepted` : `rule ${i + 1}: ${c.failures.join(' | ')}`)).join('\n');
+  const first = answer.rules.map((r) => checkRule(r, ctx));
+  let checked = first, repaired = false;
+  if (first.some((c) => !c.ok)) {
+    const why = first.map((c, i) => (c.ok ? `rule ${i + 1}: accepted` : `rule ${i + 1}: ${c.failures.join(' | ')}`)).join('\n');
     messages.push({ role: 'user', content: `The checker rejected some rules:\n${why}\nAnswer again with the full JSON: keep the accepted rules unchanged, correct the others using only values printed in the sources, or drop them.` });
     const again = await ask();
-    if (again) checked = again.rules.map((r) => checkRule(r, ctx));
+    if (again) { checked = mergeRounds(first, again.rules.map((r) => checkRule(r, ctx))); repaired = true; }
   }
   const date = new Date().toISOString().slice(0, 10);
   const rules = checked.map((c) => {
@@ -397,8 +425,8 @@ export async function draftSubject(cand, opts = {}) {
     return out;
   });
   const okN = rules.filter((r) => r.ok).length;
-  return { ...base, outcome: okN ? 'draft' : answer.rules.length ? 'rejected' : 'none', reason: answer.reason || (okN ? null : rules.length ? 'every rule failed the checks' : null), model,
-    rules, sources: src.map(({ text, ...s }) => s), calls, ms: Date.now() - t0 };
+  return { ...base, outcome: okN ? 'draft' : rules.length ? 'rejected' : 'none', reason: answer.reason || (okN ? null : rules.length ? 'every rule failed the checks' : null), model,
+    repaired, rules, sources: src.map(({ text, ...s }) => s), calls, ms: Date.now() - t0 };
 }
 
 export async function jobSigma(opts = {}) {
