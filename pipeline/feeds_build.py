@@ -32,7 +32,12 @@ LISTS = [
 ]
 # Hosts whose first path segment is a separate publication (a subreddit, a Medium author); the three-feeds-a-host cap
 # counts those segments instead.
-MULTI = {"reddit.com", "medium.com", "old.reddit.com", "feeds.feedburner.com", "feeds.feedblitz.com", "rss.app"}
+# The BBC World Service and DW language services are separate publications under one feed host each.
+MULTI = {"reddit.com", "medium.com", "old.reddit.com", "feeds.feedburner.com", "feeds.feedblitz.com", "rss.app", "feeds.bbci.co.uk", "rss.dw.com"}
+# A feed the last registry kept and this validation reached only with a transient failure (no answer, a rate limit or a
+# server error) is carried over from the last registry for one rebuild: the collector heals failing feeds itself, and a
+# weekly rebuild that happens to meet a 429 should not drop r/netsec. A second consecutive failure drops it.
+TRANSIENT = re.compile(r"^HTTP (0|429|5\d\d)$")
 GUESS = ["feed/", "feed", "rss.xml", "rss", "atom.xml", "index.xml", "feed.xml", "blog/feed/", "blog/rss.xml"]
 OSR_CAT = {"News": "cyber-news", "ThreatIntelligence": "research", "Threat Intelligence": "research"}
 
@@ -334,12 +339,27 @@ def build(lists_dir, out, workers):
         if h in MULTI: h = "/".join(k.split("/")[:3])
         if not r.get("gnews"):
             hosts[h] = hosts.get(h, 0) + 1
-            if hosts[h] > 3:
+            # Core feeds are hand-picked, so the cap counts them but never drops one.
+            if hosts[h] > 3 and r.get("origin") != "core":
                 rejected.append({"name": r["name"], "url": r["url"], "origin": r["origin"], "why": "fourth feed of one host"}); continue
         urls.add(k)
         kept.append({"id": fid(r["url"]), "name": r["name"][:120], "url": r["url"], "category": r["category"], "region": r["region"], "tier": r["tier"],
                      "lang": r["lang"], "per_day": r["per_day"], "origin": r["origin"], **({"publisher": r["publisher"]} if r.get("publisher") else {}),
                      **({"gnews": True} if r.get("gnews") else {}), **({"healed_from": r["healed_from"]} if r.get("healed_from") else {})})
+    prev = {}
+    try:
+        for f in json.load(open(out, encoding="utf-8")).get("feeds", []):
+            if not f.get("carried"): prev[f["url"]] = f
+    except (OSError, ValueError):
+        pass
+    still = []
+    for r in rejected:
+        p0 = prev.get(r.get("url"))
+        if p0 and TRANSIENT.match(str(r.get("why") or "")) and canon(p0["url"]) not in urls:
+            urls.add(canon(p0["url"])); kept.append({**p0, "carried": True, "carried_why": r["why"]})
+        else:
+            still.append(r)
+    rejected = still
     ids = {}
     for k in kept:
         if k["id"] in ids: k["id"] += "-" + str(len(ids))
@@ -347,6 +367,7 @@ def build(lists_dir, out, workers):
     counts = {}
     for k in kept: counts[k["category"]] = counts.get(k["category"], 0) + 1
     doc = {"generated": now.isoformat(timespec="seconds"), "validated_in_s": round(time.time() - t0), "candidates": len(cand), "count": len(kept),
+           "carried": sum(1 for k in kept if k.get("carried")),
            "by_category": dict(sorted(counts.items())), "by_tier": {t: sum(1 for k in kept if k["tier"] == t) for t in (1, 2, 3)},
            "lists": [{"name": n, "url": u, "license": l} for n, u, l in LISTS] + [{"name": "KTI core", "url": "data/sources/core.json", "license": "project"}],
            "feeds": sorted(kept, key=lambda k: (k["tier"], k["category"], k["name"].lower())),
@@ -362,7 +383,8 @@ def self_test():
     checks = [(a and a[0]["title"] == "A & B" and a[0]["published"].year == 2026, "RSS item"), (b and b[0]["link"] == "https://y.example/z", "Atom alternate link"),
               (parse_feed("<html>x</html>") is None, "a page is no feed"), (canon("https://www.X.example/feed/") == "x.example/feed", "canonical URL"),
               (lang_of(["网络安全 漏洞 预警"]) == "zh", "language of Chinese titles"), (all(detect_lang(t) == l for t, l in json.load(open(os.path.join(ROOT, "test/fixtures/lang_samples.json"), encoding="utf-8"))["cases"]), "language samples shared with the collector"), ("when%3A1d" in gnews("data breach"), "Google News query window"),
-              (fid("https://www.bleepingcomputer.com/feed/").startswith("bleepingcomputer-"), "feed id")]
+              (fid("https://www.bleepingcomputer.com/feed/").startswith("bleepingcomputer-"), "feed id"),
+              (bool(TRANSIENT.match("HTTP 429")) and bool(TRANSIENT.match("HTTP 0")) and bool(TRANSIENT.match("HTTP 503")) and not TRANSIENT.match("HTTP 404"), "transient failures")]
     bad = [m for ok, m in checks if not ok]
     if bad: raise SystemExit("FAIL " + "; ".join(bad))
     print(f"PASS {len(checks)} checks (source network builder)")
