@@ -59,6 +59,9 @@ export function plan(at) {
   if (m < 45) jobs.push('sources');
   // Non-English titles are translated before the entities job reads them (37q-translate.mjs).
   if (m < 45) jobs.push('translate');
+  // Machine triage also at :19 and :34 since 3.10.6, after the translation (37f-triage.mjs: TRIAGE.EXTRA_SLOTS; a free-tier
+  // account holds these runs).
+  if (m >= 15 && m < 45) jobs.push('triage');
   if (m >= 15 && m < 30) {
     jobs.push('lists', 'leaksites', 'links');
     if (h === 6) jobs.push('unit42');
@@ -87,7 +90,7 @@ export function plan(at) {
 export async function scheduled(at) {
   RUN_CACHE.clear();
   const jobs = plan(at), out = [];
-  for (const j of jobs) out.push(await runJob(j, { holder: 'cron', keepCache: true }));
+  for (const j of jobs) out.push(await runJob(j, { holder: 'cron', keepCache: true, at: at.toISOString() }));
   // Run summaries stay small in the trigger log: counts and errors, not documents.
   return { scheduled_at: at.toISOString(), version: VERSION, jobs: out };
 }
