@@ -24,6 +24,8 @@ const steps = [
   ...(has('@electric-sql/pglite') ? [['entity graph job and queries (PGlite)', process.execPath, ['test/entities_test.mjs', '.']]] : []),
   ...(has('@electric-sql/pglite') ? [['standing watches and alerts (PGlite)', process.execPath, ['test/watch_test.mjs', '.']]] : []),
   ...(has('@electric-sql/pglite') ? [['Sigma drafts: checker, YAML and job (PGlite, pySigma)', process.execPath, ['test/sigma_test.mjs', '.']]] : []),
+  ...(has('@electric-sql/pglite') ? [['threatcasting futures and the signpost watch (PGlite)', process.execPath, ['test/foresight_test.mjs', '.']]] : []),
+  ...(has('@electric-sql/pglite') ? [['language identification and title translation (PGlite)', process.execPath, ['test/translate_test.mjs', '.']]] : []),
   ...(has('@electric-sql/pglite') ? [['submarine cables job and route (PGlite)', process.execPath, ['test/cables_test.mjs', '.']]] : []),
   ['data sources registry', process.execPath, ['test/data_sources_test.mjs', '.']],
   ['collector auto-deploy', process.execPath, ['test/auto_deploy_test.mjs', '.']],

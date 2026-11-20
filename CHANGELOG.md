@@ -1,12 +1,81 @@
 # Changelog
 
-## 3.8.2 (20 November 2026)
+## 3.10.4 (20 November 2026)
 
 - Map: a Submarine cables layer, off by default. It draws the collector's weekly OpenStreetMap snapshot of submarine cables and landing stations (`/api/context?type=cables&format=geojson`), which the page reads only the first time the layer is switched on.
 - Cables sit beneath every other layer as thin lines in their own colour, with landing stations as hollow points. Hovering a cable names it and shows its OSM operator and, where one Wikidata item matched by exact name, the owners, length and service or inception year. Clicking it highlights the whole cable and links the OpenStreetMap way and the Wikidata item.
 - Every view of the layer says that coverage is partial, and the chip, tooltip and legend carry "© OpenStreetMap contributors" (ODbL), with the legend linking OSM's copyright page.
 - The layer draws on the flat map only. With the globe on, its HUD row says so.
 - No collector or service change.
+
+## 3.10.3 (20 November 2026)
+
+- Translation: an HTTP 429 now passes the batch to the next free model instead of ending the run. Two of the first four runs met a 429 on the first model and translated nothing more. The run stops on a 429 only when every model answers one, and on 401 or 402 at once. Up to four models are tried a batch.
+- Collector 2026-11-20.5.
+
+## 3.10.2 (20 November 2026)
+
+- Translation timing, from the first live run. That run translated 80 of 80 titles cleanly, and the translated source produced 5 mentions. But it ran 285 seconds against a 110-second budget, because three models were each tried for up to 65 seconds on the third batch. It also counted those timeouts as failures against 40 titles.
+  - Each request now gets what is left of the run (at most 75 seconds), and none starts with less than 20 seconds left. Requests ask for low reasoning effort and a 6,000-token answer.
+  - A batch counts a failure against its titles only when a model answered and nothing readable came back. Timeouts, refusals and the run's own deadline count nothing. The 40 miscounted titles were reset.
+- `orChat` takes request overrides.
+- Collector 2026-11-20.4.
+
+## 3.10.1 (20 November 2026)
+
+- Source registry rebuild, from the first rebuild with the native-language sources (863 to 919 feeds):
+  - **Language services.** The three-feeds-a-host cap had dropped 13 BBC World Service and DW language services as "fourth feed of one host", and with them the existing BBC News (World) feed. Those hosts now count each language service as its own publication, and the cap never drops a core feed.
+  - **Transient failures.** A feed the last registry kept that meets only a transient failure (no answer, HTTP 429 or a 5xx) is carried over for one rebuild and marked `carried`. The rebuild had dropped r/netsec, r/blueteamsec and r/threatintel on a 429.
+  - **Branch names.** Rebuild branches carry the time, so a second rebuild on one day does not collide with the first.
+
+## 3.10.0 (20 November 2026)
+
+- **Language per entry.** Every entry now carries the language of its own title and summary (`detectLang`, 37q-translate.mjs), identified by script and, for Latin text, by function words and particular letters. It covers 26 languages and falls back to the feed's tag. Previously the tag was the feed's, from five scripts: Japanese was stored as zh, Ukrainian as ru, Urdu as ar, and German, French, Spanish, Hebrew and Hindi query feeds as en. `pipeline/feeds_build.py` uses the same rules for feed tags, and `test/fixtures/lang_samples.json` keeps the two in step.
+- **Title translation.** The new `translate` job runs in every slot that reads sources, between `sources` and `entities`. It translates non-English titles of the last 48 hours, cyber first, in batches of 40 on the reports' free models, with 200 requests a day. A translation is stored in `ti.item.title_en` only when:
+  - each line is answered once;
+  - the text is mostly Latin letters;
+  - the length is plausible;
+  - CVE ids and long numbers are kept;
+  - it differs from a non-Latin source.
+
+  A title that fails twice is left untranslated.
+- **Uses of the English titles:**
+  - the entities job reads them as a third source, and entry documents carry the English title;
+  - triage labels the English title;
+  - search matches it through `item_tsv_en`, and the Search page leads with the translation, marked, with the original beside it;
+  - the Sources page gives the day's languages and the translated share.
+- **New sources in their own language** (validated by the registry rebuild):
+  - 5 national CERTs and agencies (JPCERT/CC, CERT Polska, BSI, INCIBE-CERT, NCSC-NL);
+  - 15 security outlets;
+  - 23 theater press feeds (BBC World Service and DW language services, Yonhap, NHK, Liberty Times, Ynet), each with its theater;
+  - 9 more cyber queries on Google News;
+  - 21 Google News theater queries in the theaters' own languages (`gnews_topics_theater_lang`).
+  - Core feed rows may carry a theater id.
+- Collector 2026-11-20.3. Schema: `ti.item` gains `title_en`, `tr_model`, `tr_at` and `tr_fail`, with the indexes `item_tr`, `item_tr_pending` and `item_tsv_en`, and the lease row `translate`.
+
+## 3.9.0 (20 November 2026)
+
+- Threatcasting. The new `foresight` job runs in the :04 slot and drafts one theater at ThreatCon 4 or above at a time, at most eight sets a day. It writes three futures over six months: escalation, continuation and de-escalation (Suryavanshi ch10).
+- Each future follows Vanatta and Johnson's threatcasting frame:
+  - a threatcast: person, place, activity, the adversary's view, enabling conditions and effects;
+  - a backcast of three to six milestones from the horizon to now;
+  - preparedness actions for any reader in the sector;
+  - cited items;
+  - signposts: indicators of the theater with the state the future expects, plus up to three proposed indicators that are never added automatically.
+- The inputs are the site's theaters, indicators and items, with bucket copies as the fallback.
+- A set is accepted only through deterministic checks:
+  - one future of each kind;
+  - signposts that belong to the theater and fit the future's direction;
+  - escalation and de-escalation futures that pull apart;
+  - three or more signposts per future;
+  - cited items drawn from those supplied;
+  - no first person, no reader's organisation, and no probability.
+- A failing set gets one repair round. A set that still fails is kept as rejected, with the reasons.
+- A theater is redrafted when its level or indicator states change (at most daily), or after 7 days.
+- The reading counts the signposts the analyst's current indicator states meet. A future leads only with two met and a 0.2 margin. The reading is never a forecast.
+- Watch W-4B (kind `signpost`, PIR-4) opens a change alert when a signpost indicator's state moves. The alert names the futures whose signpost the new state meets.
+- The Theaters page gains a "Futures and signposts" card for the selected theater, showing the measured proposal beside each signpost where the warning rules measure it. The card is published as the `live_foresight` dataset and at `/api/foresight`.
+- Collector 2026-11-20.2. Schema: `ti.foresight`, lease row `foresight`.
 
 ## 3.8.1 (20 November 2026)
 

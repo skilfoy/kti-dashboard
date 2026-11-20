@@ -16,8 +16,8 @@ Object.assign(JOBS, { sources: jobSources, reports: jobReports });
 Object.assign(LEASE_S, { sources: 240, reports: 900 });
 // Entity graph (3.4.0, 37k-entities.mjs): every slot, after the sources job, so an entry is in the graph within the slot
 // that collected it.
-Object.assign(JOBS, { entities: jobEntities, watch: jobWatch, score: jobScore, cyphys: jobCyphys, sigma: jobSigma });
-Object.assign(LEASE_S, { entities: 240, watch: 180, score: 120, cyphys: 120, sigma: 330 });
+Object.assign(JOBS, { entities: jobEntities, watch: jobWatch, score: jobScore, cyphys: jobCyphys, sigma: jobSigma, foresight: jobForesight, translate: jobTranslate });
+Object.assign(LEASE_S, { entities: 240, watch: 180, score: 120, cyphys: 120, sigma: 330, foresight: 330, translate: 160 });
 export async function runJob(job, opts = {}) {
   const fn = JOBS[job];
   if (!fn) return { job, ok: false, error: 'unknown job' };
@@ -57,6 +57,8 @@ export function plan(at) {
   else jobs.push('health', 'ioda');
   // The source network reads its due feeds in every slot; at :49 it runs before triage, so triage reads the hour's titles.
   if (m < 45) jobs.push('sources');
+  // Non-English titles are translated before the entities job reads them (37q-translate.mjs).
+  if (m < 45) jobs.push('translate');
   if (m >= 15 && m < 30) {
     jobs.push('lists', 'leaksites', 'links');
     if (h === 6) jobs.push('unit42');
@@ -77,6 +79,8 @@ export function plan(at) {
   jobs.push('entities', 'watch');
   // Sigma drafts (37o-sigma.mjs) in the lightest quarter hour, after the entities and watches it reads.
   if (m >= 30 && m < 45) jobs.push('sigma');
+  // Threatcasting futures (37p-foresight.mjs) in the :04 quarter hour.
+  if (m < 15) jobs.push('foresight');
   jobs.push('reports');
   return jobs;
 }

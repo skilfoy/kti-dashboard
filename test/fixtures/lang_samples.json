@@ -1,0 +1,113 @@
+{
+ "_note": "Language identification cases that neon/parts/37q-translate.mjs (detectLang) and pipeline/feeds_build.py (lang_of) must both return; null means the text does not settle the language and the feed's tag applies.",
+ "cases": [
+  [
+   "Microsoft fixes 63 flaws in November Patch Tuesday, including an exploited zero-day",
+   "en"
+  ],
+  [
+   "Hackers breach the city council and leak data from its servers",
+   "en"
+  ],
+  [
+   "Cyberangriff auf Stadtwerke: Daten von Kunden im Darknet aufgetaucht",
+   "de"
+  ],
+  [
+   "Une cyberattaque paralyse les hôpitaux de la région pendant trois jours",
+   "fr"
+  ],
+  [
+   "Ciberataque contra el Banco de España afecta a los pagos con tarjeta",
+   "es"
+  ],
+  [
+   "Ataque hacker expõe dados de milhões de clientes do banco",
+   "pt"
+  ],
+  [
+   "Attacco informatico alla sanità: bloccati i servizi della regione",
+   "it"
+  ],
+  [
+   "Cyberaanval op gemeente legt dienstverlening stil",
+   "nl"
+  ],
+  [
+   "Cyberatak na szpital w Krakowie. Dane pacjentów wyciekły",
+   "pl"
+  ],
+  [
+   "Bankaya siber saldırı: müşteri bilgileri çalındı",
+   "tr"
+  ],
+  [
+   "Serangan siber terhadap bank daerah ganggu layanan nasabah",
+   "id"
+  ],
+  [
+   "Cyberattack mot kommunen slog ut it-systemen",
+   "sv"
+  ],
+  [
+   "Tấn công mạng làm gián đoạn hệ thống thanh toán của ngân hàng",
+   "vi"
+  ],
+  [
+   "Хакеры атаковали крупнейший банк России, сбои в работе приложения",
+   "ru"
+  ],
+  [
+   "Хакери атакували Укрзалізницю: продаж квитків онлайн призупинено",
+   "uk"
+  ],
+  [
+   "网络安全漏洞预警：某厂商路由器存在远程代码执行漏洞",
+   "zh"
+  ],
+  [
+   "大手銀行にサイバー攻撃、ネットバンキングが一時停止",
+   "ja"
+  ],
+  [
+   "국내 금융기관 해킹 사이버공격으로 서비스 장애",
+   "ko"
+  ],
+  [
+   "هجوم سيبراني يستهدف البنك المركزي ويعطل أنظمة الدفع",
+   "ar"
+  ],
+  [
+   "حمله سایبری به بانک مرکزی ایران سامانه پرداخت را مختل کرد",
+   "fa"
+  ],
+  [
+   "پاکستان میں بینک پر سائبر حملہ، صارفین کا ڈیٹا چوری ہو گیا",
+   "ur"
+  ],
+  [
+   "מתקפת סייבר על בית החולים שיבושים במערכות",
+   "he"
+  ],
+  [
+   "बैंक पर साइबर हमला, ग्राहकों का डेटा चोरी",
+   "hi"
+  ],
+  [
+   "Κυβερνοεπίθεση σε νοσοκομείο της Αθήνας",
+   "el"
+  ],
+  [
+   "Banco de Mexico hacked",
+   null
+  ],
+  [
+   "CVE-2026-1234",
+   null
+  ],
+  [
+   "Fortinet FortiOS",
+   null
+  ]
+ ]
+}

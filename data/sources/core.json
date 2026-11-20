@@ -1,5 +1,5 @@
 {
- "_note": "Hand-curated core of the source network. pipeline/feeds_build.py merges it with the open lists it names, validates every feed, and writes data/feeds.json. Categories: cyber-news, research, government, vulnerability, community, geopolitics, maritime, defense, think-tank. 'region' is a theater id or Global. A row with 'gnews' is a Google News query feed (titles and links as Google syndicates them).",
+ "_note": "Hand-curated core of the source network. pipeline/feeds_build.py merges it with the open lists it names, validates every feed, and writes data/feeds.json. Categories: cyber-news, research, government, vulnerability, community, geopolitics, maritime, defense, think-tank. 'region' is a theater id or Global. A row with 'gnews' is a Google News query feed (titles and links as Google syndicates them). Rows may carry a fourth element, the theater id. gnews_topics_theater_lang holds Google News queries in a theater's own languages: [hl, gl, ceid, theater, query].",
  "feeds": [
   [
    "BleepingComputer",
@@ -555,6 +555,245 @@
    "Army Recognition",
    "https://armyrecognition.com/feed",
    "defense"
+  ],
+  [
+   "JPCERT/CC (ja)",
+   "https://www.jpcert.or.jp/rss/jpcert.rdf",
+   "government"
+  ],
+  [
+   "CERT Polska (pl)",
+   "https://cert.pl/feed/",
+   "government"
+  ],
+  [
+   "BSI Aktuelles (de)",
+   "https://www.bsi.bund.de/SiteGlobals/Functions/RSSFeed/RSSNewsfeed/RSSNewsfeed.xml",
+   "government"
+  ],
+  [
+   "INCIBE-CERT avisos (es)",
+   "https://www.incibe.es/incibe-cert/alerta-temprana/avisos/feed",
+   "government"
+  ],
+  [
+   "NCSC-NL advisories",
+   "https://advisories.ncsc.nl/rss/advisories",
+   "government"
+  ],
+  [
+   "Security NEXT (ja)",
+   "https://www.security-next.com/feed",
+   "cyber-news"
+  ],
+  [
+   "ScanNetSecurity (ja)",
+   "https://scan.netsecurity.ne.jp/rss/index.rdf",
+   "cyber-news"
+  ],
+  [
+   "Boannews (ko)",
+   "https://www.boannews.com/media/news_rss.xml",
+   "cyber-news"
+  ],
+  [
+   "ZATAZ (fr)",
+   "https://www.zataz.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "Una al Día, Hispasec (es)",
+   "https://unaaldia.hispasec.com/feed",
+   "cyber-news"
+  ],
+  [
+   "Red Hot Cyber (it)",
+   "https://www.redhotcyber.com/feed/",
+   "cyber-news"
+  ],
+  [
+   "CISO Advisor (pt)",
+   "https://www.cisoadvisor.com.br/feed/",
+   "cyber-news"
+  ],
+  [
+   "SecurityLab.ru (ru)",
+   "https://www.securitylab.ru/rss/allnews/",
+   "cyber-news"
+  ],
+  [
+   "Anti-Malware.ru (ru)",
+   "https://www.anti-malware.ru/news/feed",
+   "cyber-news"
+  ],
+  [
+   "Habr: information security (ru)",
+   "https://habr.com/ru/rss/hub/infosecurity/",
+   "research"
+  ],
+  [
+   "FreeBuf (zh)",
+   "https://www.freebuf.com/feed",
+   "cyber-news"
+  ],
+  [
+   "Sekurak (pl)",
+   "https://sekurak.pl/feed/",
+   "cyber-news"
+  ],
+  [
+   "Niebezpiecznik (pl)",
+   "https://niebezpiecznik.pl/feed/",
+   "cyber-news"
+  ],
+  [
+   "Security.NL (nl)",
+   "https://www.security.nl/rss/headlines.xml",
+   "cyber-news"
+  ],
+  [
+   "BBC Persian",
+   "https://feeds.bbci.co.uk/persian/rss.xml",
+   "geopolitics",
+   "T-HRM"
+  ],
+  [
+   "BBC Arabic",
+   "https://feeds.bbci.co.uk/arabic/rss.xml",
+   "geopolitics",
+   "T-RSY"
+  ],
+  [
+   "BBC Russian",
+   "https://feeds.bbci.co.uk/russian/rss.xml",
+   "geopolitics",
+   "T-UKR"
+  ],
+  [
+   "BBC Ukrainian",
+   "https://feeds.bbci.co.uk/ukrainian/rss.xml",
+   "geopolitics",
+   "T-UKR"
+  ],
+  [
+   "BBC Urdu",
+   "https://feeds.bbci.co.uk/urdu/rss.xml",
+   "geopolitics",
+   "T-SAS"
+  ],
+  [
+   "BBC Hindi",
+   "https://feeds.bbci.co.uk/hindi/rss.xml",
+   "geopolitics",
+   "T-SAS"
+  ],
+  [
+   "BBC Chinese",
+   "https://feeds.bbci.co.uk/zhongwen/simp/rss.xml",
+   "geopolitics",
+   "T-TWN"
+  ],
+  [
+   "BBC Korean",
+   "https://feeds.bbci.co.uk/korean/rss.xml",
+   "geopolitics",
+   "T-KOR"
+  ],
+  [
+   "BBC Mundo",
+   "https://feeds.bbci.co.uk/mundo/rss.xml",
+   "geopolitics",
+   "T-MEX"
+  ],
+  [
+   "BBC Afrique",
+   "https://feeds.bbci.co.uk/afrique/rss.xml",
+   "geopolitics",
+   "T-SAH"
+  ],
+  [
+   "BBC Hausa",
+   "https://feeds.bbci.co.uk/hausa/rss.xml",
+   "geopolitics",
+   "T-SAH"
+  ],
+  [
+   "BBC Amharic",
+   "https://feeds.bbci.co.uk/amharic/rss.xml",
+   "geopolitics",
+   "T-HOA"
+  ],
+  [
+   "BBC Somali",
+   "https://feeds.bbci.co.uk/somali/rss.xml",
+   "geopolitics",
+   "T-HOA"
+  ],
+  [
+   "BBC Turkish",
+   "https://feeds.bbci.co.uk/turkce/rss.xml",
+   "geopolitics",
+   "Global"
+  ],
+  [
+   "DW Persian",
+   "https://rss.dw.com/rdf/rss-per-all",
+   "geopolitics",
+   "T-HRM"
+  ],
+  [
+   "DW Arabic",
+   "https://rss.dw.com/rdf/rss-ar-all",
+   "geopolitics",
+   "T-LEV"
+  ],
+  [
+   "DW Russian",
+   "https://rss.dw.com/rdf/rss-ru-all",
+   "geopolitics",
+   "T-UKR"
+  ],
+  [
+   "DW Ukrainian",
+   "https://rss.dw.com/rdf/rss-ukr-all",
+   "geopolitics",
+   "T-UKR"
+  ],
+  [
+   "DW Chinese",
+   "https://rss.dw.com/rdf/rss-chi-all",
+   "geopolitics",
+   "T-TWN"
+  ],
+  [
+   "DW Urdu",
+   "https://rss.dw.com/rdf/rss-urd-all",
+   "geopolitics",
+   "T-SAS"
+  ],
+  [
+   "Yonhap: North Korea (ko)",
+   "https://www.yna.co.kr/rss/northkorea.xml",
+   "geopolitics",
+   "T-KOR"
+  ],
+  [
+   "NHK international (ja)",
+   "https://www3.nhk.or.jp/rss/news/cat6.xml",
+   "geopolitics",
+   "Global"
+  ],
+  [
+   "Liberty Times politics (zh-Hant)",
+   "https://news.ltn.com.tw/rss/politics.xml",
+   "geopolitics",
+   "T-TWN"
+  ],
+  [
+   "Ynet news (he)",
+   "https://www.ynet.co.il/Integration/StoryRss2.xml",
+   "geopolitics",
+   "T-LEV"
   ]
  ],
  "gnews_topics_cyber": [
@@ -1044,6 +1283,209 @@
    "NG",
    "NG:en",
    "cyber attack Nigeria"
+  ],
+  [
+   "fa",
+   "AE",
+   "AE:ar",
+   "حمله سایبری"
+  ],
+  [
+   "zh-Hans",
+   "CN",
+   "CN:zh-Hans",
+   "网络攻击 漏洞"
+  ],
+  [
+   "ja",
+   "JP",
+   "JP:ja",
+   "不正アクセス 情報漏えい"
+  ],
+  [
+   "ko",
+   "KR",
+   "KR:ko",
+   "개인정보 유출 해킹"
+  ],
+  [
+   "ru",
+   "RU",
+   "RU:ru",
+   "утечка данных хакеры"
+  ],
+  [
+   "ar",
+   "AE",
+   "AE:ar",
+   "اختراق بيانات"
+  ],
+  [
+   "th",
+   "TH",
+   "TH:th",
+   "โจมตีทางไซเบอร์"
+  ],
+  [
+   "ro",
+   "RO",
+   "RO:ro",
+   "atac cibernetic"
+  ],
+  [
+   "cs",
+   "CZ",
+   "CZ:cs",
+   "kybernetický útok"
+  ]
+ ],
+ "gnews_topics_theater_lang": [
+  [
+   "ar",
+   "AE",
+   "AE:ar",
+   "T-HRM",
+   "مضيق هرمز"
+  ],
+  [
+   "ar",
+   "AE",
+   "AE:ar",
+   "T-RSY",
+   "الحوثي البحر الأحمر"
+  ],
+  [
+   "ar",
+   "SA",
+   "SA:ar",
+   "T-RSY",
+   "الحوثيين صاروخ"
+  ],
+  [
+   "he",
+   "IL",
+   "IL:he",
+   "T-LEV",
+   "חיזבאללה"
+  ],
+  [
+   "ar",
+   "AE",
+   "AE:ar",
+   "T-LEV",
+   "حزب الله إسرائيل"
+  ],
+  [
+   "uk",
+   "UA",
+   "UA:uk",
+   "T-UKR",
+   "обстріл енергетика"
+  ],
+  [
+   "ru",
+   "RU",
+   "RU:ru",
+   "T-UKR",
+   "удар беспилотники"
+  ],
+  [
+   "zh-Hant",
+   "TW",
+   "TW:zh-Hant",
+   "T-TWN",
+   "共機 擾台"
+  ],
+  [
+   "zh-Hans",
+   "CN",
+   "CN:zh-Hans",
+   "T-TWN",
+   "台湾 军演"
+  ],
+  [
+   "zh-Hans",
+   "CN",
+   "CN:zh-Hans",
+   "T-SCS",
+   "南海 菲律宾"
+  ],
+  [
+   "ko",
+   "KR",
+   "KR:ko",
+   "T-KOR",
+   "북한 미사일"
+  ],
+  [
+   "ko",
+   "KR",
+   "KR:ko",
+   "T-KOR",
+   "북한 해킹"
+  ],
+  [
+   "hi",
+   "IN",
+   "IN:hi",
+   "T-SAS",
+   "पाकिस्तान सेना"
+  ],
+  [
+   "fr",
+   "FR",
+   "FR:fr",
+   "T-SAH",
+   "Sahel jihadistes"
+  ],
+  [
+   "fr",
+   "FR",
+   "FR:fr",
+   "T-SAH",
+   "Mali attaque"
+  ],
+  [
+   "ar",
+   "EG",
+   "EG:ar",
+   "T-SDN",
+   "السودان الدعم السريع"
+  ],
+  [
+   "ar",
+   "EG",
+   "EG:ar",
+   "T-HOA",
+   "إريتريا إثيوبيا"
+  ],
+  [
+   "es-419",
+   "MX",
+   "MX:es-419",
+   "T-MEX",
+   "cártel ataque"
+  ],
+  [
+   "de",
+   "DE",
+   "DE:de",
+   "T-EUH",
+   "Sabotage Russland"
+  ],
+  [
+   "pl",
+   "PL",
+   "PL:pl",
+   "T-EUH",
+   "sabotaż Rosja"
+  ],
+  [
+   "es-419",
+   "MX",
+   "MX:es-419",
+   "T-VEN",
+   "Venezuela sanciones"
   ]
  ]
 }

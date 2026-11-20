@@ -109,7 +109,7 @@ export async function jobSources(opts = {}) {
       if (!e.published || Date.now() - Date.parse(e.published) > L.KEEP_DAYS * 86400000 || Date.parse(e.published) > Date.now() + 3600000) continue;
       const ph = e.phost || (f.gnews ? (f.publisher || '') : host);
       items.push({ link: e.link, fp: fp(e.title, ph || host), feed: f.id, source: e.publisher || (f.gnews && !f.publisher ? '' : f.name.replace(/ \(via Google News\)$/, '')), host: ph || host,
-        title: e.title, summary: e.summary || null, published: e.published, category: f.category, region: f.region, lang: f.lang || 'en' });
+        title: e.title, summary: e.summary || null, published: e.published, category: f.category, region: f.region, lang: entryLang(e.title, e.summary, f.lang) });
     }
     upd.push({ id: f.id, ok: !!got, via: got ? via : st.via, alt: got && via !== 'primary' ? url : st.alt, url_used: got ? url : st.url_used,
       etag: got && !got.unchanged ? got.etag || null : st.etag, last_modified: got && !got.unchanged ? got.last_modified || null : st.last_modified,
@@ -160,7 +160,8 @@ export async function sourcesDoc(reg) {
     method: 'pipeline/feeds_build.py merges a curated core with four open lists and keeps feeds that answer with an entry in the last 180 days; the collector reads each on its tier and heals a failing feed through discovery or Google News.',
     lists: reg.doc.lists, registry_generated: reg.doc.generated, generated: new Date().toISOString(), served_from: 'store',
     feeds: rows.length, feeds_ok: rows.filter((r) => r.ok).length, healed: rows.filter((r) => r.ok && r.via && r.via !== 'primary').length, by_category: by('category'), by_via: by('via'),
-    items_45d: t.items, publishers: t.publishers, items_24h: t.d1, rejected: (reg.doc.rejected || []).length, count: rows.length, rows };
+    items_45d: t.items, publishers: t.publishers, items_24h: t.d1, rejected: (reg.doc.rejected || []).length, by_lang: by('lang'),
+    translation: (await kvGet('translate:status')) || null, count: rows.length, rows };
 }
 // Search (3.0). Full-text over the collected entries (title and publisher summary) and the advisories, newest and best
 // first, with each hit's triage label and the publishers that carried the same story. Query syntax is web-style
@@ -178,7 +179,9 @@ export async function search({ q = '', days = 30, category = '', region = '', li
   // query of three or more words matches nothing strictly, so a long agent query ("Optimizely security incident November
   // 2026 malicious code supply chain attack" found nothing on 18 November) still finds the reporting that names the
   // subject: see below.
-  const strict = `(i.tsv @@ websearch_to_tsquery('simple', $1) OR i.tsv @@ to_tsquery('simple', $2) OR i.title ILIKE $6)`;
+  // Translated titles (3.10.0) are matched too, through their own expression index (item_tsv_en).
+  const strict = `(i.tsv @@ websearch_to_tsquery('simple', $1) OR i.tsv @@ to_tsquery('simple', $2) OR i.title ILIKE $6
+    OR (i.title_en IS NOT NULL AND (to_tsvector('simple', coalesce(i.title_en, '')) @@ websearch_to_tsquery('simple', $1) OR i.title_en ILIKE $6)))`;
   const anyWords = [...new Set(lex.filter((w) => w.length >= 4 && !/^\d+$/.test(w)))].map((w) => w + ':*').join(' | ');
   const run = async (match, rankExpr, order, tq = '') => {
     const params = [q, prefix || 'zzzz', days, category || null, region || null, like, tq || 'zzzz'];
@@ -186,7 +189,7 @@ export async function search({ q = '', days = 30, category = '', region = '', li
     const where = `i.published > now() - make_interval(days => $3) AND ($4::text IS NULL OR i.category = $4) AND ($5::text IS NULL OR i.region = $5)
       AND coalesce($1::text, $2::text, $6::text, $7::text, '') IS NOT NULL AND ${match}`;
     const [hits, facets, cats, days_] = await sqlTx([
-      [`SELECT i.link, i.title, i.source, i.host, i.published, i.category, i.region, i.lang, ts_headline('simple', coalesce(i.summary, ''), ${rankExpr.q}, 'MaxWords=40, MinWords=15, StartSel=«, StopSel=»') AS snippet,
+      [`SELECT i.link, i.title, i.title_en, i.source, i.host, i.published, i.category, i.region, i.lang, ts_headline('simple', coalesce(i.summary, ''), ${rankExpr.q}, 'MaxWords=40, MinWords=15, StartSel=«, StopSel=»') AS snippet,
           t.relevance, t.vector, t.theater, t.actors, t.why, t.verify, coalesce(t.cluster, t.link) AS story, ${rankExpr.rank} AS rank,
           (SELECT coalesce(jsonb_agg(jsonb_build_array(e.id, e.n, e.t) ORDER BY e.t, e.n), '[]'::jsonb) FROM ti.mention m JOIN ti.entity e ON e.id = m.eid WHERE m.link = i.link AND m.eid NOT LIKE 'country:%') AS entities
         FROM ti.item i LEFT JOIN ti.triage t ON t.link = i.link WHERE ${where}

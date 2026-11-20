@@ -32,7 +32,12 @@ LISTS = [
 ]
 # Hosts whose first path segment is a separate publication (a subreddit, a Medium author); the three-feeds-a-host cap
 # counts those segments instead.
-MULTI = {"reddit.com", "medium.com", "old.reddit.com", "feeds.feedburner.com", "feeds.feedblitz.com", "rss.app"}
+# The BBC World Service and DW language services are separate publications under one feed host each.
+MULTI = {"reddit.com", "medium.com", "old.reddit.com", "feeds.feedburner.com", "feeds.feedblitz.com", "rss.app", "feeds.bbci.co.uk", "rss.dw.com"}
+# A feed the last registry kept and this validation reached only with a transient failure (no answer, a rate limit or a
+# server error) is carried over from the last registry for one rebuild: the collector heals failing feeds itself, and a
+# weekly rebuild that happens to meet a 429 should not drop r/netsec. A second consecutive failure drops it.
+TRANSIENT = re.compile(r"^HTTP (0|429|5\d\d)$")
 GUESS = ["feed/", "feed", "rss.xml", "rss", "atom.xml", "index.xml", "feed.xml", "blog/feed/", "blog/rss.xml"]
 OSR_CAT = {"News": "cyber-news", "ThreatIntelligence": "research", "Threat Intelligence": "research"}
 
@@ -92,13 +97,70 @@ def parse_feed(xml):
     return out
 
 
+# Language identification, ported from neon/parts/37q-translate.mjs (detectLang); test/fixtures/lang_samples.json holds
+# the cases both must return. A feed's tag is the language most of its recent titles carry.
+LATIN_LANGS = {
+    "en": "the of and to in for on with is as by from after over at says are its new how what was has have be that this into amid against",
+    "es": "el la los las del que por para con una un se al tras sobre es su sus contra como más según ante",
+    "pt": "o os do da dos das que em no na nos nas para com um uma por ao após é são contra mais pela pelo",
+    "fr": "le la les des du et un une pour sur dans par au aux est après avec contre qui ce cette son ses pas",
+    "de": "der die das und ist mit für von den dem im auf bei nach ein eine zu nicht gegen wie auch sich über vor",
+    "it": "il lo gli di del della che per con un una nel nella dopo sono è alla dei delle contro sul sulla",
+    "nl": "het een en van op met voor bij door naar aan niet dat zijn wordt tegen ook nog uit",
+    "pl": "w z i na do się nie że dla po od przez jest oraz ze jak atak są",
+    "tr": "ve bir bu ile için olarak sonra çok yeni gibi daha saldırı saldırısı oldu değil kadar",
+    "id": "dan yang di ke dari untuk dengan ini itu pada akan oleh dalam tidak serangan siber adalah",
+    "sv": "och att det som en på är för med av till den har om efter mot inte",
+}
+LATIN_SETS = {k: set(v.split()) for k, v in LATIN_LANGS.items()}
+LATIN_HINTS = {"pl": "ąćęłńśźż", "tr": "ığş", "de": "ßäöü", "es": "ñ¿¡", "pt": "ãõ", "fr": "œèêëîïûù", "sv": "å",
+               "vi": "ăđơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ"}
+
+
+def detect_lang(text):
+    s = (text or "")[:2000]
+    n = len(re.findall(r"[^\W\d_]", s))
+    if n < 4: return None
+    share = lambda rx: len(re.findall(rx, s)) / n
+    if share(r"[\u3040-\u30ff]") > 0.08: return "ja"
+    if share(r"[\uac00-\ud7af\u1100-\u11ff]") > 0.2: return "ko"
+    if share(r"[\u4e00-\u9fff\u3400-\u4dbf]") > 0.2: return "zh"
+    if share(r"[\u0400-\u04ff]") > 0.3:
+        if re.search(r"[іїєґІЇЄҐ]", s): return "uk"
+        if re.search(r"[ыэЫЭ]", s): return "ru"
+        if re.search(r"[јљњћђџЈЉЊЋЂЏ]", s): return "sr"
+        if len(re.findall(r"[ъЪ]", s)) >= 2: return "bg"
+        return "ru"
+    if share(r"[\u0600-\u06ff\u0750-\u077f\ufb50-\ufdff\ufe70-\ufeff]") > 0.3:
+        if len(re.findall(r"[\u0679\u0688\u0691\u06ba\u06d2\u06be]", s)) >= 2: return "ur"
+        if len(re.findall(r"[\u067e\u0686\u0698\u06af\u06a9\u06cc]", s)) >= 2: return "fa"
+        return "ar"
+    if share(r"[\u0590-\u05ff]") > 0.3: return "he"
+    if share(r"[\u0900-\u097f]") > 0.3: return "hi"
+    if share(r"[\u0e00-\u0e7f]") > 0.3: return "th"
+    if share(r"[\u0370-\u03ff]") > 0.3: return "el"
+    if share(r"[a-zA-Z\u00c0-\u024f\u1e00-\u1eff]") < 0.6: return None
+    low = s.lower()
+    if len(set(re.findall("[" + LATIN_HINTS["vi"] + "]", low))) >= 2: return "vi"
+    words = re.findall(r"[^\W\d_]+", low)
+    score = {k: sum(1 for w in words if w in v) for k, v in LATIN_SETS.items()}
+    for k, chars in LATIN_HINTS.items():
+        if k != "vi" and k in score: score[k] += 2 * len(set(re.findall("[" + chars + "]", low)))
+    ranked = sorted(score.items(), key=lambda kv: -kv[1])
+    (top, ts), (_, ss) = ranked[0], ranked[1]
+    if not ts: return None
+    if ts == ss: return "en" if score["en"] == ts else None
+    if top == "en": return "en"
+    return top if ts >= 2 or score["en"] == 0 else None
+
+
 def lang_of(titles):
-    s = " ".join(titles)[:4000]
-    if not s: return "en"
-    n = len(s)
-    for code, rx in (("zh", r"[一-鿿]"), ("ru", r"[Ѐ-ӿ]"), ("ar", r"[؀-ۿ]"), ("ja", r"[぀-ヿ]"), ("ko", r"[가-힯]")):
-        if len(re.findall(rx, s)) / n > 0.15: return code
-    return "en"
+    votes = {}
+    for t in titles[:20]:
+        l = detect_lang(t)
+        if l: votes[l] = votes.get(l, 0) + 1
+    if not votes: return "en"
+    return max(sorted(votes), key=lambda k: votes[k])
 
 
 def fetch(u, accept="application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5", timeout=20):
@@ -195,8 +257,9 @@ def opml_feeds(path):
 def candidates(lists_dir, core):
     c = []
     add = lambda **k: c.append(k)
-    for name, url, cat in core["feeds"]:
-        add(name=name, url=url, category=cat, region="Global", origin="core")
+    for row in core["feeds"]:
+        name, url, cat = row[:3]
+        add(name=name, url=url, category=cat, region=row[3] if len(row) > 3 else "Global", origin="core")
     news = open(os.path.join(ROOT, "neon/parts/37g-news.mjs"), encoding="utf-8").read()
     for m in re.finditer(r"\{ id: '([^']+)', name: '([^']+)', region: '([^']+)', url: '([^']+)' \}", news):
         reg = m.group(3)
@@ -205,6 +268,8 @@ def candidates(lists_dir, core):
         add(name=f"Google News: {q}", url=gnews(q), category="topic-cyber", region="Global", origin="gnews", gnews=True)
     for hl, gl, ceid, q in core.get("gnews_topics_lang", []):
         add(name=f"Google News ({ceid}): {q}", url=gnews(q, 1, hl, gl, ceid), category="topic-cyber", region="Global", origin="gnews", gnews=True)
+    for hl, gl, ceid, th, q in core.get("gnews_topics_theater_lang", []):
+        add(name=f"Google News ({ceid}): {q}", url=gnews(q, 1, hl, gl, ceid), category="topic-theater", region=th, origin="gnews", gnews=True)
     for th, q in core["gnews_topics_theater"]:
         add(name=f"Google News: {q}", url=gnews(q), category="topic-theater", region=th, origin="gnews", gnews=True)
     for name, host, cat, reg in core["gnews_sites"]:
@@ -274,12 +339,27 @@ def build(lists_dir, out, workers):
         if h in MULTI: h = "/".join(k.split("/")[:3])
         if not r.get("gnews"):
             hosts[h] = hosts.get(h, 0) + 1
-            if hosts[h] > 3:
+            # Core feeds are hand-picked, so the cap counts them but never drops one.
+            if hosts[h] > 3 and r.get("origin") != "core":
                 rejected.append({"name": r["name"], "url": r["url"], "origin": r["origin"], "why": "fourth feed of one host"}); continue
         urls.add(k)
         kept.append({"id": fid(r["url"]), "name": r["name"][:120], "url": r["url"], "category": r["category"], "region": r["region"], "tier": r["tier"],
                      "lang": r["lang"], "per_day": r["per_day"], "origin": r["origin"], **({"publisher": r["publisher"]} if r.get("publisher") else {}),
                      **({"gnews": True} if r.get("gnews") else {}), **({"healed_from": r["healed_from"]} if r.get("healed_from") else {})})
+    prev = {}
+    try:
+        for f in json.load(open(out, encoding="utf-8")).get("feeds", []):
+            if not f.get("carried"): prev[f["url"]] = f
+    except (OSError, ValueError):
+        pass
+    still = []
+    for r in rejected:
+        p0 = prev.get(r.get("url"))
+        if p0 and TRANSIENT.match(str(r.get("why") or "")) and canon(p0["url"]) not in urls:
+            urls.add(canon(p0["url"])); kept.append({**p0, "carried": True, "carried_why": r["why"]})
+        else:
+            still.append(r)
+    rejected = still
     ids = {}
     for k in kept:
         if k["id"] in ids: k["id"] += "-" + str(len(ids))
@@ -287,6 +367,7 @@ def build(lists_dir, out, workers):
     counts = {}
     for k in kept: counts[k["category"]] = counts.get(k["category"], 0) + 1
     doc = {"generated": now.isoformat(timespec="seconds"), "validated_in_s": round(time.time() - t0), "candidates": len(cand), "count": len(kept),
+           "carried": sum(1 for k in kept if k.get("carried")),
            "by_category": dict(sorted(counts.items())), "by_tier": {t: sum(1 for k in kept if k["tier"] == t) for t in (1, 2, 3)},
            "lists": [{"name": n, "url": u, "license": l} for n, u, l in LISTS] + [{"name": "KTI core", "url": "data/sources/core.json", "license": "project"}],
            "feeds": sorted(kept, key=lambda k: (k["tier"], k["category"], k["name"].lower())),
@@ -301,8 +382,9 @@ def self_test():
     a, b = parse_feed(rss), parse_feed(atom)
     checks = [(a and a[0]["title"] == "A & B" and a[0]["published"].year == 2026, "RSS item"), (b and b[0]["link"] == "https://y.example/z", "Atom alternate link"),
               (parse_feed("<html>x</html>") is None, "a page is no feed"), (canon("https://www.X.example/feed/") == "x.example/feed", "canonical URL"),
-              (lang_of(["网络安全 漏洞 预警"]) == "zh", "language of Chinese titles"), ("when%3A1d" in gnews("data breach"), "Google News query window"),
-              (fid("https://www.bleepingcomputer.com/feed/").startswith("bleepingcomputer-"), "feed id")]
+              (lang_of(["网络安全 漏洞 预警"]) == "zh", "language of Chinese titles"), (all(detect_lang(t) == l for t, l in json.load(open(os.path.join(ROOT, "test/fixtures/lang_samples.json"), encoding="utf-8"))["cases"]), "language samples shared with the collector"), ("when%3A1d" in gnews("data breach"), "Google News query window"),
+              (fid("https://www.bleepingcomputer.com/feed/").startswith("bleepingcomputer-"), "feed id"),
+              (bool(TRANSIENT.match("HTTP 429")) and bool(TRANSIENT.match("HTTP 0")) and bool(TRANSIENT.match("HTTP 503")) and not TRANSIENT.match("HTTP 404"), "transient failures")]
     bad = [m for ok, m in checks if not ok]
     if bad: raise SystemExit("FAIL " + "; ".join(bad))
     print(f"PASS {len(checks)} checks (source network builder)")

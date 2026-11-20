@@ -99,6 +99,27 @@ export async function evalWatch(w, doc, ctx) {
       first_at: c.outage_last || kv.v.at, last_at: kv.v.at, links: [], detail: { outage_hours: c.outage_hours, conflict_z: c.conflict_z, conflict_24h: c.conflict_24h, cyber_p: c.cyber_p,
         signals: ['outage', 'conflict', 'cyber'].filter((s) => c[s]), entities: (c.entities || []).slice(0, 6).map((e) => e.n) } }));
   }
+  // Signposts (3.9.0, 37p-foresight.mjs): an indicator named as a signpost by a threatcasting future whose authored
+  // state moved since the last run. Nothing is read before a future exists; the first run after that records the
+  // states and opens nothing.
+  if (w.kind === 'signpost') {
+    const idx = (await kvGet('foresight:signposts')) || {};
+    if (!Object.keys(idx).length) return [];
+    const inds = await siteRef('theater_indicators', (a) => a.length >= 10 && a.every((i) => i.ind_id && i.theater_id));
+    const prev = await kvGet('signpost:states');
+    const now = Object.fromEntries(inds.map((i) => [i.ind_id, i.state]));
+    await kvPut('signpost:states', now);
+    if (!prev) return [];
+    const items = await siteRef('items', (a) => a.length >= 100 && a.every((i) => i.item_id)).catch(() => []);
+    const url = new Map(items.map((i) => [i.item_id, i.url]));
+    const at = new Date().toISOString();
+    return inds.filter((i) => idx[i.ind_id] && prev[i.ind_id] && prev[i.ind_id] !== i.state).map((i) => {
+      const futures = idx[i.ind_id].map((f) => ({ ...f, meets: f.expect === 'present' ? ['Observed', 'Confirmed'].includes(i.state) : i.state === 'Not observed' }));
+      return { subject: `indicator:${i.ind_id}:${i.state}`, name: i.ind_id, type: 'indicator', n: 1, p: 1, first_at: i.last_seen || at, last_at: at,
+        links: url.get(i.item_id) ? [{ link: url.get(i.item_id), title: i.note || i.indicator, host: (String(url.get(i.item_id)).match(/^https?:\/\/([^/]+)/) || [])[1] || null, published: i.last_seen || null }] : [],
+        detail: { theater_id: i.theater_id, theater: i.theater_name || i.theater_id, indicator: i.indicator, from: prev[i.ind_id], to: i.state, item_id: i.item_id || null, futures } };
+    });
+  }
   if (w.kind === 'first_seen' || w.kind === 'surge') {
     if (!ctx.baselineReady) return [];
     const s = selectSql(w.select || {}, 1);
@@ -131,6 +152,10 @@ export function headline(w, c, doc) {
     case 'surge': return `${c.name} named well above its baseline (${pubs} in 7 days, z ${c.detail && c.detail.z})`;
     case 'coincidence': return `${c.name}: ${c.detail.signals.join(', ')} elevated together${c.detail.outage_hours ? `; ${c.detail.outage_hours} h of outage` : ''}${c.detail.conflict_z != null && c.detail.signals.includes('conflict') ? `; conflict z ${c.detail.conflict_z}` : ''}${c.detail.signals.includes('cyber') ? `; ${c.detail.cyber_p} publishers on threat actors` : ''}`;
     case 'entity_category': return `${c.name} named in government or CERT publications (${pubs})`;
+    case 'signpost': {
+      const met = c.detail.futures.filter((f) => f.meets).map((f) => `"${f.name}"`);
+      return `${c.name} (${c.detail.theater}) moved ${c.detail.from} to ${c.detail.to}: ${c.detail.indicator}${met.length ? `; now meets the signpost of ${met.join(' and ')}` : '; a signpost of this theater\'s futures'}`;
+    }
     default: return `${c.name} named with ${(doc && doc.term_labels && doc.term_labels[w.terms]) || w.terms + ' terms'} (${pubs})`;
   }
 }

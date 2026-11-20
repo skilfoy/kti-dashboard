@@ -4736,6 +4736,59 @@
    "source_ids": [],
    "added": "2026-11-19",
    "reviewed": "2026-11-19"
+  },
+  {
+   "id": "threatcasting",
+   "name": "KTI threatcasting futures and signposts (free hosted model, deterministic checks)",
+   "owner": "KTI",
+   "category": "Platform",
+   "feeds": [
+    "live_foresight",
+    "page:theaters"
+   ],
+   "url": "https://github.com/skilfoy/kti-dashboard/blob/main/neon/parts/37p-foresight.mjs",
+   "access": "open",
+   "secret": null,
+   "licence": "The project's own drafts, written from the site's authored theater assessments and cited items",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "one theater an hour at most (at :04), eight sets a day; a theater is redrafted when its level or indicator states change, at most daily, or after 7 days",
+   "health_feed": null,
+   "jobs": [
+    "foresight",
+    "watch"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-20",
+   "reviewed": "2026-11-20"
+  },
+  {
+   "id": "title-translation",
+   "name": "KTI title translation for non-English entries (free hosted models, deterministic checks)",
+   "owner": "KTI",
+   "category": "Platform",
+   "feeds": [
+    "live_sources",
+    "page:sources"
+   ],
+   "url": "https://github.com/skilfoy/kti-dashboard/blob/main/neon/parts/37q-translate.mjs",
+   "access": "open",
+   "secret": null,
+   "licence": "Machine translations of the publishers' own titles, shown beside the original and linked to it",
+   "attribution": "",
+   "commercial_use": "",
+   "cadence": "every slot before the entities job: up to 160 titles a run, 200 requests a day",
+   "health_feed": null,
+   "jobs": [
+    "translate"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-20",
+   "reviewed": "2026-11-20"
   }
  ]
 }

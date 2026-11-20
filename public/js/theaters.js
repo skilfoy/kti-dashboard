@@ -177,6 +177,8 @@
     if (TI.ctx) TI.ctx.theaterCards(sec);
     // Measured indications and warning (warning.js).
     if (TI.warn) TI.warn.draw(sec);
+    // Threatcasting futures for the selected theater (foresight.js).
+    if (TI.foresight) { try { TI.foresight.draw(sec, selected); } catch (e) { console.error('foresight card', e); const b = sec.querySelector('#fs-body'); if (b) TI.failLine(b); } }
   });
   dash.onData(() => TI.draw('theaters'));
 })();
