@@ -1,11 +1,19 @@
 # Changelog
 
-## 3.10.4 (20 November 2026)
+## 3.10.5 (20 November 2026)
 
 - Maritime: NGA's Maritime Safety Information portal has answered every API request with HTTP 503 and a maintenance page since November, and MARAD and UKMTO still refuse the collector, so every maritime run since 3 November failed with "no source answered". While the broadcast-warning API does not answer, the job now reads the same warnings from NGA's daily memoranda: one plain-text file per area (NAVAREA IV and XII, HYDROLANT, HYDROPAC, HYDROARC), linked from the maintenance page. The memoranda go through the same categories, positions, theaters and staleness check as the API. A file that is not plain text, such as the maintenance page, is not read as warnings. The NAVWARN source record names the memoranda read and the API's status.
 - Triage: `particle-ai/particle-1:free` no longer leads the model list. In the 48 hours to 20 November it failed 43 of 102 requests, 25 of them at the 75-second deadline. ERNIE 5.5 Flash and Nemotron 3.5 Super now lead, with the free router last.
 - Triage: the labelling budget now bounds the run. A batch or a plain retry is sent only when a full request deadline still fits inside the 200-second labelling budget, and the credited tier's verifier only when its request fits inside 240 seconds. Before this, the budget only gated the start of a batch, and runs reached 344 seconds and delayed the :49 jobs after them. A run that stops for time records `time_budget_spent`.
 - Collector 2026-11-20.6.
+
+## 3.10.4 (20 November 2026)
+
+- Map: a Submarine cables layer, off by default. It draws the collector's weekly OpenStreetMap snapshot of submarine cables and landing stations (`/api/context?type=cables&format=geojson`), which the page reads only the first time the layer is switched on.
+- Cables sit beneath every other layer as thin lines in their own colour, with landing stations as hollow points. Hovering a cable names it and shows its OSM operator and, where one Wikidata item matched by exact name, the owners, length and service or inception year. Clicking it highlights the whole cable and links the OpenStreetMap way and the Wikidata item.
+- Every view of the layer says that coverage is partial, and the chip, tooltip and legend carry "© OpenStreetMap contributors" (ODbL), with the legend linking OSM's copyright page.
+- The layer draws on the flat map only. With the globe on, its HUD row says so.
+- No collector or service change.
 
 ## 3.10.3 (20 November 2026)
 
