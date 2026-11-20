@@ -109,6 +109,12 @@ function mint(over = {}, key = PRIV, kid = 'test-kid') {
   return h + '.' + p + '.' + b64u(rsaSign('RSA-SHA256', Buffer.from(h + '.' + p), key));
 }
 let jwksCalls = 0;
+let NGA_DOWN = null;
+const memoDtg = (ms) => { const d = new Date(Date.now() - ms), p = (n) => String(n).padStart(2, '0');
+  return p(d.getUTCDate()) + p(d.getUTCHours()) + p(d.getUTCMinutes()) + 'Z ' + 'JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC'.split(' ')[d.getUTCMonth()] + ' ' + String(d.getUTCFullYear()).slice(2); };
+const MEMO_PAC = `${memoDtg(2 * 86400000)}\nHYDROPAC 3456/26(11).\nRED SEA.\n1. VESSEL REPORTED ATTACKED BY PROJECTILE IN 13-30.0N 042-50.0E.\n2. CANCEL THIS MSG 302359Z DEC 26.\n\n`
+  + `${memoDtg(86400000)}\nHYDROPAC 3457/26(94).\nTAIWAN STRAIT.\n1. LIVE FIRING EXERCISES IN AREA BOUND BY 24-30.0N 118-10.0E, 24-30.0N 119-00.0E.\n`;
+const MEMO_IV = `NAVAREA IV 1201/26(GEN).\nGULF OF MEXICO.\n1. DRILLING RIG IN 27-10.4N 090-22.1W.\n(${memoDtg(3 * 86400000)})\n`;
 const resp = (status, body, headers = {}) => new Response(typeof body === 'string' || Buffer.isBuffer(body) ? body : JSON.stringify(body), { status, headers });
 const failing = new Set();
 let EXTRA = null; // per-test upstream overrides: (url, opts, headers) => Response | null
@@ -180,6 +186,13 @@ globalThis.fetch = async (url, opts = {}) => {
   if (u.startsWith('https://www.ukmto.org/')) return resp(403, 'Forbidden');
   if (u.startsWith('https://msi.nga.mil/api/publications/asam?filter=none&minOccurDate=')) return resp(200, { asam: [] });
   if (u.startsWith('https://msi.nga.mil/api/publications/asam?filter=none&year=')) return resp(200, { asam: [{ reference: '2026-41', date: '2026-03-01', latitude: 12.9, longitude: 43.4, description: 'Suspicious approach.' }] });
+  // The MSI portal outage of November 2026: every API route answers 503 with a maintenance page, and the daily memoranda
+  // the page links are read instead (NGA_DOWN 'memo'), or are the maintenance page too (NGA_DOWN 'all').
+  if (NGA_DOWN && u.startsWith('https://msi.nga.mil/api/publications/apology_objects/DailyMem') && NGA_DOWN === 'memo') {
+    if (u.endsWith('DailyMemARC.txt')) return resp(404, 'not found');
+    return resp(200, u.endsWith('DailyMemPAC.txt') ? MEMO_PAC : MEMO_IV, { 'content-type': 'text/plain', 'last-modified': new Date(Date.now() - 3600000).toUTCString() });
+  }
+  if (NGA_DOWN && u.startsWith('https://msi.nga.mil/')) return resp(503, '<!DOCTYPE html><html><body><h3>MSI IS CURRENTLY UNDER MAINTENANCE</h3></body></html>', { 'content-type': 'text/html' });
   if (u.startsWith('https://msi.nga.mil/api/publications/broadcast-warn')) return resp(200, { 'broadcast-warn': [{ msgYear: 2024, msgNumber: 1571, navArea: 'P', text: 'TAIWAN STRAIT. LIVE FIRING EXERCISES IN AREA BOUND BY 24-30.0N 118-10.0E, 24-30.0N 119-00.0E.', issueDate: '101515Z MAY 2024' }] });
   if (u.startsWith('https://api.greynoise.io/')) return resp(404, { message: 'IP not observed' });
   if (u === 'https://lanes.news/data/temperatures.csv') return resp(200, 'date,conflict,country_a,country_a_name,country_b,country_b_name,events,articles,goldstein_mean,tone_mean,verbal_cooperation_share,material_cooperation_share,verbal_conflict_share,material_conflict_share,temperature\n'
@@ -414,6 +427,18 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const h2 = await M.runJob('health', {});
   const vr = Object.fromEntries(JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/health.json.gz')).toString()).rows.filter((x) => x.kind === 'volume').map((x) => [x.feed, x]));
   ok(h2.ok && vr.marad.state === 'known_gap' && vr.asam.state === 'known_gap' && vr.navwarn_security.state === 'known_gap' && !vr['snap-epss'].state, 'gap sources\' zero volumes marked known_gap');
+  NGA_DOWN = 'memo';
+  const mt2 = await M.runJob('maritime', {});
+  const md2 = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/maritime.json.gz')).toString());
+  const nv2 = md2.sources.find((x) => x.id === 'NAVWARN'), w2 = md2.rows.filter((r) => r.kind === 'navwarn');
+  ok(mt2.ok && nv2.ok && /daily memoranda \(IV, XII, LAN, PAC\)/.test(nv2.via) && nv2.api_status === 503 && nv2.memo_missing.join() === 'ARC' && !nv2.stale,
+    'maritime: the API down, the warnings are read from the daily memoranda ' + JSON.stringify(nv2));
+  ok(md2.navwarn.total === 5 && w2.some((r) => r.category === 'hostile' && r.theater === 'T-RSY' && r.id === '3456/2026' && r.area_label === 'HYDROPAC') && md2.by_theater['T-TWN'].warn_military === 1,
+    'maritime: memorandum warnings categorised and placed ' + JSON.stringify(md2.navwarn));
+  NGA_DOWN = 'all';
+  const mt3 = await M.runJob('maritime', {});
+  ok(!mt3.ok && /no source answered/.test(mt3.error) && /NAVWARN[^\]]*503/.test(mt3.error), 'maritime: a maintenance page in place of the memoranda is not read as warnings ' + JSON.stringify(mt3).slice(0, 300));
+  NGA_DOWN = null;
   const ret = await M.runJob('retention', {});
   ok(ret.ok && ret.db_bytes > 0, 'retention');
 }
@@ -560,6 +585,10 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(t2.ok && t2.candidates === 2 && t2.labelled === 2 && llm.length === 2 && llm[0].structured && !llm[1].structured, 'plain retry after a structured refusal ' + JSON.stringify({ c: t2.candidates, l: t2.labelled }));
   const t3 = await M.runJob('triage');
   ok(t3.ok && t3.candidates === 0 && llm.length === 2, 'nothing new: no request');
+  // 3.8.1: the plain retry is not sent when its deadline would pass the run's time budget.
+  llm = [];
+  const tb = await M.triageBatch([{ id: 1, title: 'Budget probe headline' }], 600, { until: Date.now() + 1000 });
+  ok(tb.stop === 'time budget spent' && llm.length === 1 && llm[0].structured && tb.labels.size === 0, 'no retry past the time budget ' + JSON.stringify({ stop: tb.stop, n: llm.length }));
   // The window mirror: the run wrote it; the next read takes it with the rows labelled since, and the published list it
   // builds is the one a full read builds.
   const winN = (await db.query(`SELECT count(*)::int AS n FROM ti.triage WHERE COALESCE(published, at) > now() - interval '72 hours'`)).rows[0].n;
