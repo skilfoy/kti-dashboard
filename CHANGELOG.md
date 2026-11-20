@@ -1,10 +1,19 @@
 # Changelog
 
-## 3.8.1 (20 November 2026)
+## 3.8.2 (20 November 2026)
 
 - Maritime: NGA's Maritime Safety Information portal has answered every API request with HTTP 503 and a maintenance page since November, and MARAD and UKMTO still refuse the collector, so every maritime run since 3 November failed with "no source answered". While the broadcast-warning API does not answer, the job now reads the same warnings from NGA's daily memoranda: one plain-text file per area (NAVAREA IV and XII, HYDROLANT, HYDROPAC, HYDROARC), linked from the maintenance page. The memoranda go through the same categories, positions, theaters and staleness check as the API. A file that is not plain text, such as the maintenance page, is not read as warnings. The NAVWARN source record names the memoranda read and the API's status.
 - Triage: `particle-ai/particle-1:free` no longer leads the model list. In the 48 hours to 20 November it failed 43 of 102 requests, 25 of them at the 75-second deadline. ERNIE 5.5 Flash and Nemotron 3.5 Super now lead, with the free router last.
 - Triage: the labelling budget now bounds the run. A batch or a plain retry is sent only when a full request deadline still fits inside the 200-second labelling budget, and the credited tier's verifier only when its request fits inside 240 seconds. Before this, the budget only gated the start of a batch, and runs reached 344 seconds and delayed the :49 jobs after them. A run that stops for time records `time_budget_spent`.
+- Collector 2026-11-20.2.
+
+## 3.8.1 (20 November 2026)
+
+- Sigma drafts, from the first four live attempts:
+  - A repair answer that drops rules no longer erases them. Accepted rules stay accepted, and rejected rules keep their reasons plus "dropped by the model in the repair round". The outcome now follows the final record: two attempts had been stored as rejected with no rules.
+  - Backslashes that a model doubled in a Windows path are folded once before the checks and the YAML. A UNC prefix and Sigma's wildcard escapes are left alone.
+  - The specificity check now knows platform artefacts that name the runtime, never the threat: JVM crash logs (hs_err_pid), interpreter and server processes, and bare system folders and common discovery commands.
+  - The Defense card's count reads "1 subject".
 - Collector 2026-11-20.1.
 
 ## 3.8.0 (19 November 2026)

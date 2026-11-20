@@ -733,7 +733,7 @@
         graph: '#graph?id=' + encodeURIComponent(r.subject), why: String(r.ok) === 'true' ? '' : TI.list(r.failures).join('; ') }));
       const rows = all.filter((r) => (f === 'ok' ? r.ok : f === 'gap' ? r.ok && r.gap : f === 'rejected' ? !r.ok : true));
       const attempts = (TI.rows('live_sigma') || []).filter((r) => r.kind === 'attempt');
-      sec.querySelector('#def-sigma-count').textContent = `${all.filter((r) => r.ok).length} accepted, ${all.filter((r) => !r.ok).length} rejected, ${attempts.length} subjects tried`;
+      sec.querySelector('#def-sigma-count').textContent = `${all.filter((r) => r.ok).length} accepted, ${all.filter((r) => !r.ok).length} rejected, ${attempts.length} ${attempts.length === 1 ? 'subject' : 'subjects'} tried`;
       TI.table(tsg, rows, [
         { field: 'created_at', label: 'Drafted', fmt: 'date', cls: 'ti-nowrap' },
         { field: 'name', label: 'Subject', link: 'graph' },
