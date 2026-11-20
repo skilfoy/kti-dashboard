@@ -90,8 +90,12 @@ const r4b = await M.runJob('translate', { chat: async () => ({ ok: false, status
 ok(r4b.stop === 'no model answered with readable JSON' && (await db.query(`SELECT tr_fail FROM ti.item WHERE link = 'https://ko/1'`)).rows[0].tr_fail === 1, 'timeouts count nothing against the titles ' + JSON.stringify(r4b).slice(0, 200));
 const late = await M.translateBatch([{ link: 'x', title: 'Хакеры', lang: 'ru' }], { chat, models: ['m:free'] }, Date.now() + 5000);
 ok(late.stop === 'run time spent' && late.calls.length === 0, 'no request starts without enough of the run left');
+let k429 = 0;
+const r6 = await M.runJob('translate', { chat: async (model, msgs) => (model === 'a:free' ? (k429++, { ok: false, status: 429, error: 'rate limited' }) : chat(model, msgs)), models: ['a:free', 'b:free'] });
+ok(k429 >= 1 && r6.translated >= 1 && r6.calls.some((c) => c.model === 'b:free' && c.ok), 'a 429 on one model passes the batch to the next ' + JSON.stringify(r6).slice(0, 300));
+await db.query(`UPDATE ti.item SET title_en = NULL, tr_at = NULL, tr_fail = 1 WHERE link = 'https://ko/1'`);
 const r5 = await M.runJob('translate', { chat: async () => ({ ok: false, status: 429, error: 'rate limited' }), models: ['a:free'] });
-ok(r5.stop === 'endpoint answered HTTP 429' && (await db.query(`SELECT tr_fail FROM ti.item WHERE link = 'https://ko/1'`)).rows[0].tr_fail === 1, 'a rate limit stops the run and counts nothing against the titles');
+ok(r5.stop === 'every model answered HTTP 429' && (await db.query(`SELECT tr_fail FROM ti.item WHERE link = 'https://ko/1'`)).rows[0].tr_fail === 1, 'a rate limit stops the run and counts nothing against the titles');
 // The daily allowance (real budget path, no injected chat).
 await db.query(`INSERT INTO ti.kv (k, v, at) VALUES ('translate:budget', $1, now())`, [{ day: new Date().toISOString().slice(0, 10), used: M.TR.DAILY }]);
 ok((await M.translateBatch([{ link: 'x', title: 'Хакеры', lang: 'ru' }], { models: ['m:free'] })).stop === 'daily allowance spent', 'the daily allowance stops requests');
