@@ -187,7 +187,17 @@ export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, POOL: 400, MAX_TOKENS: 
   // were routed in the first day of production, in 20 to 35 seconds; the bare free router picked a slow or reasoning-heavy
   // model about half the time and those requests met the deadline or came back empty. The router stays as the last resort
   // for the day a pinned preview model is withdrawn. TI_TRIAGE_MODEL (comma-separated) overrides the list.
-  MODELS: ['particle-ai/particle-1:free', 'baidu/ernie-5.5-flash-preview:free', 'openrouter/free'], EVAL_BATCHES: 1, EVAL_BATCHES_CREDITED: 8, EVAL_BUDGET_MS: 420000, LABEL_BATCHES_CREDITED: 8, LABEL_BUDGET_MS: 200000 };
+  // particle-1 led the list until 3.8.1: in the 48 hours to 20 November 2026 it failed 43 of its 102 requests, 25 of them
+  // by running past the 75-second deadline, and each failure cost a retry; ERNIE (12 failures in 70, none at the deadline)
+  // and Nemotron 3.5 Super (none in 18) now lead.
+  MODELS: ['baidu/ernie-5.5-flash-preview:free', 'nvidia/nemotron-3.5-super-vl:free', 'openrouter/free'], EVAL_BATCHES: 1, EVAL_BATCHES_CREDITED: 8, EVAL_BUDGET_MS: 420000, LABEL_BATCHES_CREDITED: 8, LABEL_BUDGET_MS: 200000,
+  // The job's own bound (3.8.1). LABEL_BUDGET_MS used to gate only the start of a batch, so a batch begun at 199 seconds
+  // with a slow answer and a retry ran the job to 344 seconds (20 November 2026, 00:54 UTC) and held up the jobs behind it
+  // in the :49 run. A request is now sent only when a full deadline still fits inside LABEL_BUDGET_MS, and the verifier
+  // only when its one request fits inside JOB_BUDGET_MS.
+  JOB_BUDGET_MS: 240000 };
+// The longest one request can take: the request timeout and the hard deadline's margin (triageCall).
+export const TRIAGE_CALL_MAX_MS = () => TRIAGE.TIMEOUT_MS + 5000;
 export const TRIAGE_VECTORS = ['Exploitation & edge devices', 'Fraud', 'Identity & valid accounts', 'Phishing & social engineering', 'Ransomware & malware', 'Supply chain & third parties', 'DDoS', 'Insider'];
 export const TRIAGE_THEATERS = { 'T-RSY': 'Red Sea, Yemen and Saudi Arabia', 'T-HRM': 'Strait of Hormuz and the Gulf (Iran)', 'T-AFP': 'Afghanistan and Pakistan border', 'T-HOA': 'Horn of Africa',
   'T-LEV': 'Israel, Lebanon and Syria', 'T-UKR': 'Russia and Ukraine', 'T-SAH': 'Sahel and West Africa', 'T-SDN': 'Sudan', 'T-EUH': 'Europe: hybrid threats and sabotage',
@@ -299,9 +309,11 @@ export async function triageCall(messages, { structured = true } = {}) {
 }
 // One batch: a structured request, then one plain retry when the endpoint or model refuses structured output (a 4xx other
 // than 401, 402 and 429) or the answer fails to parse. Each request spends from the budget.
-export async function triageBatch(items, cap, { retry = true, reserve = 0 } = {}) {
+export async function triageBatch(items, cap, { retry = true, reserve = 0, until = Infinity } = {}) {
   const messages = triagePrompt(items), calls = [];
   for (const structured of retry ? [true, false] : [true]) {
+    // The plain retry is sent only when its deadline still fits the caller's time budget.
+    if (calls.length && Date.now() + TRIAGE_CALL_MAX_MS() > until) return { labels: new Map(), rejects: { no_usable_answer: 1 }, missing: items.length, calls, stop: 'time budget spent' };
     const b = await triageBudget(1, cap, reserve);
     if (!b.grant) return { labels: new Map(), rejects: {}, missing: items.length, calls, stop: reserve ? 'requests kept for labelling' : 'daily request budget spent', budget: b };
     const c = await triageCall(messages, { structured });
@@ -453,14 +465,16 @@ export async function jobTriage() {
   }
   const clusters = fresh;
   // One request a run on the free tier; a credited account works the backlog down with up to LABEL_BATCHES_CREDITED
-  // requests while the run is inside LABEL_BUDGET_MS.
-  const maxB = tier.tier === 'credited' ? TRIAGE.LABEL_BATCHES_CREDITED : 1, items = [], rows = [...joined];
-  for (let b = 0; b < maxB && b * TRIAGE.BATCH < clusters.length && !res.stop && (b === 0 || Date.now() - t0 < TRIAGE.LABEL_BUDGET_MS); b++) {
+  // batches, each started only while a full request deadline still fits inside LABEL_BUDGET_MS.
+  const maxB = tier.tier === 'credited' ? TRIAGE.LABEL_BATCHES_CREDITED : 1, items = [], rows = [...joined], labelUntil = t0 + TRIAGE.LABEL_BUDGET_MS;
+  for (let b = 0; b < maxB && b * TRIAGE.BATCH < clusters.length && !res.stop && (b === 0 || Date.now() + TRIAGE_CALL_MAX_MS() <= labelUntil); b++) {
     const batch = clusters.slice(b * TRIAGE.BATCH, (b + 1) * TRIAGE.BATCH).map((c, i) => ({ id: i + 1, ...c.rep, members: c.members }));
-    const r = await triageBatch(batch, tier.cap);
+    const r = await triageBatch(batch, tier.cap, { until: labelUntil });
     items.push(...batch);
     for (const [k, n] of Object.entries(r.rejects)) res.rejects[k] = (res.rejects[k] || 0) + n;
+    // Running out of time is the end of this run's labelling, not a failure of the endpoint.
     res.missing += r.missing; res.calls.push(...r.calls); res.stop = r.stop || null;
+    if (r.stop === 'time budget spent') { res.budget_stop = true; res.stop = null; break; }
     for (const i of batch) {
       const l = r.labels.get(i.id);
       if (l) for (const m of i.members) rows.push({ link: m.link, kind: m.kind, source: m.source, title: m.title, published: m.published, cves: m.cves, ...l,
@@ -477,7 +491,8 @@ export async function jobTriage() {
   // The first verifier run (16 November 2026, 02:01 UTC) followed a slow labelling request and its retry; the invocation
   // was cut off near five minutes and the run left no record. The verifier now runs only when labelling finished inside
   // VERIFY_AFTER_MS, which bounds the job at about two and a half minutes.
-  const late = Date.now() - t0 > (tier.tier === 'credited' ? TRIAGE.LABEL_BUDGET_MS + 40000 : TRIAGE.VERIFY_AFTER_MS);
+  // Since 3.8.1 the credited tier's verifier also has to fit its one request inside JOB_BUDGET_MS.
+  const late = tier.tier === 'credited' ? Date.now() - t0 + TRIAGE_CALL_MAX_MS() > TRIAGE.JOB_BUDGET_MS : Date.now() - t0 > TRIAGE.VERIFY_AFTER_MS;
   // Every other run, by the time of the last verifier request (the schedule arrives up to 12 minutes late, so the clock
   // hour is no guide: both odd-hour slots of 16 November landed in an even hour and were skipped).
   const lastV = Date.parse(((await kvGet('triage:verify_at')) || {}).at || 0) || 0, due = Date.now() - lastV >= TRIAGE.VERIFY_EVERY_MS;
@@ -486,7 +501,7 @@ export async function jobTriage() {
   const last = { at: new Date().toISOString(), pool: pool_.length, candidates: items.length, labelled: rows.length, joined: joined.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls };
   await kvPut('triage:last', last);
   await recordVolume([['triage_labelled', rows.length]]);
-  const out = { pool: pool_.length, candidates: items.length, waiting: Math.max(0, Number(waiting) - rows.length), labelled: rows.length, joined: joined.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls, verify,
+  const out = { pool: pool_.length, candidates: items.length, waiting: Math.max(0, Number(waiting) - rows.length), labelled: rows.length, joined: joined.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, time_budget_spent: res.budget_stop || undefined, calls: res.calls, verify,
     published: await putDoc('triage', await triageDoc({ last_run: last })), ms: Date.now() - t0 };
   // A run whose requests all failed is a failed run, so the health record and the alert workflow see it.
   out.tier = tier.tier; out.cap = tier.cap;

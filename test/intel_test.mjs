@@ -77,6 +77,14 @@ ok(nw2.by_category.military === 1 && nw2.by_category.hostile === 1 && nw2.by_cat
 ok(nw2.rows[0].theater === 'T-TWN' && nw2.rows[1].theater === 'T-RSY' && nw2.rows[2].theater === 'T-EUH' && nw2.rows[0].area_label === 'HYDROPAC', 'warnings placed in theaters by their positions');
 ok(nw2.by_theater['T-RSY'].hostile === 1 && nw2.by_theater['T-TWN'].military === 1, 'warning counts by theater');
 ok(M.ngaDtg('101515Z MAY 2024') === '2024-05-10T15:15:00Z' && M.ngaDtg('nonsense') === null, 'NGA date-time groups read');
+ok(M.ngaDtg('181530Z NOV 26') === '2026-11-18T15:30:00Z' && M.ngaDtg('181530Z NOV 2026.') === '2026-11-18T15:30:00Z', 'two-digit years of the daily memoranda read');
+// The daily memorandum as plain text (NGA's layout: date-time group, then area, number and year, then the warning).
+const dm = M.parseDailyMem('181530Z NOV 26\nHYDROPAC 3456/26(11).\nRED SEA.\n1. VESSEL REPORTED ATTACKED BY PROJECTILE IN 13-30.0N 042-50.0E.\n\n'
+  + 'NAVAREA IV 1201/2026(GEN).\nGULF OF MEXICO.\n1. DRILLING RIG IN 27-10.4N 090-22.1W.\n(171200Z NOV 26)\n', 'P');
+ok(dm.length === 2 && dm[0].navArea === 'P' && dm[0].msgNumber === 3456 && dm[0].msgYear === 2026 && dm[0].issueDate === '181530Z NOV 26' && dm[1].navArea === '4' && dm[1].issueDate === '171200Z NOV 26', 'daily memorandum split into warnings ' + JSON.stringify(dm));
+const dmn = M.parseNavwarn(dm);
+ok(dmn.total === 2 && dmn.rows.length === 1 && dmn.rows[0].theater === 'T-RSY' && dmn.rows[0].id === '3456/2026' && dmn.newest === '2026-11-18T15:30:00Z', 'memorandum warnings read like the API\'s');
+ok(M.parseDailyMem('<!DOCTYPE html><html><body>MSI IS CURRENTLY UNDER MAINTENANCE</body></html>') === null && M.parseDailyMem('') === null && M.parseDailyMem('NO WARNINGS IN FORCE.').length === 0, 'a maintenance page is not a memorandum');
 ok(M.parseNavwarn({ 'broadcast-warn': [{ msgYear: 2024, msgNumber: 1, text: 'GNSS JAMMING.', issueDate: '101515Z MAY 2024' }, { msgYear: 2024, msgNumber: 2, text: 'X', issueDate: '021141Z JUN 2024' }] }).newest === '2024-06-02T11:41:00Z', 'newest warning found for the staleness check');
 ok(M.seaBox(26.5, 50.5) === 'T-HRM' && M.seaBox(12.6, 43.3) === 'T-RSY', 'the Gulf is Hormuz; Bab el Mandeb is the Red Sea');
 const md = M.maritimeDoc({ marad: mr, asam: as, navwarn: nw, ukmto: [], status: [], now: Date.parse('2026-10-22T03:00:00Z') });

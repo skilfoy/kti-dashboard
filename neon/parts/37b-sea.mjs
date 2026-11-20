@@ -10,7 +10,9 @@
 //            nga_bundle reads the application's script for any new path.
 //   NAVWARN  NGA broadcast navigational warnings in force (NAVAREA IV and XII, HYDROLANT, HYDROPAC, HYDROARC), sorted by
 //            their wording into security categories and placed by the positions they give. On 22 October 2026 the list
-//            held no warning issued after May 2024, so the staleness check below keeps it off the map.
+//            held no warning issued after May 2024, so the staleness check below keeps it off the map. From November 2026
+//            the whole MSI portal answered 503 with a maintenance page; while the API does not answer, the job reads the
+//            same warnings from NGA's daily memoranda (one plain-text file per area, linked from that page).
 //   UKMTO    its incident page sits behind a Cloudflare rule that refused the collector's address with HTTP 403 on
 //            22 October 2026; the job still asks and records the answer, so a lifted block shows up in the document.
 // Blocked sources are recorded as refused; the job sends its ordinary request and nothing meant to get around a block.
@@ -19,6 +21,13 @@ export const MARAD_URL = 'https://www.maritime.dot.gov/msci-advisories';
 // when no reference, area or subregion is chosen) and both ends of the date range.
 export const ASAM_URL = (from, to) => 'https://msi.nga.mil/api/publications/asam?filter=none&minOccurDate=' + from + '&maxOccurDate=' + (to || new Date().toISOString().slice(0, 10)) + '&sort=date&output=json';
 export const NAVWARN_URL = 'https://msi.nga.mil/api/publications/broadcast-warn?output=json&status=A';
+// NGA's daily memoranda: the broadcast warnings in force for each area as plain text, one file per area. During the MSI
+// portal outage that began in November 2026 (every /api/publications route answering 503 with a maintenance page) NGA
+// links these files from the maintenance page itself; the download route is where the portal serves them when it is up.
+// The job reads them only when the broadcast-warning API does not answer.
+export const NGA_MEMO_AREAS = [['IV', '4'], ['XII', '12'], ['LAN', 'A'], ['PAC', 'P'], ['ARC', 'C']];
+export const NGA_MEMO_URLS = (code) => ['https://msi.nga.mil/api/publications/apology_objects/DailyMem' + code + '.txt',
+  'https://msi.nga.mil/api/publications/download?type=view&key=16920957/SFH00000/DailyMem' + code + '.txt'];
 export const UKMTO_URL = { api: 'https://www.ukmto.org/api/incidents', page: 'https://www.ukmto.org/recent-incidents', origin: 'https://www.ukmto.org' };
 const pickF = (o, ...ks) => { for (const k of ks) if (o && o[k] != null && o[k] !== '') return o[k]; return null; };
 // Advisory titles and positions to the dashboard's theaters; the first match wins, so Houthi and Red Sea wording takes
@@ -110,8 +119,9 @@ export function navPoint(pos) {
 // NGA date-time groups: 101515Z MAY 2024 (day, hour, minute, month, year) to ISO.
 const MON = { JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06', JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12' };
 export function ngaDtg(s) {
-  const m = String(s || '').toUpperCase().match(/(\d{2})(\d{2})(\d{2})Z\s+([A-Z]{3})\s+(\d{4})/);
-  return m && MON[m[4]] ? `${m[5]}-${MON[m[4]]}-${m[1]}T${m[2]}:${m[3]}:00Z` : null;
+  // The daily memoranda write the year with two digits (181530Z NOV 26), the API with four.
+  const m = String(s || '').toUpperCase().match(/(\d{2})(\d{2})(\d{2})Z\s+([A-Z]{3})\s+(\d{4}|\d{2})(?!\d)/);
+  return m && MON[m[4]] ? `${m[5].length === 2 ? '20' + m[5] : m[5]}-${MON[m[4]]}-${m[1]}T${m[2]}:${m[3]}:00Z` : null;
 }
 // A source whose newest record is older than this is reported stale and kept off the map and the theater counts:
 // broadcast warnings are issued daily, ASAM reports a few times a month worldwide.
@@ -138,6 +148,24 @@ export function parseNavwarn(j) {
       spread: pt ? pt.spread : undefined, positions: pos.length, theater, text: ixText(text).slice(0, 320) });
   }
   return out;
+}
+// A daily memorandum to the records parseNavwarn reads. Each warning opens with its area, number and year
+// (HYDROPAC 3456/26(98). or NAVAREA IV 1234/26.); its date-time group is the first one in the warning or on the line
+// just above its header. A file that is not plain text (the maintenance page, an error page) gives null.
+const MEMO_HEAD = /^[ \t]*(NAVAREA[ \t]+(?:IV|XII)|HYDROLANT|HYDROPAC|HYDROARC)[ \t]+(\d{1,5})\/(\d{2,4})\b/gm;
+const MEMO_AREA = { 'NAVAREA IV': '4', 'NAVAREA XII': '12', HYDROLANT: 'A', HYDROPAC: 'P', HYDROARC: 'C' };
+const DTG_RE = /\d{6}Z\s+[A-Z]{3}\s+(?:\d{4}|\d{2})(?!\d)/;
+export function parseDailyMem(text, area) {
+  const s = String(text || '').replace(/\r\n?/g, '\n');
+  if (!s.trim() || /<(?:!doctype|html|head|body)\b/i.test(s.slice(0, 2000))) return null;
+  const heads = [...s.matchAll(MEMO_HEAD)];
+  return heads.map((h, i) => {
+    const body = s.slice(h.index, i + 1 < heads.length ? heads[i + 1].index : s.length).trim();
+    const above = s.slice(Math.max(0, h.index - 40), h.index).split('\n').filter((l) => l.trim()).pop() || '';
+    const dtg = (body.toUpperCase().match(DTG_RE) || above.toUpperCase().match(DTG_RE) || [null])[0];
+    const yr = h[3].length === 2 ? 2000 + +h[3] : +h[3];
+    return { msgNumber: +h[2], msgYear: yr, navArea: MEMO_AREA[h[1].replace(/[ \t]+/, ' ')] || area || '?', text: body, issueDate: dtg };
+  });
 }
 export function parseUkmto(j) {
   let arr = Array.isArray(j) ? j : j && (j.incidents || j.data || j.items || j.results || j.features || (j.props && j.props.pageProps && (j.props.pageProps.incidents || j.props.pageProps.data)));
@@ -200,12 +228,31 @@ export async function jobMaritime() {
   const asamStale = !asamNewest || Date.now() - Date.parse(asamNewest) > ASAM_STALE_DAYS * IX_DAY;
   note('ASAM', ASAM_URL(from), a, asam.length, a.ok ? { newest: asamNewest, stale: asamStale || undefined,
     error: asam.length ? null : asamNewest ? `no reports in the 90-day window; newest report ${asamNewest}` + (asamStale ? ' (source not current)' : '') : 'no reports in this or last year' } : null);
-  const navAll = w.ok ? parseNavwarn(w.json) : null;
+  let navAll = w.ok ? parseNavwarn(w.json) : null, navVia = null;
+  // The broadcast-warning API down: the same warnings from NGA's daily memoranda, one file per area.
+  if (!navAll) {
+    const memo = await Promise.all(NGA_MEMO_AREAS.map(async ([code, area]) => {
+      for (const url of NGA_MEMO_URLS(code)) {
+        const r = await get(url, { timeout: 20000, headers: { accept: 'text/plain' } });
+        const rows = r.ok ? parseDailyMem(r.text, area) : null;
+        if (rows) return { code, url, rows, modified: r.headers && typeof r.headers.get === 'function' ? r.headers.get('last-modified') : null };
+      }
+      return { code, rows: null };
+    }));
+    const read = memo.filter((x) => x.rows);
+    if (read.length) {
+      navAll = parseNavwarn(read.flatMap((x) => x.rows));
+      // A memorandum without date-time groups is dated by the newest file, so a current file is not called stale.
+      const mod = read.map((x) => Date.parse(x.modified || '')).filter(isFinite);
+      if (!navAll.newest && mod.length) navAll.newest = new Date(Math.max(...mod)).toISOString();
+      navVia = { via: 'NGA daily memoranda (' + read.map((x) => x.code).join(', ') + ')', api_status: w.status, memo_missing: memo.filter((x) => !x.rows).map((x) => x.code) };
+    }
+  }
   const navStale = !!navAll && (!navAll.newest || Date.now() - Date.parse(navAll.newest) > SEA_STALE_DAYS * IX_DAY);
   // NGA's broadcast-warning API answered on 22 October 2026 with warnings issued no later than May 2024; a list frozen
   // like that is reported stale and kept out of the map and the counts, since its "in force" status cannot be trusted.
   const navwarn = navStale ? null : navAll;
-  note('NAVWARN', NAVWARN_URL, w, navAll && !navStale ? navAll.total : 0, navAll ? { newest: navAll.newest, stale: navStale || undefined,
+  note('NAVWARN', NAVWARN_URL, navVia ? { ok: true, status: 200 } : w, navAll && !navStale ? navAll.total : 0, navAll ? { ...(navVia || {}), newest: navAll.newest, stale: navStale || undefined,
     error: navStale ? `stale: the newest warning listed in force was issued ${String(navAll.newest || 'at an unknown date').slice(0, 10)}; the list is not current` : null } : null);
   const ukmto = u.ok && u.json ? parseUkmto(u.json) : [];
   note('UKMTO', UKMTO_URL.api, u, ukmto.length, u.status === 403 ? { error: "refused by the site's Cloudflare rule (HTTP 403)" } : null);
