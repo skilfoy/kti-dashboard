@@ -144,6 +144,12 @@ CREATE TABLE IF NOT EXISTS ti.sigma (id bigserial PRIMARY KEY, subject text NOT 
 CREATE INDEX IF NOT EXISTS sigma_subject ON ti.sigma (subject, created_at);
 CREATE INDEX IF NOT EXISTS sigma_created ON ti.sigma (created_at);
 INSERT INTO ti.lease (job) VALUES ('sigma') ON CONFLICT DO NOTHING;
+-- Threatcasting futures (3.9.0, 37p-foresight.mjs): one row per drafting attempt for a theater; accepted sets are kept,
+-- rejected and failed attempts 365 days.
+CREATE TABLE IF NOT EXISTS ti.foresight (id bigserial PRIMARY KEY, theater_id text NOT NULL, name text, state_hash text, why text, outcome text NOT NULL, reason text, model text,
+  futures jsonb, failures jsonb NOT NULL DEFAULT '[]'::jsonb, calls jsonb NOT NULL DEFAULT '[]'::jsonb, prompt_v int, created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS foresight_theater ON ti.foresight (theater_id, created_at);
+INSERT INTO ti.lease (job) VALUES ('foresight') ON CONFLICT DO NOTHING;
 -- 2026-11-18: pg_stat_statements is enabled on the production database (CREATE EXTENSION pg_stat_statements, as the
 -- owner) to rank the collector's reads by the Postgres transfer they cost (Free plan: 5 GB a month). It is left out of
 -- this file because PGlite, which the tests load this schema into, does not ship it.

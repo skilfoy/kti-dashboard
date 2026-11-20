@@ -340,6 +340,12 @@
         <p class="ti-card-note" id="theater-leads-note">Headlines from the news, blog and advisory feeds that the triage tier labelled with this theater at relevance 2 or 3. They are leads for the analyst run, which opens each page before anything enters the evidence base.</p>
         <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-theater-leads" data-source="live_triage" data-row-key="link"></table></div>
       </div>
+      <div class="ti-card ti-section" id="fs-card">
+        <h3 class="ti-h3">Futures and signposts, six months <span class="ti-pir">PIR-4 · threatcasting</span> <span class="ti-count" id="fs-count"></span></h3>
+        <p class="ti-card-note">Three futures for the selected theater: escalation, continuation and de-escalation (Suryavanshi ch10). Each is a threatcast, after Vanatta and Johnson: a person in a place doing an activity, the adversary's view, the enabling conditions and the effects. Each is backcast to milestones and to preparedness actions a reader in the sector could take now. A free hosted model drafts the futures from this page's assessment, indicators and items, and a set is kept only when deterministic checks pass: every signpost is an indicator of this theater with the state its future expects, the escalation and de-escalation futures pull apart, each future cites items, and none carries a probability. The reading counts the signposts that the analyst's current indicator states meet. It is never a forecast and never confirms a future. Watch W-4B alerts when a signpost indicator changes state.</p>
+        <div class="ti-fs" id="fs-body" data-source="live_foresight"></div>
+        <p class="ti-cap ti-muted" id="fs-note"></p>
+      </div>
       <div id="theater-context">
         <div class="ti-card ti-section" id="warn-card">
           <h3 class="ti-h3">Measured indications and warning <span class="ti-pir">For analyst approval</span></h3>
@@ -1127,6 +1133,7 @@
 <script src="/js/method.js"></script>
 <script src="/js/search.js"></script>
 <script src="/js/graph.js"></script>
+<script src="/js/foresight.js"></script>
 <script src="/js/catalog.js"></script>
 <script src="/js/controls.js"></script>
 <script src="/js/boot.js"></script>
