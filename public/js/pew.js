@@ -14,7 +14,10 @@
    claim of traffic between their ends. A reported attack marks the victim's country only, spread in a spiral around
    the country's centre, with the basis on which threat-feeds settled ransomware.live's free-text country code. Animation is presentation only: a comet runs along an arc, a ring marks a
    record new in the last 24 hours (listed by its source in that window, or first observed by the collector in it once
-   the collector has watched for a day), and Replay re-runs the last 24 hours in the order the sources timed it. */
+   the collector has watched for a day), and Replay re-runs the last 24 hours in the order the sources timed it.
+     Submarine cables  OpenStreetMap ways and landing stations (ODbL 1.0, "© OpenStreetMap contributors"), partial
+                       coverage, with Wikidata owner, length and service date joined by exact name; off by default and
+                       read from the collector's weekly snapshot only when switched on (flat map only). */
 (() => {
   const P = (TI.pew = {});
   const LAYERS = ['c2', 'ioc', 'src', 'url'];
@@ -29,7 +32,7 @@
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage unavailable */ } },
   };
-  const DEF = { c2: true, ioc: true, src: true, url: true, attacks: true, flows: true, outages: true, fires: true, attrib: false, singles: false, motion: !reduced, family: '', folded: null };
+  const DEF = { c2: true, ioc: true, src: true, url: true, attacks: true, flows: true, outages: true, fires: true, attrib: false, cables: false, singles: false, motion: !reduced, family: '', folded: null };
   const opt = Object.assign({}, DEF, store.get('ti-pew', {}));
   if (reduced && store.get('ti-pew', null) == null) opt.motion = false;
   P.opt = opt;
@@ -73,6 +76,27 @@
   };
   const basisText = (r) => (BASIS[r.cc_basis] ? BASIS[r.cc_basis](r) : r.cc_basis || '');
 
+  // Submarine cables: the collector's weekly OpenStreetMap snapshot as GeoJSON (api/_context.js cablesGeojson), read
+  // once, the first time the layer is switched on. A failure is shown on the layer's HUD row; switching the layer off
+  // and on again asks once more.
+  const CABLES_URL = '/api/context?type=cables&format=geojson';
+  const CAB = { state: 'idle', doc: null, err: '' };
+  P.cableDoc = () => CAB;
+  P.cableFeatures = (kind) => ((CAB.doc && CAB.doc.features) || []).filter((f) => f && f.properties && f.properties.kind === kind && f.geometry);
+  function loadCables() {
+    if (CAB.state === 'loading' || CAB.state === 'ok') return;
+    CAB.state = 'loading'; CAB.err = '';
+    P.hud();
+    fetch(CABLES_URL, { headers: { accept: 'application/geo+json, application/json' } })
+      .then((r) => r.json().then((j) => ({ ok: r.ok, status: r.status, j })))
+      .then(({ ok, status, j }) => {
+        if (!ok || !j || j.error || !Array.isArray(j.features)) throw new Error((j && j.error) || 'HTTP ' + status);
+        CAB.doc = j; CAB.state = 'ok';
+      })
+      .catch((e) => { CAB.state = 'error'; CAB.err = String((e && e.message) || e); })
+      .then(() => P.redraw());
+  }
+
   // ------------------------------------------------------------------ colour
   // Computed colours arrive as rgb(), rgba() or, for color-mix() tokens, color(srgb r g b) in 0-1 units.
   const parse = (c) => {
@@ -90,7 +114,7 @@
     const dark = (0.2126 * bg[0] + 0.7152 * bg[1] + 0.0722 * bg[2]) / 255 < 0.42;
     PAL = {
       dark, c2: tok('var(--pew-c2)'), ioc: tok('var(--pew-ioc)'), src: tok('var(--pew-src)'), url: tok('var(--pew-url)'), out: tok('var(--pew-out)'),
-      atk: tok('var(--pew-atk)'), fire: tok('var(--pew-fire)'), r15: tok('var(--ti-elev)'), r16: tok('var(--ti-guard)'), r17: tok('var(--ti-high)'), r18: tok('var(--ti-crit)'), r19: tok('var(--ti-crit)'), r20: tok('var(--pew-mass)'),
+      atk: tok('var(--pew-atk)'), fire: tok('var(--pew-fire)'), cab: tok('var(--pew-cab)'), r15: tok('var(--ti-elev)'), r16: tok('var(--ti-guard)'), r17: tok('var(--ti-high)'), r18: tok('var(--ti-crit)'), r19: tok('var(--ti-crit)'), r20: tok('var(--pew-mass)'),
       fg: tok('var(--color-fg)'), bg: tok('var(--color-bg)'),
       origin: { CN: tok('var(--pew-cn)'), RU: tok('var(--pew-ru)'), IR: tok('var(--pew-ir)'), KP: tok('var(--pew-kp)'), '*': tok('var(--pew-oth)') },
     };
@@ -257,8 +281,43 @@
         if (p) F.push({ f, x: p[0], y: p[1], r: ms * (f.novel ? 2.4 : Math.min(2.2, 1.1 + Math.sqrt(f.frp || 1) / 9)), a: f.conf === 'l' ? 0.45 : f.conf === 'h' ? 0.95 : 0.75 });
       }
     }
-    G = { nodes: N, arcs: A, outs: O, attrib: R, atks: K, fires: F, grid, cell };
+    // Submarine cables: each stored part projected, cut where the projection drops a point or jumps across the map
+    // edge, with a bounding box per piece for hit testing. Landing stations as points.
+    const C = [], S = [];
+    if (opt.cables && CAB.state === 'ok') {
+      for (const f of P.cableFeatures('cable')) {
+        const parts = f.geometry.type === 'LineString' ? [f.geometry.coordinates] : f.geometry.coordinates || [];
+        for (const part of parts) for (const piece of cablePieces(part)) C.push({ f, ...piece });
+      }
+      for (const f of P.cableFeatures('station')) {
+        const p = H.proj(f.geometry.coordinates);
+        if (p) S.push({ f, x: p[0], y: p[1] });
+      }
+    }
+    G = { nodes: N, arcs: A, outs: O, attrib: R, atks: K, fires: F, cables: C, stations: S, grid, cell };
   }
+  function cablePieces(coords) {
+    const out = [];
+    let cur = [];
+    const flush = () => {
+      if (cur.length >= 2) {
+        const pts = new Float32Array(cur.length * 2);
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+        cur.forEach((p, i) => { pts[i * 2] = p[0]; pts[i * 2 + 1] = p[1]; x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); });
+        out.push({ pts, box: [x0, y0, x1, y1] });
+      }
+      cur = [];
+    };
+    for (const c of coords || []) {
+      const p = Array.isArray(c) && isFinite(c[0]) && isFinite(c[1]) ? H.proj(c) : null;
+      if (!p) { flush(); continue; }
+      if (cur.length && Math.abs(p[0] - cur[cur.length - 1][0]) > H.W * 0.4) flush();
+      cur.push(p);
+    }
+    flush();
+    return out;
+  }
+  P.cablePieces = (coords) => cablePieces(coords);
 
   // ------------------------------------------------------------------ drawing
   const sx = (x) => x * T.k + T.x, sy = (y) => y * T.k + T.y;
@@ -279,6 +338,7 @@
     if (!cs) return;
     clear(cs);
     const dim = PAL.dark ? 1 : 0.9;
+    drawCables(cs);
     // Outage halos.
     for (const o of G.outs) {
       const on = o.o.ongoing, x = sx(o.x), y = sy(o.y), r = on ? 15 : 10;
@@ -316,6 +376,26 @@
       ctx.drawImage(s.cv, sx(o.x) - s.R, sy(o.y) - s.R, s.R * 2, s.R * 2);
     }
     ctx.globalAlpha = 1;
+  }
+  // Cables sit beneath every other layer: thin, steady lines in their own muted colour, with hollow landing stations.
+  // The selected cable is drawn again on top, heavier.
+  function drawCables(ctx) {
+    if (!G.cables || !G.cables.length) return;
+    const fade = opt.family ? 0.35 : 1, w = Math.max(0.7, Math.min(1.6, 0.8 * Math.sqrt(T.k)));
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = rgba(PAL.cab, (PAL.dark ? 0.6 : 0.55) * fade); ctx.lineWidth = w;
+    ctx.beginPath();
+    for (const c of G.cables) linePath(ctx, c.pts, 0, 1);
+    ctx.stroke();
+    const pick = sel && sel.kind === 'cable' ? sel.o.f : null;
+    if (pick) {
+      ctx.strokeStyle = rgba(PAL.cab, 1); ctx.lineWidth = w + 1.6;
+      ctx.beginPath();
+      for (const c of G.cables) if (c.f === pick) linePath(ctx, c.pts, 0, 1);
+      ctx.stroke();
+    }
+    ctx.lineWidth = 1.1; ctx.strokeStyle = rgba(PAL.cab, 0.95 * fade); ctx.fillStyle = rgba(PAL.bg, 0.9);
+    for (const s of G.stations) { ctx.beginPath(); ctx.arc(sx(s.x), sy(s.y), 2.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
   }
   function drawFires(ctx) {
     for (const o of G.fires || []) {
@@ -446,6 +526,7 @@
     canS = mk('ti-pew-static'); canD = mk('ti-pew-dyn');
     cs = canS.getContext('2d'); cd = canD.getContext('2d');
     T = host.transform || { k: 1, x: 0, y: 0 };
+    if (opt.cables) loadCables();
     prepare();
     noteArrivals();
     drawStatic();
@@ -529,8 +610,27 @@
     };
     near(G.arcs, 'flow');
     if (!best) near(G.attrib, 'attrib');
+    if (best) return best;
+    for (const o of G.stations || []) { const d = Math.hypot(sx(o.x) - vx, sy(o.y) - vy); if (d < 6 && d < bd) { bd = d; best = { kind: 'station', o, x: o.x, y: o.y }; } }
+    if (best) return best;
+    // Cables last: the nearest segment within 4 px, skipping pieces whose box is out of reach.
+    const reach = 4 / T.k;
+    for (const c of G.cables || []) {
+      const b = c.box;
+      if (px < b[0] - reach || px > b[2] + reach || py < b[1] - reach || py > b[3] + reach) continue;
+      for (let i = 0; i + 3 < c.pts.length; i += 2) {
+        const d = segDist(vx, vy, sx(c.pts[i]), sy(c.pts[i + 1]), sx(c.pts[i + 2]), sy(c.pts[i + 3]));
+        if (d < 4 && d < bd) { bd = d; best = { kind: 'cable', o: c, x: px, y: py }; }
+      }
+    }
     return best;
   }
+  function segDist(x, y, x0, y0, x1, y1) {
+    const dx = x1 - x0, dy = y1 - y0, l2 = dx * dx + dy * dy;
+    const t = l2 ? Math.max(0, Math.min(1, ((x - x0) * dx + (y - y0) * dy) / l2)) : 0;
+    return Math.hypot(x - (x0 + t * dx), y - (y0 + t * dy));
+  }
+  P.segDist = segDist;
   const defang = (ip) => String(ip || '').replace(/\.(?=[^.]*$)/, '[.]');
   const ago = (iso) => {
     const t = Date.parse(iso || ''); if (!isFinite(t)) return '';
@@ -566,6 +666,21 @@
       if (n.rsit) lines.push({ text: 'RSIT: ' + n.rsit });
       lines.push({ text: 'Source: ' + SOURCES[n.layer] + ' · click for the record' });
       return { head: NAMES[n.layer].replace(/s$/, '') + (n.family && n.family !== 'scanning' ? ' · ' + n.family : ''), lines };
+    }
+    if (h.kind === 'cable' || h.kind === 'station') {
+      const pr = h.o.f.properties || {}, wd = pr.wikidata || null, lines = [];
+      const fmtKm = (v) => (v == null || !isFinite(+v) ? '' : TI.f.int(Math.round(+v)) + ' km');
+      if (h.kind === 'cable') {
+        lines.push({ text: pr.operator ? 'Operator (OSM): ' + pr.operator : 'No operator tagged in OpenStreetMap', color: rgba(PAL.cab, 1) });
+        if (wd) {
+          const owners = TI.list(wd.owners);
+          const facts = [owners.length ? 'owners ' + owners.slice(0, 4).join(', ') + (owners.length > 4 ? ' …' : '') : '', fmtKm(wd.length_km), wd.ready_for_service ? (/^inception/.test(wd.ready_for_service_basis || '') ? 'inception ' : 'in service ') + String(wd.ready_for_service).slice(0, 4) : ''].filter(Boolean);
+          lines.push({ text: 'Wikidata ' + (wd.qid || '') + (facts.length ? ': ' + facts.join(' · ') : '') });
+        } else lines.push({ text: 'No Wikidata item matched by exact name' });
+        lines.push({ text: 'Partial coverage: OpenStreetMap maps only some cables, and a drawn route is approximate' });
+      } else lines.push({ text: pr.operator ? 'Operator (OSM): ' + pr.operator : 'Cable landing station', color: rgba(PAL.cab, 1) });
+      lines.push({ text: '© OpenStreetMap contributors (ODbL) · click for the OSM record' });
+      return { head: (h.kind === 'cable' ? 'Submarine cable: ' : 'Landing station: ') + (pr.name || 'unnamed'), lines };
     }
     if (h.kind === 'fire') {
       const f = h.o.f, ao = P.fireAois().find((x) => x.id === f.aoi);
@@ -619,6 +734,7 @@
     if (h.kind === 'outage') return 'https://ioda.inetintel.cc.gatech.edu/country/' + h.o.o.cc;
     if (h.kind === 'fire') return 'https://firms.modaps.eosdis.nasa.gov/map/';
     if (h.kind === 'attack') return h.o.row.url;
+    if (h.kind === 'cable' || h.kind === 'station') return (h.o.f.properties || {}).osm || '';
     const act = P.actors().find((a) => TI.list(h.a.pr.actors, ', ').includes(a.name));
     return act ? act.ref : '';
   }
@@ -650,7 +766,9 @@
 
   // ------------------------------------------------------------------ selection panel
   P.select = (h) => {
+    const restyle = (sel && sel.kind === 'cable') || (h && h.kind === 'cable');
     sel = h;
+    if (restyle && cs) drawStatic();
     const el = document.getElementById('pew-sel');
     if (!el) return;
     TI.clear(el);
@@ -660,7 +778,9 @@
     el.append(TI.h('div', { class: 'ti-pew-sel-h' }, TI.h('span', { text: d.head }), TI.h('button', { type: 'button', class: 'ti-pew-x', 'aria-label': 'Close details', text: '×', onclick: () => P.select(null) })));
     for (const l of d.lines.slice(0, -1)) el.append(TI.h('div', { class: 'ti-pew-sel-l', text: l.text }));
     const act = TI.h('div', { class: 'ti-pew-sel-a' });
-    if (url) act.append(TI.h('a', { href: url, target: '_blank', rel: 'noopener noreferrer', text: h.kind === 'flow' || h.kind === 'attack' ? 'Open the article' : h.kind === 'outage' ? 'Open IODA' : h.kind === 'fire' ? 'Open the FIRMS map' : h.kind === 'attrib' ? 'Open a cited report' : 'Open the source record' }));
+    if (url) act.append(TI.h('a', { href: url, target: '_blank', rel: 'noopener noreferrer', text: h.kind === 'flow' || h.kind === 'attack' ? 'Open the article' : h.kind === 'outage' ? 'Open IODA' : h.kind === 'fire' ? 'Open the FIRMS map' : h.kind === 'attrib' ? 'Open a cited report' : h.kind === 'cable' || h.kind === 'station' ? 'Open in OpenStreetMap' : 'Open the source record' }));
+    const wd = h.kind === 'cable' && (h.o.f.properties || {}).wikidata;
+    if (wd && /^Q\d+$/.test(String(wd.qid || ''))) act.append(TI.h('a', { href: 'https://www.wikidata.org/wiki/' + wd.qid, target: '_blank', rel: 'noopener noreferrer', text: 'Wikidata item' }));
     if (h.kind === 'attack' && h.o.row.link) act.append(TI.h('a', { href: h.o.row.link, target: '_blank', rel: 'noopener noreferrer', text: 'ransomware.live record' }));
     // Pivots (context.js): a country profile for a reported attack or an outage.
     const prof = TI.pivot && (h.kind === 'attack' || h.kind === 'outage') ? TI.pivot.country(h.kind === 'attack' ? h.o.row.cc : h.o.o.cc) : null;
@@ -700,6 +820,7 @@
     out.fires = { drawn: P.fires().length, all: ao.reduce((s, x) => s + (+x.detections || 0), 0), aois: ao.filter((x) => +x.detections > 0).length, novel: ao.reduce((s, x) => s + (+x.novel_cells || 0), 0), judged: ao.some((x) => x.novelty_judged) };
     const at = P.attacksAll();
     out.attacks = { all: at.length, placed: at.filter((r) => r.cc).length, fresh: at.filter((r) => r.cc && freshAtk(r)).length };
+    out.cables = { state: CAB.state, ways: P.cableFeatures('cable').length, stations: P.cableFeatures('station').length };
     return out;
   };
   P.hud = () => {
@@ -737,6 +858,9 @@
     row('outages', rgba(PAL.out, 1), 'Internet outages', TI.f.int(c.outages.ongoing), `${TI.f.int(c.outages.all)} in 7 days`);
     row('fires', rgba(PAL.fire, 1), 'Thermal anomalies', TI.f.int(c.fires.all), [`${TI.f.int(c.fires.aois)} theaters`, c.fires.drawn < c.fires.all ? `${TI.f.int(c.fires.drawn)} mapped` : '', c.fires.judged ? `${TI.f.int(c.fires.novel)} novel cells` : 'novelty after 7 days'].filter(Boolean).join(' · '), !TI.failed('live_fires'));
     row('attrib', rgba(PAL.origin.CN, 1), 'Attribution arcs', TI.f.int(c.attrib.pairs), `${TI.f.int(c.attrib.actors)} actors`);
+    row('cables', rgba(PAL.cab, 1), 'Submarine cables', c.cables.state === 'ok' ? TI.f.int(c.cables.ways) : '–',
+      c.cables.state === 'ok' ? `${TI.f.int(c.cables.stations)} landing station${c.cables.stations === 1 ? '' : 's'} · OSM, partial${TI.globe && TI.globe.on() ? ' · flat map only' : ''}` : c.cables.state === 'loading' ? 'loading' : c.cables.state === 'error' ? 'unavailable' : 'off · © OpenStreetMap contributors',
+      c.cables.state !== 'error');
     const ages = [];
     if (meta && meta.generated) ages.push('infrastructure ' + ago(meta.generated) + (meta.served_from && meta.served_from !== 'store' ? ' (' + meta.served_from + ')' : ''));
     if (gm && gm.latest) ages.push('GDELT export ' + String(gm.latest).slice(11, 16) + 'Z');
@@ -773,6 +897,10 @@
     if (opt.flows) for (const r of [15, 17, 18, 19, 20]) el.append(sw(rgba(rootColor(r), 1), ROOT[r], 'line'));
     if (opt.fires) el.append(sw(rgba(PAL.fire, 1), 'Thermal anomaly, 24 h (NASA FIRMS; ringed: novel cell)', 'square'));
     if (opt.attrib) for (const [cc, nm] of [['CN', 'China'], ['RU', 'Russia'], ['IR', 'Iran'], ['KP', 'North Korea'], ['*', 'Other origin']]) el.append(sw(rgba(PAL.origin[cc], 1), nm + '-attributed', 'dash'));
+    if (opt.cables) {
+      el.append(sw(rgba(PAL.cab, 1), 'Submarine cable, partial coverage (hollow: landing station)', 'line'));
+      el.append(TI.h('a', { href: 'https://www.openstreetmap.org/copyright', target: '_blank', rel: 'noopener noreferrer', text: '© OpenStreetMap contributors' }));
+    }
     el.append(TI.h('span', {}, 'Rings mark records new in 24 h (attacks: added since yesterday); arrows point to the action end'));
   };
   P.ticker = () => {
@@ -870,7 +998,7 @@
 
   // ------------------------------------------------------------------ controls
   function syncControls() {
-    for (const k of ['c2', 'ioc', 'src', 'url', 'attacks', 'flows', 'outages', 'fires', 'attrib', 'singles', 'motion']) {
+    for (const k of ['c2', 'ioc', 'src', 'url', 'attacks', 'flows', 'outages', 'fires', 'attrib', 'cables', 'singles', 'motion']) {
       const b = document.getElementById('map-' + k);
       if (b) b.setAttribute('aria-pressed', String(!!opt[k]));
     }
@@ -901,7 +1029,7 @@
       else if (a === 'reset') { const box = document.getElementById('ti-map'); if (box && box._resetZoom) box._resetZoom(); }
       return;
     }
-    const t = ev.target.closest && ev.target.closest('#map-c2, #map-ioc, #map-src, #map-url, #map-attacks, #map-flows, #map-outages, #map-fires, #map-attrib, #map-singles, #map-motion, #map-replay, #map-wall, .ti-pew-row');
+    const t = ev.target.closest && ev.target.closest('#map-c2, #map-ioc, #map-src, #map-url, #map-attacks, #map-flows, #map-outages, #map-fires, #map-attrib, #map-cables, #map-singles, #map-motion, #map-replay, #map-wall, .ti-pew-row');
     if (!t) return;
     if (t.id === 'map-replay') { P.replay(); return; }
     if (t.id === 'map-wall') { toggleWall(); return; }
@@ -909,6 +1037,7 @@
     opt[key] = !opt[key];
     save();
     syncControls();
+    if (key === 'cables' && opt.cables) { if (CAB.state === 'error') CAB.state = 'idle'; loadCables(); }
     if (key === 'motion') { if (TI.globe && TI.globe.on()) { TI.globe.refresh(); return; } if (!opt.motion) { drawStatic(); } kick(); return; }
     P.redraw(); P.ticker();
   });

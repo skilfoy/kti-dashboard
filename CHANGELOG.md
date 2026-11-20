@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.10.4 (20 November 2026)
+
+- Map: a Submarine cables layer, off by default. It draws the collector's weekly OpenStreetMap snapshot of submarine cables and landing stations (`/api/context?type=cables&format=geojson`), which the page reads only the first time the layer is switched on.
+- Cables sit beneath every other layer as thin lines in their own colour, with landing stations as hollow points. Hovering a cable names it and shows its OSM operator and, where one Wikidata item matched by exact name, the owners, length and service or inception year. Clicking it highlights the whole cable and links the OpenStreetMap way and the Wikidata item.
+- Every view of the layer says that coverage is partial, and the chip, tooltip and legend carry "© OpenStreetMap contributors" (ODbL), with the legend linking OSM's copyright page.
+- The layer draws on the flat map only. With the globe on, its HUD row says so.
+- No collector or service change.
+
 ## 3.10.3 (20 November 2026)
 
 - Translation: an HTTP 429 now passes the batch to the next free model instead of ending the run. Two of the first four runs met a 429 on the first model and translated nothing more. The run stops on a 429 only when every model answers one, and on 401 or 402 at once. Up to four models are tried a batch.
