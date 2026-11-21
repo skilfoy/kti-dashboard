@@ -102,5 +102,29 @@ ok((await M.translateBatch([{ link: 'x', title: 'Хакеры', lang: 'ru' }], {
 // Search matches the English title of a Russian entry.
 const s = await M.search({ q: 'attacked a bank', days: 7 });
 ok(s.hits.some((h) => h.link === 'https://ru/1' && h.title_en === 'Hackers attacked a bank' && h.lang === 'ru'), 'search finds a Russian entry by its English title ' + JSON.stringify(s.hits.map((h) => h.link)));
-ok(M.plan(new Date('2026-11-20T10:04:00Z')).join().includes('sources,translate,entities') && !M.plan(new Date('2026-11-20T10:49:00Z')).includes('translate'), 'translate runs between sources and entities, in the slots that read sources');
+ok(M.plan(new Date('2026-11-20T10:04:00Z')).join().includes('sources,translate,entities') && M.plan(new Date('2026-11-20T10:49:00Z')).join().includes('sources,translate,triage'), 'translate runs right after sources in every slot');
+
+// ---------------------------------------------------------------- scale (3.11.0): theater priority, parallel batches, the allowance under concurrency
+await db.query(`DELETE FROM ti.item`);
+await db.query(`DELETE FROM ti.kv WHERE k = 'translate:budget'`);
+for (let n = 0; n < 130; n++) await db.query(`INSERT INTO ti.item (link, fp, feed, host, title, summary, published, category, region, lang, seen_at) VALUES ($1, $1, 'f', 'h', $2, '', now(), $3, $4, 'fa', now() - make_interval(mins => $5))`,
+  [`https://fa/${n}`, `خبر شماره ${1000 + n} درباره حمله`, n < 10 ? 'cyber-news' : 'geopolitics', n % 2 ? 'T-HRM' : 'T-BAL', n]);
+const pr = await M.pendingTitles(20, [], ['T-HRM']);
+ok(pr.slice(0, 10).every((r) => +r.link.split('/').pop() < 10) && pr.slice(10).every((r) => +r.link.split('/').pop() % 2 === 1), 'cyber first, then the high-level theater\'s press ' + JSON.stringify(pr.map((r) => r.link.split('/').pop())));
+const order = [];
+const pchat = async (model, messages) => {
+  order.push(model);
+  await new Promise((r) => setTimeout(r, 20));
+  const lines = messages[1].content.split('\n').map((l) => l.split('\t'));
+  return { ok: true, msg: { content: JSON.stringify({ t: lines.map(([i, , src]) => ({ i: +i, en: `News number ${src.match(/\d{4}/)[0]} about an attack` })) }) } };
+};
+const rp = await M.runJob('translate', { chat: pchat, models: ['a:free', 'b:free', 'c:free'] });
+ok(rp.ok && rp.translated === 130 && rp.batches === 4, 'parallel rounds clear 130 titles in four batches ' + JSON.stringify(rp).slice(0, 300));
+ok(order.slice(0, 3).sort().join() === 'a:free,b:free,c:free', 'the parallel batches of a round start on different models ' + JSON.stringify(order));
+// The allowance holds under parallel requests: 10 requests at once against 3 left grant exactly 3.
+await db.query(`DELETE FROM ti.kv WHERE k = 'translate:budget'`);
+await db.query(`INSERT INTO ti.kv (k, v, at) VALUES ('translate:budget', $1, now())`, [{ day: new Date().toISOString().slice(0, 10), used: M.TR.DAILY - 3, cap: M.TR.DAILY }]);
+const got = await Promise.all(Array.from({ length: 10 }, () => M.translateBatch([{ link: 'z', title: 'خبر', lang: 'fa' }], { models: ['m:free'] }).catch((e) => ({ err: e.message }))));
+const used = (await db.query(`SELECT v FROM ti.kv WHERE k = 'translate:budget'`)).rows[0].v.used;
+ok(used === M.TR.DAILY && got.filter((g) => g.stop === 'daily allowance spent').length >= 7, 'parallel requests never overspend the allowance ' + JSON.stringify({ used, stops: got.map((g) => g.stop) }));
 console.log(`translate_test: ${pass} checks passed`);

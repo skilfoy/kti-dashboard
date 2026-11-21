@@ -991,7 +991,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const st = await (await call('/status', bearer(mint()))).json();
   ok(st.gdelt_files.files >= 288 && st.version === M.VERSION && st.runs.length > 0, 'status ' + JSON.stringify(st.gdelt_files));
   ok(JSON.stringify(M.plan(new Date('2026-10-17T18:34:00Z'))) === '["gdelt","infra","snap","sources","translate","triage","entities","watch","sigma","reports"]', 'sources in every slot, Sigma drafts at :34, reports last');
-  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:00:00Z'))) === '["gdelt","infra","snap","sources","translate","entities","watch","foresight","reports"]' && JSON.stringify(M.plan(new Date('2026-10-17T18:45:00Z'))) === '["gdelt","health","ioda","retention","fires","maritime","sources","triage","cyphys","entities","watch","reports"]'
+  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:00:00Z'))) === '["gdelt","infra","snap","sources","translate","entities","watch","foresight","reports"]' && JSON.stringify(M.plan(new Date('2026-10-17T18:45:00Z'))) === '["gdelt","health","ioda","retention","fires","maritime","sources","translate","triage","cyphys","entities","watch","reports"]'
     && M.plan(new Date('2026-10-17T07:19:00Z')).includes('psirt') && !M.plan(new Date('2026-10-17T08:19:00Z')).includes('psirt') && M.plan(new Date('2026-10-17T08:19:00Z')).includes('triageeval') && !M.plan(new Date('2026-10-17T08:49:00Z')).includes('triageeval'), 'plan');
 }
 

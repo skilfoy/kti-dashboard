@@ -30,17 +30,17 @@ Before 3.10.0 the tag was the feed's, from five scripts. As a result:
 
 ## Title translation
 
-The `translate` job runs in every slot that reads sources, after `sources` and before `entities`:
+The `translate` job runs in every slot, right after `sources`:
 
-1. **Queue.** It takes non-English titles of the last 48 hours: cyber categories first, then theater and geopolitical press, newest first.
-2. **Request.** It sends them in batches of 40 to the reports' free hosted models, with up to four batches and 110 seconds a run. The job has its own allowance of 200 requests a day (kv `translate:budget`).
+1. **Queue.** It takes non-English titles of the last 48 hours in this order: cyber categories, then theater and geopolitical press from theaters at ThreatCon 4 or above (by the feed's region), then the rest of that press, then everything else. Newest first within each group.
+2. **Request.** Each round sends up to three batches of 40 at once to the reports' free hosted models, each batch starting on a different model. A run makes up to three rounds within 120 seconds. The job has its own allowance of 420 requests a day (kv `translate:budget`), taken one request at a time in one SQL statement.
 3. **Checks.** A translation is stored in `ti.item.title_en`, with the model and time, only when all of these hold:
    - each line is answered once;
    - the text is mostly Latin letters;
    - the length is plausible;
    - every CVE id and every number of four or more digits in the source is kept (Arabic-Indic and full-width digits count as their ASCII digits);
    - for a non-Latin source, the text differs from the source.
-4. **Failures.** A title that fails waits for the next run, and after two failures it is left untranslated. A rate limit stops the run without counting against the titles.
+4. **Failures.** A title that fails waits for the next run, and after two failures it is left untranslated. A 429 passes the batch to the next model. Timeouts and the run's own deadline count nothing against the titles.
 
 ## Where the English titles go
 

@@ -78,7 +78,7 @@ export function plan(at) {
     jobs.push('score');
   }
   // Cyber-physical coincidences (37n-cyphys.mjs) hourly, before the watch job reads them.
-  if (m >= 45) jobs.push('retention', 'fires', 'maritime', 'sources', 'triage', 'cyphys');
+  if (m >= 45) jobs.push('retention', 'fires', 'maritime', 'sources', 'translate', 'triage', 'cyphys');
   jobs.push('entities', 'watch');
   // Sigma drafts (37o-sigma.mjs) in the lightest quarter hour, after the entities and watches it reads.
   if (m >= 30 && m < 45) jobs.push('sigma');
