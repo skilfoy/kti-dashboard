@@ -149,6 +149,8 @@ INSERT INTO ti.lease (job) VALUES ('sigma') ON CONFLICT DO NOTHING;
 CREATE TABLE IF NOT EXISTS ti.foresight (id bigserial PRIMARY KEY, theater_id text NOT NULL, name text, state_hash text, why text, outcome text NOT NULL, reason text, model text,
   futures jsonb, failures jsonb NOT NULL DEFAULT '[]'::jsonb, calls jsonb NOT NULL DEFAULT '[]'::jsonb, prompt_v int, created_at timestamptz NOT NULL DEFAULT now());
 CREATE INDEX IF NOT EXISTS foresight_theater ON ti.foresight (theater_id, created_at);
+-- Horizons (3.12.0): six and 18 months; rows before 3.12.0 are six-month sets.
+ALTER TABLE ti.foresight ADD COLUMN IF NOT EXISTS horizon int NOT NULL DEFAULT 6;
 INSERT INTO ti.lease (job) VALUES ('foresight') ON CONFLICT DO NOTHING;
 -- Non-English collection (3.10.0, 37q-translate.mjs): an English title for entries in other languages, the model that
 -- wrote it and when, and failed attempts (a title is left after two). Translated titles are searched through their own

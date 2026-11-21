@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.12.0 (21 November 2026)
+
+- Threatcasting gains an 18-month horizon beside the six-month one (advancement plan B69: "6-month, 18-month, and longer horizons"). Each theater at ThreatCon 4 or above now holds two sets of three futures.
+  - **Prompt.** For 18 months the model builds each future on structural drivers: force posture, alliances, sanctions and trade, economic strain, technology and infrastructure, and succession. Milestones may span quarters.
+  - **Redrafting.** An 18-month set is redrafted when the theater's level or trend changes, or after 21 days. A six-month set still follows indicator states too, and is refreshed after 7 days. Six-month sets go first when both are due.
+  - **Allowance.** The daily allowance rises from 8 to 12 sets.
+  - **Theaters page.** The "Futures and signposts" card gains a horizon selector.
+  - **Data.** The document carries one reading per theater and horizon, the signpost index names the horizon, and `ti.foresight` gains `horizon`, default 6, so existing sets read as six-month ones.
+- Collector 2026-11-21.2.
+
 ## 3.11.0 (21 November 2026)
 
 - **The problem.** Translation covered the cyber press but very little of the theater press. In the 24 hours to 21 November, 1,695 of 1,703 non-English cyber entries were translated against 1,527 of 8,766 theater and geopolitical entries. The registry rebuild had added Persian, Arabic and Russian press: 2,326 Persian entries a day, most from six Iranian outlets. The job, one batch at a time within its 120-second run, managed about 110 titles an hour.
