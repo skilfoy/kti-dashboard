@@ -120,10 +120,10 @@ const chat = async (model, messages) => {
 };
 process.env.OPENROUTER_API_KEY = 'test-key';
 const due = await M.foreDue(inp());
-ok(due.map((d) => d.t.theater_id).join() === 'T-HRM,T-LEV' && due[0].why === 'no accepted set', 'only ThreatCon 4 and above, highest first ' + JSON.stringify(due.map((d) => [d.t.theater_id, d.why])));
+ok(due.map((d) => `${d.t.theater_id}/${d.horizon}`).join() === 'T-HRM/6,T-LEV/6,T-HRM/18,T-LEV/18' && due[0].why === 'no accepted set', 'only ThreatCon 4 and above; six-month sets first, highest level first ' + JSON.stringify(due.map((d) => [d.t.theater_id, d.horizon, d.why])));
 const r1 = await M.runJob('foresight', { chat, models: ['test/model:free'] });
 const row1 = (await db.query(`SELECT * FROM ti.foresight ORDER BY id`)).rows;
-ok(r1.ok && row1.length === 1 && row1[0].outcome === 'accepted' && row1[0].theater_id === 'T-HRM' && row1[0].calls.length === 2, 'one repair round turns a two-future answer into an accepted set ' + JSON.stringify(r1).slice(0, 300));
+ok(r1.ok && row1.length === 1 && row1[0].outcome === 'accepted' && row1[0].theater_id === 'T-HRM' && row1[0].horizon === 6 && row1[0].calls.length === 2, 'one repair round turns a two-future answer into an accepted set ' + JSON.stringify(r1).slice(0, 300));
 const doc1 = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/foresight.json.gz')).toString());
 if (process.env.FORESIGHT_DOC_OUT) fs.writeFileSync(process.env.FORESIGHT_DOC_OUT, JSON.stringify(doc1));
 const fut = doc1.rows.filter((r) => r.kind === 'future'), rd = doc1.rows.find((r) => r.kind === 'reading');
@@ -134,6 +134,15 @@ const r2 = await M.runJob('foresight', { chat, models: ['test/model:free'] });
 ok(r2.attempt.theater_id === 'T-LEV' && r2.attempt.outcome === 'rejected', 'the next due theater is drafted; its answer cites the wrong theater\'s indicators and is rejected ' + JSON.stringify(r2.attempt));
 const rej = (await db.query(`SELECT failures FROM ti.foresight WHERE theater_id = 'T-LEV'`)).rows[0].failures;
 ok(rej.some((f) => /W-HRM-1 is not an indicator of T-LEV/.test(f)), 'rejected attempts keep the reasons');
+// The 18-month sets come next: the prompt states the horizon and asks for structural drivers.
+const prompts = [];
+const chat18 = async (model, messages) => { prompts.push(messages[1].content); return { ok: true, msg: { content: JSON.stringify(sets()) } }; };
+const r3a = await M.runJob('foresight', { chat: chat18, models: ['test/model:free'] });
+ok(r3a.attempt.theater_id === 'T-HRM' && r3a.attempt.horizon === 18 && r3a.attempt.outcome === 'accepted' && /HORIZON: 18 months/.test(prompts[0]), 'the 18-month set for T-HRM ' + JSON.stringify(r3a.attempt));
+const r3b = await M.runJob('foresight', { chat: chat18, models: ['test/model:free'] });
+ok(r3b.attempt.theater_id === 'T-LEV' && r3b.attempt.horizon === 18 && r3b.attempt.outcome === 'rejected', 'T-LEV 18 months is tried (and rejected on the wrong theater\'s indicators)');
+const docH = await M.foresightDoc(inp());
+ok(docH.rows.filter((r) => r.kind === 'reading').map((r) => `${r.theater_id}/${r.horizon_months}`).sort().join() === 'T-HRM/18,T-HRM/6' && docH.sets === 2 && docH.theaters === 1, 'one reading per theater and horizon');
 const r3 = await M.runJob('foresight', { chat, models: ['test/model:free'] });
 ok(r3.skipped === 'no theater is due', 'a rejected theater waits RETRY_H before another attempt; an accepted set waits for a change ' + JSON.stringify(r3));
 // A change in an indicator state makes the theater due again, but not within a day of its last set.
@@ -142,9 +151,9 @@ M.resetForesight();
 ok(!(await M.foreDue(inp())).some((d) => d.t.theater_id === 'T-HRM'), 'a changed theater waits CHANGED_MIN_H');
 await db.query(`UPDATE ti.foresight SET created_at = now() - interval '30 hours'`);
 const d2 = await M.foreDue(inp());
-ok(d2[0].t.theater_id === 'T-LEV' && d2[0].why === 'no accepted set' && d2[1].t.theater_id === 'T-HRM' && /changed/.test(d2[1].why), 'a missing set goes before a changed one ' + JSON.stringify(d2.map((d) => [d.t.theater_id, d.why])));
+ok(d2.map((d) => `${d.t.theater_id}/${d.horizon}`).join() === 'T-LEV/6,T-LEV/18,T-HRM/6' && /indicator states changed/.test(d2[2].why), 'a missing set goes before a changed one; an indicator change leaves the 18-month set alone ' + JSON.stringify(d2.map((d) => [d.t.theater_id, d.horizon, d.why])));
 const doc2 = await M.foresightDoc(inp());
-ok(doc2.rows.find((r) => r.kind === 'reading').current === false, 'the document marks a set drafted on older indicator states');
+ok(doc2.rows.find((r) => r.kind === 'reading' && r.horizon_months === 6).current === false && doc2.rows.find((r) => r.kind === 'reading' && r.horizon_months === 18).current === true, 'the six-month set is marked as drafted on older indicator states; the 18-month set is not');
 // The site down: the job reads the bucket copies.
 siteUp = false; M.resetForesight();
 const r4 = await M.runJob('foresight', { chat: async () => ({ ok: true, msg: { content: '{"futures": []}' } }), models: ['m:free'] });

@@ -1,6 +1,6 @@
-# Threatcasting: futures and signposts (3.9.0)
+# Threatcasting: futures and signposts (3.9.0; 18-month horizon 3.12.0)
 
-The `foresight` job (`neon/parts/37p-foresight.mjs`) gives each theater at ThreatCon 4 or above three futures over six months. It links each future to the theater's warning indicators as signposts. The watch W-4B alerts when a signpost indicator changes state. This answers the advancement plan's B69 and G45 work items with machine drafts. It does not replace an analyst-run threatcasting workshop (B68).
+The `foresight` job (`neon/parts/37p-foresight.mjs`) gives each theater at ThreatCon 4 or above two sets of three futures: one over six months and one over 18 months. It links each future to the theater's warning indicators as signposts. The watch W-4B alerts when a signpost indicator changes state. This answers the advancement plan's B69 and G45 work items with machine drafts. It does not replace an analyst-run threatcasting workshop (B68).
 
 ## What a future holds
 
@@ -77,4 +77,4 @@ The watch reads nothing until a future exists. Its first run after that records 
 
 - The futures are only as good as the theater's authored assessment and items. The model cannot see beyond them, and the checks test structure and grounding in the theater's indicators. They do not test analytic quality.
 - The reading follows the authored indicator states, which the daily reassessment maintains. A measured change shows on the page as a proposal until the analyst applies it.
-- Six months is the only horizon so far. The plan's 18-month and longer horizons remain open.
+- Two horizons, six and 18 months, are in place (3.12.0). An 18-month set rests on structural drivers: it is redrafted when the theater's level or trend changes, or after 21 days, but not when an indicator state moves. Horizons beyond 18 months remain open.
