@@ -181,7 +181,7 @@ export async function jobPsirt(opts = {}) {
 // vector and theater from the closed lists, actors that occur in the title, and a short reason without links; anything
 // else is rejected and counted. A daily request budget in ti.kv keeps the job inside the free tier. Without
 // OPENROUTER_API_KEY in the function environment the job records "held" and makes no request.
-export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 40, POOL: 900, MAX_TOKENS: 16000, DAILY_REQUESTS: 45, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 70000, VERIFY_AFTER_MS: 80000, VERIFY_EVERY_MS: 100 * 60000, EVAL_TRIES: 3, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
+export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 50, POOL: 900, MAX_TOKENS: 16000, DAILY_REQUESTS: 45, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 70000, VERIFY_AFTER_MS: 80000, VERIFY_EVERY_MS: 100 * 60000, EVAL_TRIES: 3, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
   ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions',
   // Tried in order by OpenRouter (its `models` fallback list, three at most). The first two answered every request they
   // were routed in the first day of production, in 20 to 35 seconds; the bare free router picked a slow or reasoning-heavy
@@ -209,9 +209,10 @@ export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 40, POOL: 900, MAX_TOKENS: 
   //   advisories 95%, government 64%, research 60%, cyber-news 59%, topic-theater 44%, blogs 41%) go first; the other
   //   kinds follow in the same run. Within a tier the newest titles go first, so the backlog takes the spare capacity.
   // - LABEL_WINDOW_H: 30 days, the life of a label (KEEP_DAYS), so no title ages out unlabelled while it is stored.
-  // - Throughput: 40 titles a request (BATCH), up to PARALLEL requests at once, the job in every quarter hour on a
+  // - Throughput: 50 titles a request (BATCH), up to PARALLEL requests at once, the job in every quarter hour on a
   //   credited account (EXTRA_SLOTS: the free tier's day of 45 requests allows one an hour, at :49), a non-reasoning
-  //   model first (MODELS) and the request cap raised to 750 of OpenRouter's 1,000 (TRIAGE_CAPS; translation has 200).
+  //   model first (MODELS), and a request cap of 560 of OpenRouter's 1,000 a day (TRIAGE_CAPS): translation takes 420
+  //   since 3.11.0 (37q-translate.mjs, TR.DAILY), and the two together stay 20 under the account's limit.
   //   A run takes at most LABEL_BATCHES_CREDITED requests and at most its share of the day's remaining requests (pace),
   //   so the budget lasts to midnight UTC.
   LABEL_WINDOW_H: 30 * 24, EXTRA_SLOTS: [0, 15, 30] };
@@ -278,7 +279,7 @@ const utcDay = () => new Date().toISOString().slice(0, 10);
 // The day's request cap follows the account. OpenRouter allows 50 free-model requests a day to an account that has never
 // bought credits and 1,000 a day to one that has; the key endpoint says which. The answer is kept for six hours. An
 // account on the free tier, or a key endpoint that does not answer, gets the conservative cap.
-export const TRIAGE_CAPS = { free: 45, credited: 750 };
+export const TRIAGE_CAPS = { free: 45, credited: 560 };
 export async function triageCap() {
   const E = ENV(), k = (await kvGet('triage:tier')) || {};
   if (k.at && Date.now() - Date.parse(k.at) < 6 * 3600000 && k.cap) return k;

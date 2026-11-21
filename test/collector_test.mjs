@@ -667,9 +667,9 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
     ('https://w.example/cy1', 'fp-w-cy1', 'w', 'World Wire', 'w.example', 'Ransomware crew leaks hospital records', now() - interval '2 hours', 'topic-cyber', 'Global'),
     ('https://w.example/cyold', 'fp-w-cyold', 'w', 'World Wire', 'w.example', 'Botnet takedown announced by police', now() - interval '30 hours', 'topic-cyber', 'Global'),
     ('https://w.example/cyancient', 'fp-w-cyanc', 'w', 'World Wire', 'w.example', 'Spyware vendor sanctioned last month', now() - interval '31 days', 'topic-cyber', 'Global')`);
-  // Enough fresh world-news titles for several parallel batches.
+  // Enough fresh world-news titles for more than four batches.
   await db.query(`INSERT INTO ti.item (link, fp, feed, source, host, title, published, category, region)
-    SELECT 'https://w.example/g' || g, 'fp-w-g' || g, 'w', 'World Wire', 'w.example', concat_ws(' ', 'w' || substr(md5(g::text), 1, 7), 'x' || substr(md5(g::text), 8, 7), 'y' || substr(md5(g::text), 15, 7), 'z' || substr(md5(g::text), 22, 7), 'q' || substr(md5(g::text), 29, 4)), now() - make_interval(mins => g), 'geopolitics', 'Global' FROM generate_series(1, 130) g`);
+    SELECT 'https://w.example/g' || g, 'fp-w-g' || g, 'w', 'World Wire', 'w.example', concat_ws(' ', 'w' || substr(md5(g::text), 1, 7), 'x' || substr(md5(g::text), 8, 7), 'y' || substr(md5(g::text), 15, 7), 'z' || substr(md5(g::text), 22, 7), 'q' || substr(md5(g::text), 29, 4)), now() - make_interval(mins => g), 'geopolitics', 'Global' FROM generate_series(1, 210) g`);
   llm = []; await db.query(`DELETE FROM ti.kv WHERE k = 'triage:tier'`); keyTier = 'credited'; // the free tier's day of requests is spent by now
   const bud0 = ((await M.kvGet('triage:budget')) || {}).used || 0;
   const tm = await M.runJob('triage', { at: '2026-11-20T10:49:00Z' });
@@ -681,7 +681,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
     'every stored title is labelled, tier 1 first, in parallel batches that each spend one request ' + JSON.stringify({ calls: llm.length, spent: bud1 - bud0, candidates: tm.candidates, stop: tm.stop, err: tm.error }));
   ok(tm.ok && !tm.held && Number.isInteger(tm.waiting) && Number.isInteger(tm.waiting_tier1) && tm.label_window_h === 720 && tm.requests_left > 0 && tm.run_share >= 1, 'the :49 run labels, reports the queue by tier and its share of the day ' + JSON.stringify({ w: tm.waiting, w1: tm.waiting_tier1, left: tm.requests_left, share: tm.run_share }));
   await db.query(`DELETE FROM ti.item WHERE link LIKE 'https://w.example/%'`); await db.query(`DELETE FROM ti.triage WHERE link LIKE 'https://w.example/%'`); M.resetMirrorMemory(); // leave the later checks the state they expect
-  const pc = await M.triagePace(750, new Date(new Date().toISOString().slice(0, 10) + 'T23:50:00Z'));
+  const pc = await M.triagePace(560, new Date(new Date().toISOString().slice(0, 10) + 'T23:50:00Z'));
   ok(pc.share >= 1 && pc.share <= Math.ceil(1.5 * pc.left), 'the last slot of the day may take what is left ' + JSON.stringify(pc));
   // Story clustering: same story from three publishers, a shared CVE with different wording, and an unrelated title.
   const cl = M.clusterTitles([{ title: 'Fortinet patches critical FortiOS SSL VPN authentication bypass', cves: [] }, { title: 'Critical FortiOS SSL VPN authentication bypass patched by Fortinet', cves: [] },
@@ -1007,7 +1007,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const st = await (await call('/status', bearer(mint()))).json();
   ok(st.gdelt_files.files >= 288 && st.version === M.VERSION && st.runs.length > 0, 'status ' + JSON.stringify(st.gdelt_files));
   ok(JSON.stringify(M.plan(new Date('2026-10-17T18:34:00Z'))) === '["gdelt","infra","snap","sources","translate","triage","entities","watch","sigma","reports"]', 'sources in every slot, Sigma drafts at :34, reports last');
-  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:00:00Z'))) === '["gdelt","infra","snap","sources","translate","triage","entities","watch","foresight","reports"]' && JSON.stringify(M.plan(new Date('2026-10-17T18:45:00Z'))) === '["gdelt","health","ioda","retention","fires","maritime","sources","triage","cyphys","entities","watch","reports"]'
+  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:00:00Z'))) === '["gdelt","infra","snap","sources","translate","triage","entities","watch","foresight","reports"]' && JSON.stringify(M.plan(new Date('2026-10-17T18:45:00Z'))) === '["gdelt","health","ioda","retention","fires","maritime","sources","translate","triage","cyphys","entities","watch","reports"]'
     && M.plan(new Date('2026-10-17T07:19:00Z')).includes('psirt') && !M.plan(new Date('2026-10-17T08:19:00Z')).includes('psirt') && M.plan(new Date('2026-10-17T08:19:00Z')).includes('triageeval') && !M.plan(new Date('2026-10-17T08:49:00Z')).includes('triageeval'), 'plan');
 }
 

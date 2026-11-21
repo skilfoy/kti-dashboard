@@ -282,7 +282,7 @@ ok(vf(500, 100, 10).flag === 'spike' && vf(10, 100, 10).flag === 'silence' && vf
 const at = (s) => M.plan(new Date(s));
 ok(JSON.stringify(at('2026-10-22T06:19:00Z')) === JSON.stringify(['gdelt', 'health', 'ioda', 'sources', 'translate', 'triage', 'lists', 'leaksites', 'links', 'unit42', 'triageeval', 'score', 'entities', 'watch', 'reports']), ':19 at 06 UTC adds Unit 42');
 ok(at('2026-10-26T08:19:00Z').includes('ransompay') && !at('2026-10-27T08:19:00Z').includes('ransompay'), 'Ransomwhere Mondays only');
-ok(at('2026-10-22T10:49:00Z').join() === 'gdelt,health,ioda,retention,fires,maritime,sources,triage,cyphys,entities,watch,reports' && at('2026-10-22T10:04:00Z').join() === 'gdelt,infra,snap,sources,translate,triage,entities,watch,foresight,reports', ':49 and :04 plans');
+ok(at('2026-10-22T10:49:00Z').join() === 'gdelt,health,ioda,retention,fires,maritime,sources,translate,triage,cyphys,entities,watch,reports' && at('2026-10-22T10:04:00Z').join() === 'gdelt,infra,snap,sources,translate,triage,entities,watch,foresight,reports', ':49 and :04 plans');
 ok(at('2026-10-22T12:19:00Z').includes('sec8k') && at('2026-10-22T22:19:00Z').includes('sec8k') && !at('2026-10-22T13:19:00Z').includes('sec8k'), 'SEC 8-K at 12 and 22 UTC');
 
 // ---------------------------------------------------------------- SEC 8-K (EDGAR full-text search hits as served 22 October 2026)

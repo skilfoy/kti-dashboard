@@ -1,19 +1,27 @@
 # Changelog
 
-## 3.10.7 (21 November 2026)
+## 3.11.1 (21 November 2026)
 
 - Triage labels every title instead of only the last day's. 3.10.6 sent only titles of the last 24 hours, so most world news aged out unlabelled. The labelling window is now 30 days, the life of a label, and nothing ages out while it is stored. High-yield kinds still go first, and within each tier the newest titles go first, so the backlog takes the spare capacity.
-- Throughput, from about 1,700 titles a day to a capacity of about 28,000 (intake is 18,000 to 23,000):
-  - 40 titles a request instead of 25.
+- Throughput, from about 1,700 titles a day to a capacity of about 28,000, 560 requests of 50 (intake is 18,000 to 23,000):
+  - 50 titles a request instead of 25.
   - Up to four requests at once.
   - The job in every quarter hour on a credited account. The free tier still runs at :49 only.
-  - The request cap raised from 600 to 750 of OpenRouter's 1,000 a day (translation keeps its 200).
+  - A request cap of 560 (was 600). Translation takes 420 since 3.11.0, so the two together stay 20 under OpenRouter's 1,000 a day.
   - A non-reasoning model first: `google/gemma-4-26b-a4b-it:free` answered 25 labels with 1,248 tokens in 26 s, against 8,200 to 9,700 tokens and 46 to 53 s for the reasoning models. Then Nemotron 3.5 Super, then the free router.
   - Answers get up to 16,000 tokens.
   - A run takes at most its share of the day's remaining requests, so the budget lasts until midnight UTC.
 - The day's request budget is spent in one statement, so parallel requests cannot both spend the same request.
 - The gold-set evaluation now re-runs when the model list changes, so the new lineup's accuracy is measured against the promotion thresholds.
 - Maritime: a failed run keeps every source's answer in its record, including the status and error of each NGA daily memorandum fetch. The error message used to be cut at 600 characters, before the memoranda.
+
+## 3.11.0 (21 November 2026)
+
+- **The problem.** Translation covered the cyber press but very little of the theater press. In the 24 hours to 21 November, 1,695 of 1,703 non-English cyber entries were translated against 1,527 of 8,766 theater and geopolitical entries. The registry rebuild had added Persian, Arabic and Russian press: 2,326 Persian entries a day, most from six Iranian outlets. The job, one batch at a time within its 120-second run, managed about 110 titles an hour.
+- **Parallel batches.** Each round now sends up to three batches of 40 at once, each starting on a different free model so one provider's rate limit meets one batch. A run makes up to three rounds.
+- **The :49 slot.** The job now runs there too, between sources and triage.
+- **Allowance.** The daily allowance rises from 200 to 420 requests and is taken in one SQL statement per request, so parallel batches cannot overspend it. OpenRouter's credited free tier allows 1,000 requests a day; triage used 65 and reports 10 of theirs on 21 November.
+- **Queue order.** Cyber categories, then theater and geopolitical press from theaters at ThreatCon 4 or above (by the feed's region, read from the site's theaters), then the rest of that press, then everything else.
 - Collector 2026-11-21.1.
 
 ## 3.10.6 (20 November 2026)
