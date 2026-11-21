@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.12.2 (21 November 2026)
+
+- Translation asks each model for the least reasoning it allows. The first 3.12.1 run's diagnostics showed the cause of the empty answers: with low effort, reasoning models spent 3,500 to 12,000 output tokens on 40 headlines whose answer needs about 1,200, and two came back empty with finish reason `length`.
+  - The model catalogue's reasoning controls are now kept in kv `report:models`: whether a model takes the parameter, whether reasoning is mandatory, its efforts, and whether it takes a token cap.
+  - Translation turns reasoning off where a model allows it. Otherwise it asks for the lowest effort the model lists, or caps reasoning at 1,024 tokens where the model takes a cap.
+  - A model that refuses the setting with HTTP 400 is asked once more with its default.
+  - Reports, Sigma and threatcasting keep their own settings.
+- Collector 2026-11-21.4.
+
 ## 3.12.1 (21 November 2026)
 
 - Translation yield. In the first runs of 3.11.0, half of the translation requests were wasted: six of twelve at 21:37 UTC came back from four models as "no JSON object in the answer".

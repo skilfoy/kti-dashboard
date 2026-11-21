@@ -42,7 +42,7 @@ The `translate` job runs in every slot, right after `sources`:
    - for a non-Latin source, the text differs from the source.
 
    The answer may be the JSON object asked for, a bare JSON array of its entries, or numbered lines in the request's layout. An answer cut short keeps the entries it completed.
-4. **Model order.** Each model's record of readable answers is kept in kv `translate:models` and decays by 3% a run, so the order follows roughly the last day of runs. A run tries models in that order; a model never tried ranks at even odds. A 429, or a timeout on a request that the run's own deadline cut short, counts nothing against the model. Each request allows 12,000 tokens, since reasoning tokens count against the allowance and a model that spends it thinking returns nothing.
+4. **Model order.** Each model's record of readable answers is kept in kv `translate:models` and decays by 3% a run, so the order follows roughly the last day of runs. A run tries models in that order; a model never tried ranks at even odds. A 429, or a timeout on a request that the run's own deadline cut short, counts nothing against the model. Each request asks for the least reasoning the model allows (off, else its lowest effort, else a 1,024-token cap), from the catalogue's reasoning controls kept in kv `report:models`, and allows 12,000 tokens. A model that refuses the setting is asked once more with its default.
 5. **Failures.** A title that fails waits for the next run, and after two failures it is left untranslated. A line the answer left out waits without a failure counted. A 429 passes the batch to the next model. Timeouts and the run's own deadline count nothing against the titles.
 
 ## Where the English titles go

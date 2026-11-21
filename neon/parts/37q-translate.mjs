@@ -171,6 +171,7 @@ async function hotTheaters() {
 // less than MIN_CALL_MS left. Translation needs little reasoning, so requests ask for low effort and a short answer.
 export async function translateBatch(rows, opts = {}, deadline = Date.now() + TR.BUDGET_MS, offset = 0) {
   const chat = opts.chat || orChat, all = opts.models || (await reportModels());
+  const rmeta = opts.reasoning || (opts.chat ? {} : await modelReasoning());
   // Parallel batches start on different models, so one upstream provider's rate limit meets one batch, not all.
   const models = all.length ? [...all.slice(offset % all.length), ...all.slice(0, offset % all.length)] : all;
   const user = rows.map((r, n) => `${n + 1}\t[${r.lang}]\t${String(r.title).replace(/\s+/g, ' ').slice(0, 300)}`).join('\n');
@@ -180,9 +181,16 @@ export async function translateBatch(rows, opts = {}, deadline = Date.now() + TR
     if (left < TR.MIN_CALL_MS) return { done: null, calls, stop: 'run time spent', answered: calls.some((c) => c.ok) };
     if (!opts.chat && !(await trBudget())) return { done: null, calls, stop: 'daily allowance spent' };
     const ms = Math.min(TR.CALL_MS, left - 5000);
-    const a = await chat(model, [{ role: 'system', content: TR_SYS }, { role: 'user', content: user }], null, ms,
-      { reasoning: { effort: 'low', exclude: true }, max_tokens: TR.MAX_TOKENS, temperature: 0.1 });
-    const call = { model, ok: a.ok, status: a.status || null, error: a.ok ? null : String(a.error || '').slice(0, 120),
+    // The least reasoning the model allows (3.12.2). With low effort, reasoning models spent 3,500 to 12,000 output
+    // tokens on 40 headlines whose answer needs about 1,200 (21 November 2026, 22:57 UTC), and two answered nothing.
+    const reasoning = leastReasoning(rmeta[model]);
+    let a = await chat(model, [{ role: 'system', content: TR_SYS }, { role: 'user', content: user }], null, ms,
+      { reasoning, max_tokens: TR.MAX_TOKENS, temperature: 0.1 });
+    // A model that refuses the reasoning setting is asked once more with the catalogue's default.
+    if (a.status === 400 && reasoning.effort !== 'low' && Date.now() + TR.MIN_CALL_MS < deadline && (opts.chat || (await trBudget())))
+      a = await chat(model, [{ role: 'system', content: TR_SYS }, { role: 'user', content: user }], null, Math.min(TR.CALL_MS, deadline - Date.now() - 5000),
+        { reasoning: { exclude: true }, max_tokens: TR.MAX_TOKENS, temperature: 0.1 });
+    const call = { model, reasoning: reasoning.effort || (reasoning.max_tokens ? 'capped' : 'default'), ok: a.ok, status: a.status || null, error: a.ok ? null : String(a.error || '').slice(0, 120),
       ...(ms < TR.CALL_MS ? { short: true } : {}),
       ...(a.ok ? { finish: a.finish || null, chars: String((a.msg && a.msg.content) || '').length, out_tokens: (a.usage && a.usage.completion_tokens) || null } : {}) };
     calls.push(call);

@@ -121,6 +121,14 @@ const kos = Object.fromEntries((await db.query(`SELECT link, title_en, tr_fail F
 ok(rh.translated === 1 && rh.unanswered === 1 && Object.values(kos).filter((r) => r.title_en).length === 1 && Object.values(kos).every((r) => r.tr_fail === 0), 'a cut-short answer stores what it completed; the rest waits ' + JSON.stringify({ rh: { t: rh.translated, u: rh.unanswered, f: rh.failed }, kos }));
 const mk = (await db.query(`SELECT v FROM ti.kv WHERE k = 'translate:models'`)).rows[0].v;
 ok(mk.stats['h:free'].ok === 1 && mk.order[0] === 'h:free', 'the model record is kept in kv ' + JSON.stringify(mk));
+// 3.12.2: the least reasoning each model allows, and one retry when a model refuses the setting.
+const LR = M.leastReasoning;
+ok(LR(undefined).effort === 'low' && LR({ param: false, efforts: null }).effort === undefined && LR({ param: true, mandatory: false }).effort === 'none'
+  && LR({ param: true, mandatory: true, efforts: ['high', 'medium', 'low', 'minimal'] }).effort === 'minimal' && LR({ param: true, mandatory: true, max_tokens: true }).max_tokens === 1024, 'least reasoning per catalogue entry');
+const sent = [];
+const rchat = async (model, messages, tools, ms, extra) => { sent.push([model, JSON.stringify(extra.reasoning)]); if (model === 'r:free' && extra.reasoning.effort === 'none') return { ok: false, status: 400, error: 'reasoning is mandatory' }; return chat(model, messages); };
+const rb = await M.translateBatch([{ link: 'q', title: 'Хакеры атаковали банк', lang: 'ru' }], { chat: rchat, models: ['r:free'], reasoning: { 'r:free': { param: true, mandatory: false } } });
+ok(rb.done && rb.done[0].ok && sent.length === 2 && /"none"/.test(sent[0][1]) && !/effort/.test(sent[1][1]) && rb.calls[0].reasoning === 'none', 'a refused setting is retried with the default ' + JSON.stringify({ sent, calls: rb.calls }));
 // The daily allowance (real budget path, no injected chat).
 await db.query(`INSERT INTO ti.kv (k, v, at) VALUES ('translate:budget', $1, now())`, [{ day: new Date().toISOString().slice(0, 10), used: M.TR.DAILY }]);
 ok((await M.translateBatch([{ link: 'x', title: 'Хакеры', lang: 'ru' }], { models: ['m:free'] })).stop === 'daily allowance spent', 'the daily allowance stops requests');
