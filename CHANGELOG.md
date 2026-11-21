@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.11.1 (21 November 2026)
+## 3.12.1 (21 November 2026)
 
 - Triage labels every title instead of only the last day's. 3.10.6 sent only titles of the last 24 hours, so most world news aged out unlabelled. The labelling window is now 30 days, the life of a label, and nothing ages out while it is stored. High-yield kinds still go first, and within each tier the newest titles go first, so the backlog takes the spare capacity.
 - Throughput, from about 1,700 titles a day to a capacity of about 28,000, 560 requests of 50 (intake is 18,000 to 23,000):
@@ -14,6 +14,16 @@
 - The day's request budget is spent in one statement, so parallel requests cannot both spend the same request.
 - The gold-set evaluation now re-runs when the model list changes, so the new lineup's accuracy is measured against the promotion thresholds.
 - Maritime: a failed run keeps every source's answer in its record, including the status and error of each NGA daily memorandum fetch. The error message used to be cut at 600 characters, before the memoranda.
+
+## 3.12.0 (21 November 2026)
+
+- Threatcasting gains an 18-month horizon beside the six-month one (advancement plan B69: "6-month, 18-month, and longer horizons"). Each theater at ThreatCon 4 or above now holds two sets of three futures.
+  - **Prompt.** For 18 months the model builds each future on structural drivers: force posture, alliances, sanctions and trade, economic strain, technology and infrastructure, and succession. Milestones may span quarters.
+  - **Redrafting.** An 18-month set is redrafted when the theater's level or trend changes, or after 21 days. A six-month set still follows indicator states too, and is refreshed after 7 days. Six-month sets go first when both are due.
+  - **Allowance.** The daily allowance rises from 8 to 12 sets.
+  - **Theaters page.** The "Futures and signposts" card gains a horizon selector.
+  - **Data.** The document carries one reading per theater and horizon, the signpost index names the horizon, and `ti.foresight` gains `horizon`, default 6, so existing sets read as six-month ones.
+- Collector 2026-11-21.2.
 
 ## 3.11.0 (21 November 2026)
 

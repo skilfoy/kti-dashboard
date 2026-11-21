@@ -42,6 +42,8 @@
       ev.length ? h('p', { class: 'ti-cap ti-muted' }, 'Builds on: ', ...ev.flatMap((e, i) => [i ? ', ' : '', e.url ? h('a', { href: e.url, target: '_blank', rel: 'noopener noreferrer', title: e.title || '', text: e.item_id }) : e.item_id])) : null);
   }
 
+  TI.root.addEventListener('input', (ev) => { if (ev.target.id === 'fs-h') TI.draw('theaters'); });
+
   TI.foresight = {
     draw(sec, theaterId) {
       const box = sec.querySelector('#fs-body');
@@ -52,16 +54,18 @@
       box.classList.remove('dash-skeleton');
       TI.clear(box);
       const rows = TI.rows(SRC) || [];
-      const mine = rows.filter((r) => r.theater_id === theaterId);
+      const hz = +((sec.querySelector('#fs-h') || {}).value || 6);
+      // Rows from before 3.12.0 carry no horizon: they are six-month sets.
+      const mine = rows.filter((r) => r.theater_id === theaterId && (+r.horizon_months || 6) === hz);
       const futs = mine.filter((r) => r.kind === 'future').sort((a, b) => ['escalation', 'continuation', 'de-escalation'].indexOf(a.future) - ['escalation', 'continuation', 'de-escalation'].indexOf(b.future));
       const reading = mine.find((r) => r.kind === 'reading');
       const tried = mine.filter((r) => r.kind === 'attempt');
-      const sets = new Set(rows.filter((r) => r.kind === 'reading').map((r) => r.theater_id)).size;
-      sec.querySelector('#fs-count').textContent = `${sets} ${sets === 1 ? 'theater' : 'theaters'} with futures`;
+      const sets = new Set(rows.filter((r) => r.kind === 'reading' && (+r.horizon_months || 6) === hz).map((r) => r.theater_id)).size;
+      sec.querySelector('#fs-count').textContent = `${sets} ${sets === 1 ? 'theater' : 'theaters'} with ${hz}-month futures`;
       if (!futs.length) {
         const last = tried[0];
         box.append(h('p', { class: 'ti-muted', text: last ? `No accepted set yet. The last attempt (${TI.f.date(last.created_at)}) was ${last.outcome}${TI.list(last.failures).length ? ': ' + TI.list(last.failures).slice(0, 3).join('; ') : ''}.`
-          : 'Futures are drafted for theaters at ThreatCon 4 and above; this theater has none.' }));
+          : `Futures are drafted for theaters at ThreatCon 4 and above; this theater has no ${hz}-month set yet.` }));
         if (note) note.textContent = '';
         return;
       }
