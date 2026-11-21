@@ -470,22 +470,57 @@ export function clusterTitles(items) {
   }
   return clusters;
 }
+// Candidates for labelling, shared by the job and the subscription worker (3.11.2): titles of the last LABEL_WINDOW_H
+// hours (advisories: WINDOW_H) with no label, the high-yield kinds first (TRIAGE_TIER1), the kinds taken in turn so one
+// kind's volume cannot starve the others. The job takes the newest first; the worker takes the oldest, the titles
+// closest to leaving the label window, so the two seldom meet (and ON CONFLICT settles it when they do).
+export async function triageCandidates(limit, { oldest = false } = {}) {
+  const dir = oldest ? 'ASC' : 'DESC';
+  return sql(`SELECT link, kind, source, title, published, cves FROM (SELECT c.*, row_number() OVER (PARTITION BY c.kind ORDER BY c.published ${dir}) AS rn,
+      CASE WHEN c.kind = ANY($3::text[]) THEN 1 ELSE 2 END AS tier FROM (
+      SELECT i.link, i.category AS kind, coalesce(nullif(i.source, ''), i.host) AS source, coalesce(i.title_en, i.title) AS title, i.published, '[]'::jsonb AS cves FROM ti.item i WHERE i.published > now() - make_interval(hours => $1)
+      UNION ALL SELECT a.link, 'advisory', a.feed, a.title, COALESCE(a.published, a.seen_at), a.cves FROM ti.advisory a WHERE COALESCE(a.published, a.seen_at) > now() - make_interval(hours => $4)) c
+    WHERE NOT EXISTS (SELECT 1 FROM ti.triage t WHERE t.link = c.link)) x ORDER BY tier, rn, published ${dir} LIMIT $2`, [TRIAGE.LABEL_WINDOW_H, limit, `{${TRIAGE_TIER1.join(',')}}`, TRIAGE.WINDOW_H]);
+}
+// Groups candidates into stories and splits them: a story already labelled in the stored window takes that label with
+// no request (joined rows, ready to store); the rest are fresh stories to label. CVE identifiers come from the advisory
+// feed and from the title itself, never from the model.
+export async function triageSplit(cand) {
+  const pool = cand.map((c) => ({ ...c, cves: [...new Set([...(Array.isArray(c.cves) ? c.cves : []), ...cvesIn(c.title)])] }));
+  // Hourly feeds carry a story for hours after its first title was labelled.
+  const stored = (await triageWindow()).rows.filter((r) => !r.cluster || r.cluster === r.link)
+    .map((r) => ({ ...r, words: titleWords(r.title), cvs: new Set(Array.isArray(r.cves) ? r.cves : []) }));
+  const joined = [], fresh = [];
+  for (const c of clusterTitles(pool)) {
+    const s0 = stored.find((x) => sameStory(c.words, c.cves, x.words, x.cvs));
+    if (s0) for (const m of c.members) joined.push({ link: m.link, kind: m.kind, source: m.source, title: m.title, published: m.published, cves: m.cves, relevance: s0.relevance, vector: s0.vector,
+      theater: s0.theater, actors: (Array.isArray(s0.actors) ? s0.actors : []).filter((a) => String(m.title).toLowerCase().includes(String(a).toLowerCase())), why: s0.why, cluster: s0.link, model: s0.model, prompt_v: TRIAGE.PROMPT_V });
+    else fresh.push(c);
+  }
+  return { pool, joined, fresh };
+}
+// One accepted label, stored for every member of the story; an actor is kept for a member only when it occurs in that
+// member's own title.
+export const triageMemberRows = (i, l, model) => i.members.map((m) => ({ link: m.link, kind: m.kind, source: m.source, title: m.title, published: m.published, cves: m.cves, ...l,
+  actors: l.actors.filter((a) => String(m.title).toLowerCase().includes(a.toLowerCase())), cluster: i.members.length > 1 ? i.link : null, model, prompt_v: TRIAGE.PROMPT_V }));
+export async function triageInsert(rows) {
+  if (!rows.length) return;
+  await sql(`INSERT INTO ti.triage (link, kind, source, title, published, cves, relevance, vector, theater, actors, why, model, prompt_v, cluster)
+    SELECT link, kind, source, title, published, cves, relevance, vector, theater, actors, why, model, prompt_v, cluster FROM jsonb_to_recordset($1::jsonb)
+    AS x(link text, kind text, source text, title text, published timestamptz, cves jsonb, relevance int, vector text, theater text, actors jsonb, why text, model text, prompt_v text, cluster text) ON CONFLICT (link) DO NOTHING`, [rows]);
+}
 export async function jobTriage(opts = {}) {
   const t0 = Date.now(), E = ENV();
-  if (!(E.OPENROUTER_API_KEY || E.TI_TRIAGE_KEY)) return { held: 'OPENROUTER_API_KEY is not set in the function environment; no request made', labelled: 0, published: null, ms: Date.now() - t0 };
+  // The subscription worker's labels and next batch first: they need no model key and must not wait on the free tier.
+  const worker = await triageWorkerTick().catch((e) => ({ error: String((e && e.message) || e) }));
+  if (!(E.OPENROUTER_API_KEY || E.TI_TRIAGE_KEY)) return { held: 'OPENROUTER_API_KEY is not set in the function environment; no request made', worker, labelled: 0, published: null, ms: Date.now() - t0 };
   const tier = await triageCap();
   // The :04, :19 and :34 runs are for a credited account; the free tier's daily cap allows one request an hour.
   // A run without a schedule time (the operator route, the tests) is never held.
   const slot = opts.at ? Math.floor(new Date(opts.at).getUTCMinutes() / 15) * 15 : null;
-  if (tier.tier !== 'credited' && TRIAGE.EXTRA_SLOTS.includes(slot)) return { held: 'free tier: labelling runs at :49 only', labelled: 0, published: null, tier: tier.tier, ms: Date.now() - t0 };
-  // The high-yield kinds first (TRIAGE_TIER1), then the rest; within a tier newest first in each kind, the kinds taken in
-  // turn, so one kind's volume cannot starve the others. Headlines of the last LABEL_WINDOW_H hours are candidates;
-  // advisories (a few hundred a day, dated by day, nearly all relevant) keep the WINDOW_H window.
-  const cand = await sql(`SELECT link, kind, source, title, published, cves FROM (SELECT c.*, row_number() OVER (PARTITION BY c.kind ORDER BY c.published DESC) AS rn,
-      CASE WHEN c.kind = ANY($3::text[]) THEN 1 ELSE 2 END AS tier FROM (
-      SELECT i.link, i.category AS kind, coalesce(nullif(i.source, ''), i.host) AS source, coalesce(i.title_en, i.title) AS title, i.published, '[]'::jsonb AS cves FROM ti.item i WHERE i.published > now() - make_interval(hours => $1)
-      UNION ALL SELECT a.link, 'advisory', a.feed, a.title, COALESCE(a.published, a.seen_at), a.cves FROM ti.advisory a WHERE COALESCE(a.published, a.seen_at) > now() - make_interval(hours => $4)) c
-    WHERE NOT EXISTS (SELECT 1 FROM ti.triage t WHERE t.link = c.link)) x ORDER BY tier, rn, published DESC LIMIT $2`, [TRIAGE.LABEL_WINDOW_H, TRIAGE.POOL, `{${TRIAGE_TIER1.join(',')}}`, TRIAGE.WINDOW_H]);
+  if (tier.tier !== 'credited' && TRIAGE.EXTRA_SLOTS.includes(slot)) return { held: 'free tier: labelling runs at :49 only', worker, labelled: 0, published: null, tier: tier.tier, ms: Date.now() - t0 };
+  // The high-yield kinds first (TRIAGE_TIER1), then the rest; within a tier newest first (triageCandidates).
+  const cand = await triageCandidates(TRIAGE.POOL);
   // The queue as counts: titles of the label window not yet labelled, by tier (the same subtraction as before 3.10.6, by
   // kind so the tiers can be told apart).
   const q = await sql(`SELECT CASE WHEN k = ANY($2::text[]) THEN 1 ELSE 2 END AS tier, GREATEST(0, sum(n))::int AS n FROM (
@@ -496,19 +531,7 @@ export async function jobTriage(opts = {}) {
   for (const r of q) waitTier[r.tier] = Math.max(0, Number(r.n) || 0);
   const waiting = waitTier[1] + waitTier[2];
   let res = { labels: new Map(), rejects: {}, missing: 0, calls: [] };
-  // CVE identifiers come from the advisory feed and from the title itself, never from the model.
-  const pool_ = cand.map((c) => ({ ...c, cves: [...new Set([...(Array.isArray(c.cves) ? c.cves : []), ...cvesIn(c.title)])] }));
-  // A title that is the same story as one already labelled in the window takes that story's label and joins it, with no
-  // request: hourly feeds carry a story for hours after its first title was labelled.
-  const stored = (await triageWindow()).rows.filter((r) => !r.cluster || r.cluster === r.link)
-    .map((r) => ({ ...r, words: titleWords(r.title), cvs: new Set(Array.isArray(r.cves) ? r.cves : []) }));
-  const joined = [], fresh = [];
-  for (const c of clusterTitles(pool_)) {
-    const s0 = stored.find((x) => sameStory(c.words, c.cves, x.words, x.cvs));
-    if (s0) for (const m of c.members) joined.push({ link: m.link, kind: m.kind, source: m.source, title: m.title, published: m.published, cves: m.cves, relevance: s0.relevance, vector: s0.vector,
-      theater: s0.theater, actors: (Array.isArray(s0.actors) ? s0.actors : []).filter((a) => String(m.title).toLowerCase().includes(String(a).toLowerCase())), why: s0.why, cluster: s0.link, model: s0.model, prompt_v: TRIAGE.PROMPT_V });
-    else fresh.push(c);
-  }
+  const { pool: pool_, joined, fresh } = await triageSplit(cand);
   const clusters = fresh;
   // One request a run on the free tier. A credited account sends up to PARALLEL batches at once, in rounds, each round
   // started only while a full request deadline still fits inside LABEL_BUDGET_MS, up to LABEL_BATCHES_CREDITED batches
@@ -531,17 +554,12 @@ export async function jobTriage(opts = {}) {
       else if (r.stop) res.stop = r.stop;
       for (const i of batch) {
         const l = r.labels.get(i.id);
-        if (l) for (const m of i.members) rows.push({ link: m.link, kind: m.kind, source: m.source, title: m.title, published: m.published, cves: m.cves, ...l,
-          actors: l.actors.filter((a) => String(m.title).toLowerCase().includes(a.toLowerCase())), cluster: i.members.length > 1 ? i.link : null, model: r.model || null, prompt_v: TRIAGE.PROMPT_V });
+        if (l) rows.push(...triageMemberRows(i, l, r.model || null));
       }
     });
     if (res.budget_stop) break;
   }
-  if (rows.length) {
-    await sql(`INSERT INTO ti.triage (link, kind, source, title, published, cves, relevance, vector, theater, actors, why, model, prompt_v, cluster)
-      SELECT link, kind, source, title, published, cves, relevance, vector, theater, actors, why, model, prompt_v, cluster FROM jsonb_to_recordset($1::jsonb)
-      AS x(link text, kind text, source text, title text, published timestamptz, cves jsonb, relevance int, vector text, theater text, actors jsonb, why text, model text, prompt_v text, cluster text) ON CONFLICT (link) DO NOTHING`, [rows]);
-  }
+  await triageInsert(rows);
   await sql(`DELETE FROM ti.triage WHERE at < now() - make_interval(days => $1)`, [TRIAGE.KEEP_DAYS]);
   const vmode = ENV().TI_TRIAGE_VERIFY || 'alternate'; // 'always' and 'never' are for tests and for switching the verifier off
   // The first verifier run (16 November 2026, 02:01 UTC) followed a slow labelling request and its retry; the invocation
@@ -557,7 +575,7 @@ export async function jobTriage(opts = {}) {
   const last = { at: new Date().toISOString(), pool: pool_.length, candidates: items.length, labelled: rows.length, joined: joined.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls };
   await kvPut('triage:last', last);
   await recordVolume([['triage_labelled', rows.length]]);
-  const out = { pool: pool_.length, candidates: items.length, waiting: Math.max(0, waiting - rows.length), waiting_tier1: Math.max(0, waitTier[1] - rows.filter((r) => TRIAGE_TIER1.includes(r.kind)).length), label_window_h: TRIAGE.LABEL_WINDOW_H, requests_left: pace ? pace.left : undefined, run_share: pace ? pace.share : undefined, labelled: rows.length, joined: joined.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, time_budget_spent: res.budget_stop || undefined, calls: res.calls, verify,
+  const out = { worker, pool: pool_.length, candidates: items.length, waiting: Math.max(0, waiting - rows.length), waiting_tier1: Math.max(0, waitTier[1] - rows.filter((r) => TRIAGE_TIER1.includes(r.kind)).length), label_window_h: TRIAGE.LABEL_WINDOW_H, requests_left: pace ? pace.left : undefined, run_share: pace ? pace.share : undefined, labelled: rows.length, joined: joined.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, time_budget_spent: res.budget_stop || undefined, calls: res.calls, verify,
     published: await putDoc('triage', await triageDoc({ last_run: last })), ms: Date.now() - t0 };
   // A run whose requests all failed is a failed run, so the health record and the alert workflow see it.
   out.tier = tier.tier; out.cap = tier.cap;
@@ -647,4 +665,93 @@ export async function jobTriageeval(opts = {}) {
     prompt_version: TRIAGE.PROMPT_V, models_key: triageEvalKey(), gold_sha: gold.sha, gold_checked_at: new Date().toISOString(), started: st.started, at: new Date().toISOString() };
   if (summary) await kvPut('triage:eval', summary);
   return { scored: Object.keys(st.done).length, of: gold.items.length, stop, calls: calls.length, eval: summary, published: await putDoc('triage', await triageDoc()), ms: Date.now() - t0 };
+}
+// The subscription worker (3.11.2). A scheduled Claude session on the owner's subscription labels the titles the free
+// models have no requests left for, oldest first. It needs no key of its own: it reaches the database through the Neon
+// connector the owner's account already has, reads the open batch from ti.kv ('triage:worker:batch') and leaves its
+// labels as rows 'triage:worker:inbox:<uuid>' in ti.kv. It never writes ti.triage. Each triage run (every quarter hour)
+// drains the inbox first: every label passes the same triageCheck as a model answer before the store sees it, then the
+// run opens the next batch when none is open. One ticket is open at a time and lapses after TICKET_TTL_MS, so a session
+// that stops half way leaves its remaining stories to the next one. pipeline/TRIAGE_WORKER_PROMPT.md is the session's
+// prompt.
+export const TRIAGE_WORKER = { SIZE: 600, MAX_ITEMS: 1000, TICKET_TTL_MS: 3 * 3600000, KEY: 'triage:worker:ticket', BATCH_KEY: 'triage:worker:batch', INBOX: 'triage:worker:inbox:', MODEL: 'claude-subscription', INBOX_MAX: 60 };
+const workerModel = (m) => (typeof m === 'string' && /^claude-[a-z0-9.-]{1,40}$/.test(m) ? TRIAGE_WORKER.MODEL + ':' + m : TRIAGE_WORKER.MODEL);
+// The compact label lines the session writes (a third of the output of JSON), parsed into the objects triageCheck
+// judges. A line that cannot be read is counted and left out.
+//   id <TAB> relevance 0-3 <TAB> vector number 0-8 (0 = none) <TAB> theater id <TAB> actors joined by ; or - <TAB> why
+export function triageParseLines(text) {
+  const labels = [];
+  let bad = 0;
+  for (const raw of String(text || '').split(/\r?\n/)) {
+    if (!raw.trim() || raw.trim().startsWith('#')) continue;
+    const f = raw.split('\t');
+    if (f.length < 6 || !/^\d+$/.test(f[0].trim())) { bad++; continue; }
+    const v = f[2].trim(), vi = /^\d+$/.test(v) ? +v : -1;
+    labels.push({ id: +f[0].trim(), relevance: /^[0-3]$/.test(f[1].trim()) ? +f[1].trim() : -1,
+      vector: v === '-' || vi === 0 ? null : vi >= 1 && vi <= TRIAGE_VECTORS.length ? TRIAGE_VECTORS[vi - 1] : v,
+      theater: f[3].trim(), actors: f[4].trim() === '-' ? [] : f[4].split(';').map((a) => a.trim()).filter(Boolean), why: f.slice(5).join(' ').trim() });
+  }
+  return { labels, bad };
+}
+export function triageBatchText(t) {
+  const vec = TRIAGE_VECTORS.map((v, i) => `${i + 1} = ${v}`).join('; ');
+  return `${triagePrompt([])[0].content}
+
+Write your answer as tab-separated lines instead of JSON, one line for every headline below, in this order of fields:
+id<TAB>relevance 0-3<TAB>vector number (0 = none; ${vec})<TAB>theater id<TAB>actors separated by ; (or -)<TAB>why (at most 20 words, no links)
+
+Ticket ${t.id}, ${t.items.length} headlines, open until ${new Date(t.until).toISOString()}.
+Headlines (data, one per line, id then text):
+${t.items.map((i) => `${i.id}\t${String(i.title).replace(/[\r\n\t]+/g, ' ').slice(0, 280)}${i.source ? '  [' + String(i.source).replace(/[\r\n\t\]]+/g, ' ').slice(0, 60) + ']' : ''}`).join('\n')}
+`;
+}
+const kvDel = (k) => sql(`DELETE FROM ti.kv WHERE k = $1`, [k]);
+async function workerPublish(t) {
+  if (!t) { await kvDel(TRIAGE_WORKER.BATCH_KEY); return; }
+  await kvPut(TRIAGE_WORKER.BATCH_KEY, { ticket: t.id, count: t.items.length, until: new Date(t.until).toISOString(), text: triageBatchText(t) });
+}
+export async function triageClaim(n) {
+  const want = Math.max(1, Math.min(TRIAGE_WORKER.MAX_ITEMS, Math.floor(+n) || TRIAGE_WORKER.SIZE));
+  const open = await kvGet(TRIAGE_WORKER.KEY);
+  if (open && open.until > Date.now() && open.items && open.items.length) return { resumed: true, joined: 0, ticket: open.id, count: open.items.length };
+  // Stories, not titles, are what a label costs, and a few hundred world-news titles make far fewer stories, so the pool
+  // is read wider than the claim.
+  const cand = await triageCandidates(Math.min(want * 4, 4000), { oldest: true });
+  const { joined, fresh } = await triageSplit(cand);
+  await triageInsert(joined);
+  const items = fresh.slice(0, want).map((c, k) => ({ id: k + 1, ...c.rep, members: c.members }));
+  if (!items.length) { await kvDel(TRIAGE_WORKER.KEY); await workerPublish(null); return { ticket: null, count: 0, joined: joined.length }; }
+  const t = { id: randomUUID(), until: Date.now() + TRIAGE_WORKER.TICKET_TTL_MS, claimed: new Date().toISOString(), items };
+  await kvPut(TRIAGE_WORKER.KEY, t);
+  await workerPublish(t);
+  return { resumed: false, joined: joined.length, ticket: t.id, count: items.length };
+}
+export async function triageSubmit(body) {
+  const t = await kvGet(TRIAGE_WORKER.KEY);
+  if (!body || typeof body !== 'object' || !t || !t.items || t.id !== body.ticket) return { error: 'no open ticket with that id' };
+  if (t.until <= Date.now()) { await kvDel(TRIAGE_WORKER.KEY); await workerPublish(null); return { error: 'ticket expired' }; }
+  if (!Array.isArray(body.labels) || body.labels.length > TRIAGE_WORKER.MAX_ITEMS) return { error: 'labels must be an array of at most ' + TRIAGE_WORKER.MAX_ITEMS };
+  const chk = triageCheck(t.items, { labels: body.labels }), model = workerModel(body.model), rows = [];
+  for (const i of t.items) { const l = chk.ok.get(i.id); if (l) rows.push(...triageMemberRows(i, l, model)); }
+  await triageInsert(rows);
+  const left = t.items.filter((i) => !chk.ok.has(i.id)), next = { ...t, items: left };
+  if (left.length) { await kvPut(TRIAGE_WORKER.KEY, next); await workerPublish(next); } else { await kvDel(TRIAGE_WORKER.KEY); await workerPublish(null); }
+  return { ticket: t.id, model, stories: chk.ok.size, labelled: rows.length, rejects: chk.rejects, remaining: left.length };
+}
+// Drains the inbox the session writes, then opens a batch when none is open. Called at the start of every triage run,
+// before the free-model labelling, and needs no model key.
+export async function triageWorkerTick() {
+  const inbox = await sql(`SELECT k, v FROM ti.kv WHERE k LIKE $1 ORDER BY at LIMIT $2`, [TRIAGE_WORKER.INBOX + '%', TRIAGE_WORKER.INBOX_MAX]);
+  const done = [];
+  for (const r of inbox) {
+    const v = r.v || {}, p = triageParseLines(typeof v.tsv === 'string' ? v.tsv.slice(0, 1e6) : '');
+    const s = await triageSubmit({ ticket: v.ticket, model: v.model, labels: p.labels });
+    if (p.bad) s.unreadable_lines = p.bad;
+    done.push(s);
+    await kvDel(r.k);
+  }
+  const claim = await triageClaim(TRIAGE_WORKER.SIZE);
+  const sum = { at: new Date().toISOString(), inbox: done.length, labelled: done.reduce((a, s) => a + (s.labelled || 0), 0), results: done.slice(0, 12), open: claim };
+  if (done.length) { await kvPut('triage:worker:last', sum); await recordVolume([['triage_labelled', sum.labelled]]); }
+  return sum;
 }
