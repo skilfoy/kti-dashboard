@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.12.1 (21 November 2026)
+
+- Translation yield. In the first runs of 3.11.0, half of the translation requests were wasted: six of twelve at 21:37 UTC came back from four models as "no JSON object in the answer".
+  - **Answer shapes.** The reader takes the JSON object asked for, a bare JSON array, or numbered lines in the request's own layout. An answer cut short keeps the entries it completed.
+  - **Token allowance.** Requests allow 12,000 tokens, as triage does, because reasoning tokens count against the allowance.
+  - **Lines left out.** A line the answer left out waits for the next run and counts no failure. Only a line that fails the checks counts toward the two-failure limit.
+  - **Model order.** Each model's record of readable answers, decaying 3% a run, sets the order in which a run tries the models (kv `translate:models`; the top six appear in `translate:status`). A 429, or a timeout the run's own deadline forced, counts nothing.
+  - **Diagnostics.** Each request records its finish reason, answer length and output tokens.
+- Collector 2026-11-21.3.
+
 ## 3.12.0 (21 November 2026)
 
 - Threatcasting gains an 18-month horizon beside the six-month one (advancement plan B69: "6-month, 18-month, and longer horizons"). Each theater at ThreatCon 4 or above now holds two sets of three futures.
