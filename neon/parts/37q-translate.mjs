@@ -15,7 +15,7 @@
 //    - for a non-Latin source, text that differs from the source.
 //    A title that fails twice is left untranslated. The entities job reads translated titles as a third source (by
 //    tr_at), triage labels the English title, and search matches it.
-export const TR = { WINDOW_H: 48, BATCH: 40, BATCHES: 4, DAILY: 200, MAX_FAILS: 2, BUDGET_MS: 120000, CALL_MS: 75000, MIN_CALL_MS: 20000, MAX_TOKENS: 6000, PROMPT_V: 1 };
+export const TR = { WINDOW_H: 48, BATCH: 40, PARALLEL: 3, ROUNDS: 3, DAILY: 420, MIN_THREATCON: 4, MAX_FAILS: 2, BUDGET_MS: 120000, CALL_MS: 75000, MIN_CALL_MS: 20000, MAX_TOKENS: 6000, PROMPT_V: 1 };
 
 // --- language identification -----------------------------------------------------------------------------------------------
 const LATIN_LANGS = {
@@ -111,28 +111,41 @@ const TR_SYS = `Translate each numbered news headline into English. Answer with 
 Keep names of people, organisations, products, malware and threat groups, CVE ids, numbers and dates exactly; transliterate names written in another script. Translate only: no notes, no explanations, no added context.`;
 
 // --- the job ----------------------------------------------------------------------------------------------------------------
-async function trBudget(want) {
-  const day = new Date().toISOString().slice(0, 10), b = (await kvGet('translate:budget')) || {};
-  const used = b.day === day ? b.used || 0 : 0, grant = Math.max(0, Math.min(want, TR.DAILY - used));
-  if (grant) await kvPut('translate:budget', { day, used: used + grant, cap: TR.DAILY });
-  return grant;
+// The daily allowance, taken one request at a time in one statement, so batches sent in parallel cannot both read the
+// same count and overspend it.
+async function trBudget() {
+  const day = new Date().toISOString().slice(0, 10);
+  await sql(`INSERT INTO ti.kv (k, v, at) VALUES ('translate:budget', jsonb_build_object('day', $1::text, 'used', 0, 'cap', $2::int), now()) ON CONFLICT (k) DO NOTHING`, [day, TR.DAILY]);
+  const r = await sql(`UPDATE ti.kv SET v = jsonb_build_object('day', $1::text, 'cap', $2::int, 'used', CASE WHEN v->>'day' = $1 THEN (v->>'used')::int ELSE 0 END + 1), at = now()
+    WHERE k = 'translate:budget' AND (v->>'day' IS DISTINCT FROM $1 OR (v->>'used')::int < $2::int) RETURNING (v->>'used')::int AS used`, [day, TR.DAILY]);
+  return r.length > 0;
 }
-export async function pendingTitles(limit, skip = []) {
+// The queue's order: cyber categories, then theater and geopolitical press from theaters at ThreatCon MIN_THREATCON
+// or above (the site's theaters, by the feed's region), then the rest of that press, then everything else; newest first.
+export async function pendingTitles(limit, skip = [], hot = []) {
   return sql(`SELECT link, title, lang FROM ti.item WHERE lang <> 'en' AND title_en IS NULL AND tr_fail < $1 AND seen_at > now() - make_interval(hours => $2::int)
       AND NOT (link = ANY(ARRAY(SELECT jsonb_array_elements_text($4::jsonb))))
-    ORDER BY CASE WHEN category IN ('vulnerability', 'government', 'research', 'cyber-news', 'topic-cyber', 'community') THEN 0 WHEN category IN ('topic-theater', 'geopolitics', 'defense', 'maritime', 'think-tank') THEN 1 ELSE 2 END,
-      seen_at DESC LIMIT $3::int`, [TR.MAX_FAILS, TR.WINDOW_H, limit, JSON.stringify(skip)]);
+    ORDER BY CASE WHEN category IN ('vulnerability', 'government', 'research', 'cyber-news', 'topic-cyber', 'community') THEN 0
+      WHEN category IN ('topic-theater', 'geopolitics', 'defense', 'maritime', 'think-tank') AND region = ANY(ARRAY(SELECT jsonb_array_elements_text($5::jsonb))) THEN 1
+      WHEN category IN ('topic-theater', 'geopolitics', 'defense', 'maritime', 'think-tank') THEN 2 ELSE 3 END,
+      seen_at DESC LIMIT $3::int`, [TR.MAX_FAILS, TR.WINDOW_H, limit, JSON.stringify(skip), JSON.stringify(hot)]);
+}
+async function hotTheaters() {
+  try { return (await siteRef('theaters', (a) => a.length >= 5 && a.every((t) => t.theater_id))).filter((t) => +t.threatcon >= TR.MIN_THREATCON).map((t) => t.theater_id); }
+  catch { return []; }
 }
 // A batch stops at the run's deadline: each request gets what is left of it (at most CALL_MS), and no request starts with
 // less than MIN_CALL_MS left. Translation needs little reasoning, so requests ask for low effort and a short answer.
-export async function translateBatch(rows, opts = {}, deadline = Date.now() + TR.BUDGET_MS) {
-  const chat = opts.chat || orChat, models = opts.models || (await reportModels());
+export async function translateBatch(rows, opts = {}, deadline = Date.now() + TR.BUDGET_MS, offset = 0) {
+  const chat = opts.chat || orChat, all = opts.models || (await reportModels());
+  // Parallel batches start on different models, so one upstream provider's rate limit meets one batch, not all.
+  const models = all.length ? [...all.slice(offset % all.length), ...all.slice(0, offset % all.length)] : all;
   const user = rows.map((r, n) => `${n + 1}\t[${r.lang}]\t${String(r.title).replace(/\s+/g, ' ').slice(0, 300)}`).join('\n');
   const calls = [];
   for (const model of models.slice(0, 4)) {
     const left = deadline - Date.now();
     if (left < TR.MIN_CALL_MS) return { done: null, calls, stop: 'run time spent', answered: calls.some((c) => c.ok) };
-    if (!opts.chat && !(await trBudget(1))) return { done: null, calls, stop: 'daily allowance spent' };
+    if (!opts.chat && !(await trBudget())) return { done: null, calls, stop: 'daily allowance spent' };
     const a = await chat(model, [{ role: 'system', content: TR_SYS }, { role: 'user', content: user }], null, Math.min(TR.CALL_MS, left - 5000),
       { reasoning: { effort: 'low', exclude: true }, max_tokens: TR.MAX_TOKENS, temperature: 0.1 });
     const call = { model, ok: a.ok, status: a.status || null, error: a.ok ? null : String(a.error || '').slice(0, 120) };
@@ -159,21 +172,17 @@ export async function jobTranslate(opts = {}) {
   const t0 = Date.now();
   if (!(ENV().OPENROUTER_API_KEY || ENV().TI_TRIAGE_KEY) && !opts.chat) return { skipped: 'the model key is not configured', ms: Date.now() - t0 };
   const out = { batches: 0, sent: 0, translated: 0, failed: 0, reasons: {}, calls: [], stop: null };
-  // A title tried in this run waits for the next one (and, as models fail over, perhaps another model).
-  const tried = [];
-  for (let b = 0; b < TR.BATCHES && Date.now() - t0 < TR.BUDGET_MS - TR.MIN_CALL_MS; b++) {
-    const rows = await pendingTitles(TR.BATCH, tried);
-    tried.push(...rows.map((r) => r.link));
-    if (!rows.length) break;
-    const r = await translateBatch(rows, opts, t0 + TR.BUDGET_MS);
+  // A title tried in this run waits for the next one (and, as models fail over, perhaps another model). Each round
+  // sends up to PARALLEL batches at once; a round whose batches all stop early ends the run.
+  const tried = [], hot = await hotTheaters();
+  const store = async (rows, r) => {
     out.calls.push(...r.calls);
     out.batches++; out.sent += rows.length;
     if (!r.done) {
-      out.stop = r.stop;
       // When a model answered but nothing readable came back, the lines count a failure, so one poison title cannot
       // hold the queue. Timeouts, refusals and the run's own deadline say nothing about the titles and count nothing.
       if (r.answered) await sql(`UPDATE ti.item SET tr_fail = tr_fail + 1 WHERE link = ANY(ARRAY(SELECT jsonb_array_elements_text($1::jsonb)))`, [rows.map((x) => x.link)]);
-      break;
+      return r.stop;
     }
     const ok = r.done.filter((d) => d.ok), bad = r.done.filter((d) => !d.ok);
     await sqlTx([
@@ -182,6 +191,19 @@ export async function jobTranslate(opts = {}) {
     ]);
     out.translated += ok.length; out.failed += bad.length;
     for (const d of bad) for (const w of d.why) { const k = w.replace(/CVE-\S+|\d{4,}/g, '#'); out.reasons[k] = (out.reasons[k] || 0) + 1; }
+    return null;
+  };
+  for (let round = 0; round < TR.ROUNDS && Date.now() - t0 < TR.BUDGET_MS - TR.MIN_CALL_MS; round++) {
+    const rows = await pendingTitles(TR.BATCH * TR.PARALLEL, tried, hot);
+    tried.push(...rows.map((r) => r.link));
+    if (!rows.length) break;
+    const chunks = [];
+    for (let k = 0; k < rows.length; k += TR.BATCH) chunks.push(rows.slice(k, k + TR.BATCH));
+    const res = await Promise.all(chunks.map((c, k) => translateBatch(c, opts, t0 + TR.BUDGET_MS, round * TR.PARALLEL + k)));
+    const stops = [];
+    for (const [k, r] of res.entries()) stops.push(await store(chunks[k], r));
+    if (stops.every(Boolean)) { out.stop = stops[0]; break; }
+    out.stop = stops.find(Boolean) || null;
   }
   const [q] = await sql(`SELECT count(*) FILTER (WHERE title_en IS NULL AND tr_fail < $1)::int AS waiting, count(*) FILTER (WHERE title_en IS NOT NULL)::int AS translated,
       count(*) FILTER (WHERE title_en IS NULL AND tr_fail >= $1)::int AS given_up FROM ti.item WHERE lang <> 'en' AND seen_at > now() - make_interval(hours => $2::int)`, [TR.MAX_FAILS, TR.WINDOW_H]);

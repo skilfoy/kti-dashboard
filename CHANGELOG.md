@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.11.0 (21 November 2026)
+
+- **The problem.** Translation covered the cyber press but very little of the theater press. In the 24 hours to 21 November, 1,695 of 1,703 non-English cyber entries were translated against 1,527 of 8,766 theater and geopolitical entries. The registry rebuild had added Persian, Arabic and Russian press: 2,326 Persian entries a day, most from six Iranian outlets. The job, one batch at a time within its 120-second run, managed about 110 titles an hour.
+- **Parallel batches.** Each round now sends up to three batches of 40 at once, each starting on a different free model so one provider's rate limit meets one batch. A run makes up to three rounds.
+- **The :49 slot.** The job now runs there too, between sources and triage.
+- **Allowance.** The daily allowance rises from 200 to 420 requests and is taken in one SQL statement per request, so parallel batches cannot overspend it. OpenRouter's credited free tier allows 1,000 requests a day; triage used 65 and reports 10 of theirs on 21 November.
+- **Queue order.** Cyber categories, then theater and geopolitical press from theaters at ThreatCon 4 or above (by the feed's region, read from the site's theaters), then the rest of that press, then everything else.
+- Collector 2026-11-21.1.
+
 ## 3.10.6 (20 November 2026)
 
 - Triage backlog: on 20 November the source network stored about 23,000 titles a day (15,500 of them world-news "geopolitics" entries from 293 sources) and triage labelled about 2,500, so the 72-hour waiting count passed 56,000 and kept growing. Three changes bound it.
