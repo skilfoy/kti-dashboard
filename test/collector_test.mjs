@@ -649,6 +649,24 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   await db.query(`DELETE FROM ti.kv WHERE k = 'triage:tier'`); keyTier = 'free';
   const c3 = await M.triageCap(), c4 = await M.triageCap();
   ok(c1.tier === 'credited' && c1.cap === M.TRIAGE_CAPS.credited && c2.tier === 'free' && /key endpoint/.test(c2.note) && c3.cap === M.TRIAGE_CAPS.free && c4.at === c3.at, 'request cap follows the account tier and is cached ' + JSON.stringify([c1.cap, c2.cap, c3.cap]));
+  // 3.10.6: the scheduled :19 and :34 runs are held on the free tier; :49 and unscheduled runs are not.
+  llm = [];
+  const th = await M.runJob('triage', { at: '2026-11-20T10:19:00Z' });
+  ok(th.ok && /free tier/.test(th.held) && llm.length === 0 && M.TRIAGE.EXTRA_SLOTS.join() === '15,30' && M.TRIAGE.LABEL_WINDOW_H === 24
+    && M.TRIAGE_TIER1.includes('topic-cyber') && !M.TRIAGE_TIER1.includes('geopolitics'), 'free tier: no labelling in the extra slots ' + JSON.stringify(th).slice(0, 200));
+  // The label window and the tier order: a fresh world-news title waits behind a fresh cyber title, and a cyber title older
+  // than LABEL_WINDOW_H is not sent at all.
+  await db.query(`INSERT INTO ti.item (link, fp, feed, source, host, title, published, category, region) VALUES
+    ('https://w.example/geo1', 'fp-w-geo1', 'w', 'World Wire', 'w.example', 'Coalition talks resume in the capital', now() - interval '1 hour', 'geopolitics', 'Global'),
+    ('https://w.example/cy1', 'fp-w-cy1', 'w', 'World Wire', 'w.example', 'Ransomware crew leaks hospital records', now() - interval '2 hours', 'topic-cyber', 'Global'),
+    ('https://w.example/cyold', 'fp-w-cyold', 'w', 'World Wire', 'w.example', 'Botnet takedown announced by police', now() - interval '30 hours', 'topic-cyber', 'Global')`);
+  llm = []; await db.query(`DELETE FROM ti.kv WHERE k = 'triage:tier'`); keyTier = 'credited'; // the free tier's day of requests is spent by now
+  const tm = await M.runJob('triage', { at: '2026-11-20T10:49:00Z' });
+  await db.query(`DELETE FROM ti.kv WHERE k = 'triage:tier'`); keyTier = 'free';
+  const sentAll = llm.map((x) => x.user).join('\n');
+  ok(llm.length >= 1 && sentAll.includes('Ransomware crew leaks') && !sentAll.includes('Botnet takedown') && (!sentAll.includes('Coalition talks') || sentAll.indexOf('Ransomware crew leaks') < sentAll.indexOf('Coalition talks')),
+    'tier 1 is sent before world news and titles past the 24-hour window are not sent ' + JSON.stringify({ calls: llm.length, candidates: tm.candidates, stop: tm.stop, joined: tm.joined, err: tm.error }));
+  ok(tm.ok && !tm.held && Number.isInteger(tm.waiting) && Number.isInteger(tm.waiting_tier1) && tm.label_window_h === 24, 'the :49 run labels and reports the queue by tier ' + JSON.stringify({ w: tm.waiting, w1: tm.waiting_tier1 }));
   // Story clustering: same story from three publishers, a shared CVE with different wording, and an unrelated title.
   const cl = M.clusterTitles([{ title: 'Fortinet patches critical FortiOS SSL VPN authentication bypass', cves: [] }, { title: 'Critical FortiOS SSL VPN authentication bypass patched by Fortinet', cves: [] },
     { title: 'Exploitation of CVE-2026-33333 seen in the wild against gateways', cves: ['CVE-2026-33333'] }, { title: 'Gateways under attack: CVE-2026-33333 exploitation in the wild', cves: ['CVE-2026-33333'] },
@@ -969,10 +987,10 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok((await call('/status', { headers: { 'x-ti-key': 'k'.repeat(48) } })).status === 200, 'operator key accepted when configured');
   const t = await call('/', { method: 'POST', headers: { 'x-neon-trigger-invocation-id': 'abc', 'content-type': 'application/json' }, body: JSON.stringify({ version: 1, trigger: { type: 'schedule' }, data: { scheduled_at: '2026-10-17T18:15:00Z' } }) });
   const tj = await t.json();
-  ok(t.status === 200 && tj.jobs.map((j) => j.job).join() === 'gdelt,health,ioda,sources,translate,lists,leaksites,links,triageeval,score,entities,watch,reports', 'trigger plan at :15 ' + tj.jobs.map((j) => j.job));
+  ok(t.status === 200 && tj.jobs.map((j) => j.job).join() === 'gdelt,health,ioda,sources,translate,triage,lists,leaksites,links,triageeval,score,entities,watch,reports', 'trigger plan at :15 ' + tj.jobs.map((j) => j.job));
   const st = await (await call('/status', bearer(mint()))).json();
   ok(st.gdelt_files.files >= 288 && st.version === M.VERSION && st.runs.length > 0, 'status ' + JSON.stringify(st.gdelt_files));
-  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:34:00Z'))) === '["gdelt","infra","snap","sources","translate","entities","watch","sigma","reports"]', 'sources in every slot, Sigma drafts at :34, reports last');
+  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:34:00Z'))) === '["gdelt","infra","snap","sources","translate","triage","entities","watch","sigma","reports"]', 'sources in every slot, Sigma drafts at :34, reports last');
   ok(JSON.stringify(M.plan(new Date('2026-10-17T18:00:00Z'))) === '["gdelt","infra","snap","sources","translate","entities","watch","foresight","reports"]' && JSON.stringify(M.plan(new Date('2026-10-17T18:45:00Z'))) === '["gdelt","health","ioda","retention","fires","maritime","sources","triage","cyphys","entities","watch","reports"]'
     && M.plan(new Date('2026-10-17T07:19:00Z')).includes('psirt') && !M.plan(new Date('2026-10-17T08:19:00Z')).includes('psirt') && M.plan(new Date('2026-10-17T08:19:00Z')).includes('triageeval') && !M.plan(new Date('2026-10-17T08:49:00Z')).includes('triageeval'), 'plan');
 }

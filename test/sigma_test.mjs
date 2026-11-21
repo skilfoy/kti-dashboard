@@ -202,7 +202,7 @@ const r5 = await M.runJob('sigma', { chat: async () => ({ ok: true, msg: { conte
 const d5 = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/sigma.json.gz')).toString());
 const rr = d5.rows.find((r) => r.kind === 'rule');
 ok(r5.attempt.outcome === 'rejected' && rr && !rr.ok && rr.yaml === null && rr.failures.some((f) => /ghostsvc64/.test(f)), 'a rule still failing after the repair is kept as rejected with its reasons');
-ok(M.plan(new Date('2026-11-19T10:34:00Z')).join() === 'gdelt,infra,snap,sources,translate,entities,watch,sigma,reports' && !M.plan(new Date('2026-11-19T10:04:00Z')).includes('sigma'), 'sigma runs in the :30 quarter hour');
+ok(M.plan(new Date('2026-11-19T10:34:00Z')).join() === 'gdelt,infra,snap,sources,translate,triage,entities,watch,sigma,reports' && !M.plan(new Date('2026-11-19T10:04:00Z')).includes('sigma'), 'sigma runs in the :30 quarter hour');
 
 if (hasPySigma) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sigma-'));

@@ -195,7 +195,21 @@ export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, POOL: 400, MAX_TOKENS: 
   // with a slow answer and a retry ran the job to 344 seconds (20 November 2026, 00:54 UTC) and held up the jobs behind it
   // in the :49 run. A request is now sent only when a full deadline still fits inside LABEL_BUDGET_MS, and the verifier
   // only when its one request fits inside JOB_BUDGET_MS.
-  JOB_BUDGET_MS: 240000 };
+  JOB_BUDGET_MS: 240000,
+  // The backlog (3.10.6). On 20 November 2026 the source network stored about 23,000 titles a day (15,500 of them
+  // world-news "geopolitics" entries from 293 sources) and triage labelled about 2,500: one run an hour, 128 of the 600
+  // daily requests, every kind given an equal turn. The 72-hour waiting count passed 56,000. Three changes:
+  // - LABEL_WINDOW_H: only titles of the last 24 hours are sent. A lead older than that is not news to the analyst run,
+  //   so the queue is bounded by a day's intake instead of three days'; older titles age out unlabelled. Advisories keep
+  //   the 72-hour WINDOW_H: they are few, vendors date them by day, and 95% of them are relevant.
+  // - TRIAGE_TIER1: kinds whose labelled titles were mostly relevance 2 or 3 (72 hours to 20 November: topic-cyber 74%,
+  //   advisories 95%, government 64%, research 60%, cyber-news 59%, topic-theater 44%, blogs 41%) are labelled before the
+  //   low-yield kinds (vulnerability 25%, defense 13%, geopolitics 11%, think-tank and maritime 8%, community 2%), which
+  //   take what capacity is left.
+  // - EXTRA_SLOTS: on a credited account the job also runs at :19 and :34, after the translation, so about 360 requests
+  //   a day go to labelling, inside the 600 cap. The free tier keeps its one request an hour at :49.
+  LABEL_WINDOW_H: 24, EXTRA_SLOTS: [15, 30] };
+export const TRIAGE_TIER1 = ['advisory', 'topic-cyber', 'government', 'research', 'cyber-news', 'topic-theater', 'blog'];
 // The longest one request can take: the request timeout and the hard deadline's margin (triageCall).
 export const TRIAGE_CALL_MAX_MS = () => TRIAGE.TIMEOUT_MS + 5000;
 export const TRIAGE_VECTORS = ['Exploitation & edge devices', 'Fraud', 'Identity & valid accounts', 'Phishing & social engineering', 'Ransomware & malware', 'Supply chain & third parties', 'DDoS', 'Insider'];
@@ -437,21 +451,34 @@ export function clusterTitles(items) {
   }
   return clusters;
 }
-export async function jobTriage() {
+export async function jobTriage(opts = {}) {
   const t0 = Date.now(), E = ENV();
   if (!(E.OPENROUTER_API_KEY || E.TI_TRIAGE_KEY)) return { held: 'OPENROUTER_API_KEY is not set in the function environment; no request made', labelled: 0, published: null, ms: Date.now() - t0 };
-  // Newest first within each kind (blog, advisory, news), the kinds taken in turn, so the news volume cannot starve the
-  // CTI blogs and advisories of labelling.
-  const cand = await sql(`SELECT link, kind, source, title, published, cves FROM (SELECT c.*, row_number() OVER (PARTITION BY c.kind ORDER BY c.published DESC) AS rn FROM (
+  const tier = await triageCap();
+  // The scheduled :19 and :34 runs are for a credited account; the free tier's daily cap allows one request an hour.
+  // A run without a schedule time (the operator route, the tests) is never held.
+  const slot = opts.at ? Math.floor(new Date(opts.at).getUTCMinutes() / 15) * 15 : null;
+  if (tier.tier !== 'credited' && TRIAGE.EXTRA_SLOTS.includes(slot)) return { held: 'free tier: labelling runs at :49 only', labelled: 0, published: null, tier: tier.tier, ms: Date.now() - t0 };
+  // The high-yield kinds first (TRIAGE_TIER1), then the rest; within a tier newest first in each kind, the kinds taken in
+  // turn, so one kind's volume cannot starve the others. Headlines of the last LABEL_WINDOW_H hours are candidates;
+  // advisories (a few hundred a day, dated by day, nearly all relevant) keep the WINDOW_H window.
+  const cand = await sql(`SELECT link, kind, source, title, published, cves FROM (SELECT c.*, row_number() OVER (PARTITION BY c.kind ORDER BY c.published DESC) AS rn,
+      CASE WHEN c.kind = ANY($3::text[]) THEN 1 ELSE 2 END AS tier FROM (
       SELECT i.link, i.category AS kind, coalesce(nullif(i.source, ''), i.host) AS source, coalesce(i.title_en, i.title) AS title, i.published, '[]'::jsonb AS cves FROM ti.item i WHERE i.published > now() - make_interval(hours => $1)
-      UNION ALL SELECT a.link, 'advisory', a.feed, a.title, COALESCE(a.published, a.seen_at), a.cves FROM ti.advisory a WHERE COALESCE(a.published, a.seen_at) > now() - make_interval(hours => $1)) c
-    WHERE NOT EXISTS (SELECT 1 FROM ti.triage t WHERE t.link = c.link)) x ORDER BY rn, published DESC LIMIT $2`, [TRIAGE.WINDOW_H, TRIAGE.POOL]);
-  const [{ n: waiting }] = await sql(`SELECT (SELECT count(*) FROM ti.item WHERE published > now() - make_interval(hours => $1)) + (SELECT count(*) FROM ti.advisory WHERE COALESCE(published, seen_at) > now() - make_interval(hours => $1))
-    - (SELECT count(*) FROM ti.triage WHERE COALESCE(published, at) > now() - make_interval(hours => $1)) AS n`, [TRIAGE.WINDOW_H]);
+      UNION ALL SELECT a.link, 'advisory', a.feed, a.title, COALESCE(a.published, a.seen_at), a.cves FROM ti.advisory a WHERE COALESCE(a.published, a.seen_at) > now() - make_interval(hours => $4)) c
+    WHERE NOT EXISTS (SELECT 1 FROM ti.triage t WHERE t.link = c.link)) x ORDER BY tier, rn, published DESC LIMIT $2`, [TRIAGE.LABEL_WINDOW_H, TRIAGE.POOL, `{${TRIAGE_TIER1.join(',')}}`, TRIAGE.WINDOW_H]);
+  // The queue as counts: titles of the label window not yet labelled, by tier (the same subtraction as before 3.10.6, by
+  // kind so the tiers can be told apart).
+  const q = await sql(`SELECT CASE WHEN k = ANY($2::text[]) THEN 1 ELSE 2 END AS tier, GREATEST(0, sum(n))::int AS n FROM (
+      SELECT category AS k, count(*) AS n FROM ti.item WHERE published > now() - make_interval(hours => $1) GROUP BY 1
+      UNION ALL SELECT 'advisory', count(*) FROM ti.advisory WHERE COALESCE(published, seen_at) > now() - make_interval(hours => $3)
+      UNION ALL SELECT kind, -count(*) FROM ti.triage WHERE COALESCE(published, at) > now() - make_interval(hours => CASE WHEN kind = 'advisory' THEN $3 ELSE $1 END) GROUP BY 1) z GROUP BY 1`, [TRIAGE.LABEL_WINDOW_H, `{${TRIAGE_TIER1.join(',')}}`, TRIAGE.WINDOW_H]);
+  const waitTier = { 1: 0, 2: 0 };
+  for (const r of q) waitTier[r.tier] = Math.max(0, Number(r.n) || 0);
+  const waiting = waitTier[1] + waitTier[2];
   let res = { labels: new Map(), rejects: {}, missing: 0, calls: [] };
   // CVE identifiers come from the advisory feed and from the title itself, never from the model.
   const pool_ = cand.map((c) => ({ ...c, cves: [...new Set([...(Array.isArray(c.cves) ? c.cves : []), ...cvesIn(c.title)])] }));
-  const tier = await triageCap();
   // A title that is the same story as one already labelled in the window takes that story's label and joins it, with no
   // request: hourly feeds carry a story for hours after its first title was labelled.
   const stored = (await triageWindow()).rows.filter((r) => !r.cluster || r.cluster === r.link)
@@ -501,7 +528,7 @@ export async function jobTriage() {
   const last = { at: new Date().toISOString(), pool: pool_.length, candidates: items.length, labelled: rows.length, joined: joined.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls };
   await kvPut('triage:last', last);
   await recordVolume([['triage_labelled', rows.length]]);
-  const out = { pool: pool_.length, candidates: items.length, waiting: Math.max(0, Number(waiting) - rows.length), labelled: rows.length, joined: joined.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, time_budget_spent: res.budget_stop || undefined, calls: res.calls, verify,
+  const out = { pool: pool_.length, candidates: items.length, waiting: Math.max(0, waiting - rows.length), waiting_tier1: Math.max(0, waitTier[1] - rows.filter((r) => TRIAGE_TIER1.includes(r.kind)).length), label_window_h: TRIAGE.LABEL_WINDOW_H, labelled: rows.length, joined: joined.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, time_budget_spent: res.budget_stop || undefined, calls: res.calls, verify,
     published: await putDoc('triage', await triageDoc({ last_run: last })), ms: Date.now() - t0 };
   // A run whose requests all failed is a failed run, so the health record and the alert workflow see it.
   out.tier = tier.tier; out.cap = tier.cap;

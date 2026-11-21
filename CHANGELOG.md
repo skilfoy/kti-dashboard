@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.10.6 (20 November 2026)
+
+- Triage backlog: on 20 November the source network stored about 23,000 titles a day (15,500 of them world-news "geopolitics" entries from 293 sources) and triage labelled about 2,500, so the 72-hour waiting count passed 56,000 and kept growing. Three changes bound it.
+- Headlines are labelled only within 24 hours of publication (`TRIAGE.LABEL_WINDOW_H`). Older ones age out unlabelled, so the queue is at most a day's intake. Advisories keep the 72-hour window: they are few, vendors date them by day, and 95% of them were relevant.
+- High-yield kinds go first (`TRIAGE_TIER1`: advisories, topic-cyber, government, research, cyber-news, topic-theater, blogs, each 41% to 95% relevance 2 or higher over the last 72 hours). Vulnerability, defense, geopolitics, think-tank, maritime and community titles (2% to 25%) take what capacity is left.
+- On a credited OpenRouter account triage also runs at :19 and :34, after translation, for about 360 of the 600 daily requests. On the free tier those two runs are held, because its 45-request day allows one request an hour.
+- The run record gains `waiting_tier1` and `label_window_h`.
+- Collector 2026-11-20.7.
+
 ## 3.10.5 (20 November 2026)
 
 - Maritime: NGA's Maritime Safety Information portal has answered every API request with HTTP 503 and a maintenance page since November, and MARAD and UKMTO still refuse the collector, so every maritime run since 3 November failed with "no source answered". While the broadcast-warning API does not answer, the job now reads the same warnings from NGA's daily memoranda: one plain-text file per area (NAVAREA IV and XII, HYDROLANT, HYDROPAC, HYDROARC), linked from the maintenance page. The memoranda go through the same categories, positions, theaters and staleness check as the API. A file that is not plain text, such as the maintenance page, is not read as warnings. The NAVWARN source record names the memoranda read and the API's status.
