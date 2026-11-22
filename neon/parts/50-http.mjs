@@ -59,9 +59,9 @@ export function plan(at) {
   if (m < 45) jobs.push('sources');
   // Non-English titles are translated before the entities job reads them (37q-translate.mjs).
   if (m < 45) jobs.push('translate');
-  // Machine triage also at :19 and :34 since 3.10.6, after the translation (37f-triage.mjs: TRIAGE.EXTRA_SLOTS; a free-tier
-  // account holds these runs).
-  if (m >= 15 && m < 45) jobs.push('triage');
+  // Machine triage in every quarter hour since 3.10.7 (:19 and :34 since 3.10.6), after the translation
+  // (37f-triage.mjs: TRIAGE.EXTRA_SLOTS; a free-tier account holds these runs).
+  if (m < 45) jobs.push('triage');
   if (m >= 15 && m < 30) {
     jobs.push('lists', 'leaksites', 'links');
     if (h === 6) jobs.push('unit42');

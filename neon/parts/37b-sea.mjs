@@ -264,17 +264,21 @@ export async function jobMaritime() {
   const asamStale = !asamNewest || Date.now() - Date.parse(asamNewest) > ASAM_STALE_DAYS * IX_DAY;
   note('ASAM', ASAM_URL(from), a, asam.length, a.ok ? { newest: asamNewest, stale: asamStale || undefined,
     error: asam.length ? null : asamNewest ? `no reports in the 90-day window; newest report ${asamNewest}` + (asamStale ? ' (source not current)' : '') : 'no reports in this or last year' } : null);
-  let navAll = w.ok ? parseNavwarn(w.json) : null, navVia = null;
-  // The broadcast-warning API down: the same warnings from NGA's daily memoranda, one file per area.
+  let navAll = w.ok ? parseNavwarn(w.json) : null, navVia = null, memoTried = null;
+  // The broadcast-warning API down: the same warnings from NGA's daily memoranda, one file per area. Every fetch's answer
+  // is kept (3.10.7), so a run in which the memoranda fail too says how: on 20 November 2026 it recorded only the API's 503.
   if (!navAll) {
     const memo = await Promise.all(NGA_MEMO_AREAS.map(async ([code, area]) => {
+      const tried = [];
       for (const url of NGA_MEMO_URLS(code)) {
         const r = await get(url, { timeout: 20000, headers: { accept: 'text/plain' } });
         const rows = r.ok ? parseDailyMem(r.text, area) : null;
-        if (rows) return { code, url, rows, modified: r.headers && typeof r.headers.get === 'function' ? r.headers.get('last-modified') : null };
+        tried.push({ url, status: r.status, error: r.ok ? (rows ? null : 'not a memorandum (HTML or empty)') : (r.error || 'HTTP ' + r.status) });
+        if (rows) return { code, url, rows, tried, modified: r.headers && typeof r.headers.get === 'function' ? r.headers.get('last-modified') : null };
       }
-      return { code, rows: null };
+      return { code, rows: null, tried };
     }));
+    memoTried = memo.map((x) => ({ code: x.code, read: !!x.rows, tried: x.tried }));
     const read = memo.filter((x) => x.rows);
     if (read.length) {
       navAll = parseNavwarn(read.flatMap((x) => x.rows));
@@ -288,8 +292,8 @@ export async function jobMaritime() {
   // NGA's broadcast-warning API answered on 22 October 2026 with warnings issued no later than May 2024; a list frozen
   // like that is reported stale and kept out of the map and the counts, since its "in force" status cannot be trusted.
   const navwarn = navStale ? null : navAll;
-  note('NAVWARN', NAVWARN_URL, navVia ? { ok: true, status: 200 } : w, navAll && !navStale ? navAll.total : 0, navAll ? { ...(navVia || {}), newest: navAll.newest, stale: navStale || undefined,
-    error: navStale ? `stale: the newest warning listed in force was issued ${String(navAll.newest || 'at an unknown date').slice(0, 10)}; the list is not current` : null } : null);
+  note('NAVWARN', NAVWARN_URL, navVia ? { ok: true, status: 200 } : w, navAll && !navStale ? navAll.total : 0, navAll ? { ...(navVia || {}), memo: memoTried || undefined, newest: navAll.newest, stale: navStale || undefined,
+    error: navStale ? `stale: the newest warning listed in force was issued ${String(navAll.newest || 'at an unknown date').slice(0, 10)}; the list is not current` : null } : (memoTried ? { memo: memoTried } : null));
   const ukmto = u.ok && u.json ? parseUkmto(u.json) : [];
   note('UKMTO', UKMTO_URL.api, u, ukmto.length, u.status === 403 ? { error: "refused by the site's Cloudflare rule (HTTP 403)" } : null);
   let press = [];
@@ -300,7 +304,9 @@ export async function jobMaritime() {
     status.push({ id: 'PRESS', url: '/api/search?category=maritime', ok: press.length > 0, status: 200, n: press.length, newest: press.length ? press[0].date : null,
       via: `${new Set(press.map((r) => r.publisher)).size} publishers in the source network, ${items.length} maritime entries read`, error: press.length ? null : 'no incident reported in 14 days of maritime entries' });
   } catch (e) { status.push({ id: 'PRESS', url: '/api/search?category=maritime', ok: false, status: 0, n: 0, error: String(e.message || e).slice(0, 160) }); }
-  if (!marad.length && !asam.length && !navAll && !ukmto.length && !press.length) throw new Error('maritime: no source answered: ' + JSON.stringify(status).slice(0, 600));
+  // No source answered: the run fails with every source's answer kept whole in its record (the thrown message used to be
+  // cut at 600 characters, before the memoranda's answers).
+  if (!marad.length && !asam.length && !navAll && !ukmto.length && !press.length) return { run_failed: 'maritime: no source answered: ' + status.map((x) => `${x.id} ${x.status || 0}`).join(', '), sources: status, published: null };
   const doc = maritimeDoc({ marad, asam: asamStale ? [] : asam, navwarn, ukmto, press, status });
   doc.stale_sources = status.filter((x) => x.stale).map((x) => ({ id: x.id, newest: x.newest || null }));
   await recordVolume([['marad', marad.length], ['asam', asam.length], ['navwarn_security', navwarn ? navwarn.rows.length : 0], ['maritime_press', press.length]]);

@@ -1,5 +1,21 @@
 # Changelog
 
+## 3.13.3 (22 November 2026)
+
+- Triage labels every title instead of only the last day's. 3.10.6 sent only titles of the last 24 hours, so most world news aged out unlabelled. The labelling window is now 30 days, the life of a label, and nothing ages out while it is stored. High-yield kinds still go first, and within each tier the newest titles go first, so the backlog takes the spare capacity.
+- Throughput, from about 1,700 titles a day to a capacity of about 28,000, 560 requests of 50 (intake is 18,000 to 23,000):
+  - 50 titles a request instead of 25.
+  - Up to four requests at once.
+  - The job in every quarter hour on a credited account. The free tier still runs at :49 only.
+  - A request cap of 560 (was 600). Translation takes 420 since 3.11.0, so the two together stay 20 under OpenRouter's 1,000 a day.
+  - A non-reasoning model first: `google/gemma-4-26b-a4b-it:free` answered 25 labels with 1,248 tokens in 26 s, against 8,200 to 9,700 tokens and 46 to 53 s for the reasoning models. Then Nemotron 3.5 Super, then the free router.
+  - Answers get up to 16,000 tokens.
+  - A run takes at most its share of the day's remaining requests, so the budget lasts until midnight UTC.
+- The day's request budget is spent in one statement, so parallel requests cannot both spend the same request.
+- The gold-set evaluation now re-runs when the model list changes, so the new lineup's accuracy is measured against the promotion thresholds.
+- Maritime: a failed run keeps every source's answer in its record, including the status and error of each NGA daily memorandum fetch. The error message used to be cut at 600 characters, before the memoranda.
+- Collector 2026-11-22.4.
+
 ## 3.13.2 (22 November 2026)
 
 - Translation takes the account's spare share. Since 3.12.2 its daily allowance of 420 requests is all that bounds it, at roughly 11,000 titles a day against an inflow of about 8,800 and a backlog near 15,500.

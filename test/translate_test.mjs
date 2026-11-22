@@ -135,7 +135,7 @@ ok((await M.translateBatch([{ link: 'x', title: 'Хакеры', lang: 'ru' }], {
 // Search matches the English title of a Russian entry.
 const s = await M.search({ q: 'attacked a bank', days: 7 });
 ok(s.hits.some((h) => h.link === 'https://ru/1' && h.title_en === 'Hackers attacked a bank' && h.lang === 'ru'), 'search finds a Russian entry by its English title ' + JSON.stringify(s.hits.map((h) => h.link)));
-ok(M.plan(new Date('2026-11-20T10:04:00Z')).join().includes('sources,translate,entities') && M.plan(new Date('2026-11-20T10:49:00Z')).join().includes('sources,translate,triage'), 'translate runs right after sources in every slot');
+ok(M.plan(new Date('2026-11-20T10:04:00Z')).join().includes('sources,translate,triage,entities') && M.plan(new Date('2026-11-20T10:49:00Z')).join().includes('sources,translate,triage'), 'translate runs right after sources in every slot');
 
 // ---------------------------------------------------------------- scale (3.11.0): theater priority, parallel batches, the allowance under concurrency
 await db.query(`DELETE FROM ti.item`);

@@ -181,7 +181,7 @@ export async function jobPsirt(opts = {}) {
 // vector and theater from the closed lists, actors that occur in the title, and a short reason without links; anything
 // else is rejected and counted. A daily request budget in ti.kv keeps the job inside the free tier. Without
 // OPENROUTER_API_KEY in the function environment the job records "held" and makes no request.
-export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, POOL: 400, MAX_TOKENS: 12000, DAILY_REQUESTS: 45, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 70000, VERIFY_AFTER_MS: 80000, VERIFY_EVERY_MS: 100 * 60000, EVAL_TRIES: 3, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
+export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 50, POOL: 900, MAX_TOKENS: 16000, DAILY_REQUESTS: 45, EVAL_DAILY_REQUESTS: 45, TIMEOUT_MS: 70000, VERIFY_AFTER_MS: 80000, VERIFY_EVERY_MS: 100 * 60000, EVAL_TRIES: 3, WINDOW_H: 72, KEEP_DAYS: 30, MAX_ROWS: 300, WHY_MAX: 160,
   ENDPOINT: 'https://openrouter.ai/api/v1/chat/completions',
   // Tried in order by OpenRouter (its `models` fallback list, three at most). The first two answered every request they
   // were routed in the first day of production, in 20 to 35 seconds; the bare free router picked a slow or reasoning-heavy
@@ -190,25 +190,32 @@ export const TRIAGE = { PROMPT_V: 'triage-1', BATCH: 25, POOL: 400, MAX_TOKENS: 
   // particle-1 led the list until 3.8.1: in the 48 hours to 20 November 2026 it failed 43 of its 102 requests, 25 of them
   // by running past the 75-second deadline, and each failure cost a retry; ERNIE (12 failures in 70, none at the deadline)
   // and Nemotron 3.5 Super (none in 18) now lead.
-  MODELS: ['baidu/ernie-5.5-flash-preview:free', 'nvidia/nemotron-3.5-super-vl:free', 'openrouter/free'], EVAL_BATCHES: 1, EVAL_BATCHES_CREDITED: 8, EVAL_BUDGET_MS: 420000, LABEL_BATCHES_CREDITED: 8, LABEL_BUDGET_MS: 200000,
+  // Since 3.10.7 a model that answers without hidden reasoning leads. In the 48 hours to 21 November 2026 the two
+  // reasoning models spent 8,200 (Nemotron) and 9,700 (ERNIE) output tokens on 25 labels that take about 1,500, and
+  // took 46 to 53 seconds; Gemma 4 26B, routed once, answered the same batch with 1,248 tokens in 26 seconds. Nemotron
+  // (no failures in 53) is the fallback and the router the last resort. The gold-set evaluation re-runs whenever this
+  // list changes (triageEvalKey), so the lineup's accuracy is measured, not assumed.
+  MODELS: ['google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3.5-super-vl:free', 'openrouter/free'], EVAL_BATCHES: 1, EVAL_BATCHES_CREDITED: 8, EVAL_BUDGET_MS: 420000, LABEL_BATCHES_CREDITED: 8, PARALLEL: 4, LABEL_BUDGET_MS: 200000,
   // The job's own bound (3.8.1). LABEL_BUDGET_MS used to gate only the start of a batch, so a batch begun at 199 seconds
   // with a slow answer and a retry ran the job to 344 seconds (20 November 2026, 00:54 UTC) and held up the jobs behind it
   // in the :49 run. A request is now sent only when a full deadline still fits inside LABEL_BUDGET_MS, and the verifier
   // only when its one request fits inside JOB_BUDGET_MS.
   JOB_BUDGET_MS: 240000,
-  // The backlog (3.10.6). On 20 November 2026 the source network stored about 23,000 titles a day (15,500 of them
-  // world-news "geopolitics" entries from 293 sources) and triage labelled about 2,500: one run an hour, 128 of the 600
-  // daily requests, every kind given an equal turn. The 72-hour waiting count passed 56,000. Three changes:
-  // - LABEL_WINDOW_H: only titles of the last 24 hours are sent. A lead older than that is not news to the analyst run,
-  //   so the queue is bounded by a day's intake instead of three days'; older titles age out unlabelled. Advisories keep
-  //   the 72-hour WINDOW_H: they are few, vendors date them by day, and 95% of them are relevant.
+  // The backlog (3.10.6, 3.10.7). On 20 November 2026 the source network stored about 23,000 titles a day (15,500 of
+  // them world-news "geopolitics" entries from 293 sources) and triage labelled about 1,700: one run an hour, two to four
+  // requests run one after another, 128 of the 600 daily requests spent. The 72-hour waiting count passed 64,000. 3.10.6
+  // put the high-yield kinds first and labelled only the last 24 hours; 3.10.7 labels every title instead:
   // - TRIAGE_TIER1: kinds whose labelled titles were mostly relevance 2 or 3 (72 hours to 20 November: topic-cyber 74%,
-  //   advisories 95%, government 64%, research 60%, cyber-news 59%, topic-theater 44%, blogs 41%) are labelled before the
-  //   low-yield kinds (vulnerability 25%, defense 13%, geopolitics 11%, think-tank and maritime 8%, community 2%), which
-  //   take what capacity is left.
-  // - EXTRA_SLOTS: on a credited account the job also runs at :19 and :34, after the translation, so about 360 requests
-  //   a day go to labelling, inside the 600 cap. The free tier keeps its one request an hour at :49.
-  LABEL_WINDOW_H: 24, EXTRA_SLOTS: [15, 30] };
+  //   advisories 95%, government 64%, research 60%, cyber-news 59%, topic-theater 44%, blogs 41%) go first; the other
+  //   kinds follow in the same run. Within a tier the newest titles go first, so the backlog takes the spare capacity.
+  // - LABEL_WINDOW_H: 30 days, the life of a label (KEEP_DAYS), so no title ages out unlabelled while it is stored.
+  // - Throughput: 50 titles a request (BATCH), up to PARALLEL requests at once, the job in every quarter hour on a
+  //   credited account (EXTRA_SLOTS: the free tier's day of 45 requests allows one an hour, at :49), a non-reasoning
+  //   model first (MODELS), and a request cap of 560 of OpenRouter's 1,000 a day (TRIAGE_CAPS): translation takes 420
+  //   since 3.11.0 (37q-translate.mjs, TR.DAILY), and the two together stay 20 under the account's limit.
+  //   A run takes at most LABEL_BATCHES_CREDITED requests and at most its share of the day's remaining requests (pace),
+  //   so the budget lasts to midnight UTC.
+  LABEL_WINDOW_H: 30 * 24, EXTRA_SLOTS: [0, 15, 30] };
 export const TRIAGE_TIER1 = ['advisory', 'topic-cyber', 'government', 'research', 'cyber-news', 'topic-theater', 'blog'];
 // The longest one request can take: the request timeout and the hard deadline's margin (triageCall).
 export const TRIAGE_CALL_MAX_MS = () => TRIAGE.TIMEOUT_MS + 5000;
@@ -272,7 +279,7 @@ const utcDay = () => new Date().toISOString().slice(0, 10);
 // The day's request cap follows the account. OpenRouter allows 50 free-model requests a day to an account that has never
 // bought credits and 1,000 a day to one that has; the key endpoint says which. The answer is kept for six hours. An
 // account on the free tier, or a key endpoint that does not answer, gets the conservative cap.
-export const TRIAGE_CAPS = { free: 45, credited: 600 };
+export const TRIAGE_CAPS = { free: 45, credited: 560 };
 export async function triageCap() {
   const E = ENV(), k = (await kvGet('triage:tier')) || {};
   if (k.at && Date.now() - Date.parse(k.at) < 6 * 3600000 && k.cap) return k;
@@ -293,11 +300,23 @@ export async function triageCap() {
 export const triageReserve = (now = new Date()) => Math.ceil((24 - now.getUTCHours() - 1) * 1.25);
 // Spends from the day's request budget; returns how many of `want` requests may be sent. `reserve` requests are held back.
 export async function triageBudget(want, cap, reserve = 0) {
-  const day = utcDay(), b = (await kvGet('triage:budget')) || {};
-  const used = b.day === day ? (+b.used || 0) : 0, grant = Math.max(0, Math.min(want, cap - reserve - used));
-  if (grant) await kvPut('triage:budget', { day, used: used + grant, cap });
-  return { grant, used: used + grant, cap, day };
+  // One statement, so parallel batches (3.10.7) cannot both spend the same request.
+  const day = utcDay();
+  await sql(`INSERT INTO ti.kv (k, v, at) VALUES ('triage:budget', jsonb_build_object('day', $1::text, 'used', 0, 'cap', $2::int), now()) ON CONFLICT (k) DO NOTHING`, [day, cap]);
+  const [r] = await sql(`WITH cur AS (SELECT CASE WHEN v->>'day' = $1::text THEN COALESCE((v->>'used')::int, 0) ELSE 0 END AS used FROM ti.kv WHERE k = 'triage:budget' FOR UPDATE),
+      g AS (SELECT used, GREATEST(0, LEAST($3::int, $2::int - $4::int - used)) AS grant FROM cur)
+    UPDATE ti.kv SET v = jsonb_build_object('day', $1::text, 'used', g.used + g.grant, 'cap', $2::int), at = now() FROM g WHERE k = 'triage:budget' RETURNING g.grant, g.used + g.grant AS used`, [day, cap, want, reserve]);
+  return { grant: Number(r.grant), used: Number(r.used), cap, day };
 }
+// Requests left today for labelling, and this run's share of them: the quarter-hour slots left in the UTC day share what
+// is left, with half again as much allowed so a run can take up a slot that held or failed.
+export async function triagePace(cap, now = new Date()) {
+  const b = (await kvGet('triage:budget')) || {}, used = b.day === now.toISOString().slice(0, 10) ? (+b.used || 0) : 0;
+  const slotsLeft = Math.max(1, (24 - now.getUTCHours()) * 4 - Math.floor(now.getUTCMinutes() / 15));
+  return { left: Math.max(0, cap - used), share: Math.max(1, Math.ceil(1.5 * Math.max(0, cap - used) / slotsLeft)) };
+}
+// The model lineup the evaluation scored (3.10.7): a changed list, or TI_TRIAGE_MODEL, restarts the gold-set replay.
+export const triageEvalKey = () => { const E = ENV(); return (E.TI_TRIAGE_MODEL ? String(E.TI_TRIAGE_MODEL).split(',').map((x) => x.trim()).filter(Boolean) : TRIAGE.MODELS).slice(0, 3).join(','); };
 export async function triageCall(messages, { structured = true } = {}) {
   const E = ENV(), key = E.OPENROUTER_API_KEY || E.TI_TRIAGE_KEY;
   const models = (E.TI_TRIAGE_MODEL ? String(E.TI_TRIAGE_MODEL).split(',').map((s) => s.trim()).filter(Boolean) : TRIAGE.MODELS).slice(0, 3);
@@ -455,7 +474,7 @@ export async function jobTriage(opts = {}) {
   const t0 = Date.now(), E = ENV();
   if (!(E.OPENROUTER_API_KEY || E.TI_TRIAGE_KEY)) return { held: 'OPENROUTER_API_KEY is not set in the function environment; no request made', labelled: 0, published: null, ms: Date.now() - t0 };
   const tier = await triageCap();
-  // The scheduled :19 and :34 runs are for a credited account; the free tier's daily cap allows one request an hour.
+  // The :04, :19 and :34 runs are for a credited account; the free tier's daily cap allows one request an hour.
   // A run without a schedule time (the operator route, the tests) is never held.
   const slot = opts.at ? Math.floor(new Date(opts.at).getUTCMinutes() / 15) * 15 : null;
   if (tier.tier !== 'credited' && TRIAGE.EXTRA_SLOTS.includes(slot)) return { held: 'free tier: labelling runs at :49 only', labelled: 0, published: null, tier: tier.tier, ms: Date.now() - t0 };
@@ -491,22 +510,32 @@ export async function jobTriage(opts = {}) {
     else fresh.push(c);
   }
   const clusters = fresh;
-  // One request a run on the free tier; a credited account works the backlog down with up to LABEL_BATCHES_CREDITED
-  // batches, each started only while a full request deadline still fits inside LABEL_BUDGET_MS.
-  const maxB = tier.tier === 'credited' ? TRIAGE.LABEL_BATCHES_CREDITED : 1, items = [], rows = [...joined], labelUntil = t0 + TRIAGE.LABEL_BUDGET_MS;
-  for (let b = 0; b < maxB && b * TRIAGE.BATCH < clusters.length && !res.stop && (b === 0 || Date.now() + TRIAGE_CALL_MAX_MS() <= labelUntil); b++) {
-    const batch = clusters.slice(b * TRIAGE.BATCH, (b + 1) * TRIAGE.BATCH).map((c, i) => ({ id: i + 1, ...c.rep, members: c.members }));
-    const r = await triageBatch(batch, tier.cap, { until: labelUntil });
-    items.push(...batch);
-    for (const [k, n] of Object.entries(r.rejects)) res.rejects[k] = (res.rejects[k] || 0) + n;
-    // Running out of time is the end of this run's labelling, not a failure of the endpoint.
-    res.missing += r.missing; res.calls.push(...r.calls); res.stop = r.stop || null;
-    if (r.stop === 'time budget spent') { res.budget_stop = true; res.stop = null; break; }
-    for (const i of batch) {
-      const l = r.labels.get(i.id);
-      if (l) for (const m of i.members) rows.push({ link: m.link, kind: m.kind, source: m.source, title: m.title, published: m.published, cves: m.cves, ...l,
-        actors: l.actors.filter((a) => String(m.title).toLowerCase().includes(a.toLowerCase())), cluster: i.members.length > 1 ? i.link : null, model: r.model || null, prompt_v: TRIAGE.PROMPT_V });
-    }
+  // One request a run on the free tier. A credited account sends up to PARALLEL batches at once, in rounds, each round
+  // started only while a full request deadline still fits inside LABEL_BUDGET_MS, up to LABEL_BATCHES_CREDITED batches
+  // and the run's share of the day's remaining requests.
+  const pace = tier.tier === 'credited' ? await triagePace(tier.cap) : null;
+  const maxB = tier.tier === 'credited' ? Math.min(TRIAGE.LABEL_BATCHES_CREDITED, pace.share) : 1, par = tier.tier === 'credited' ? TRIAGE.PARALLEL : 1;
+  const items = [], rows = [...joined], labelUntil = t0 + TRIAGE.LABEL_BUDGET_MS;
+  for (let b = 0; b < maxB && b * TRIAGE.BATCH < clusters.length && !res.stop && (b === 0 || Date.now() + TRIAGE_CALL_MAX_MS() <= labelUntil);) {
+    const batches = [];
+    for (let k = 0; k < par && b < maxB && b * TRIAGE.BATCH < clusters.length; k++, b++)
+      batches.push(clusters.slice(b * TRIAGE.BATCH, (b + 1) * TRIAGE.BATCH).map((c, i) => ({ id: i + 1, ...c.rep, members: c.members })));
+    const results = await Promise.all(batches.map((batch) => triageBatch(batch, tier.cap, { until: labelUntil })));
+    batches.forEach((batch, j) => {
+      const r = results[j];
+      items.push(...batch);
+      for (const [k, n] of Object.entries(r.rejects)) res.rejects[k] = (res.rejects[k] || 0) + n;
+      res.missing += r.missing; res.calls.push(...r.calls);
+      // Running out of time is the end of this run's labelling, not a failure of the endpoint.
+      if (r.stop === 'time budget spent') res.budget_stop = true;
+      else if (r.stop) res.stop = r.stop;
+      for (const i of batch) {
+        const l = r.labels.get(i.id);
+        if (l) for (const m of i.members) rows.push({ link: m.link, kind: m.kind, source: m.source, title: m.title, published: m.published, cves: m.cves, ...l,
+          actors: l.actors.filter((a) => String(m.title).toLowerCase().includes(a.toLowerCase())), cluster: i.members.length > 1 ? i.link : null, model: r.model || null, prompt_v: TRIAGE.PROMPT_V });
+      }
+    });
+    if (res.budget_stop) break;
   }
   if (rows.length) {
     await sql(`INSERT INTO ti.triage (link, kind, source, title, published, cves, relevance, vector, theater, actors, why, model, prompt_v, cluster)
@@ -528,7 +557,7 @@ export async function jobTriage(opts = {}) {
   const last = { at: new Date().toISOString(), pool: pool_.length, candidates: items.length, labelled: rows.length, joined: joined.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, calls: res.calls };
   await kvPut('triage:last', last);
   await recordVolume([['triage_labelled', rows.length]]);
-  const out = { pool: pool_.length, candidates: items.length, waiting: Math.max(0, waiting - rows.length), waiting_tier1: Math.max(0, waitTier[1] - rows.filter((r) => TRIAGE_TIER1.includes(r.kind)).length), label_window_h: TRIAGE.LABEL_WINDOW_H, labelled: rows.length, joined: joined.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, time_budget_spent: res.budget_stop || undefined, calls: res.calls, verify,
+  const out = { pool: pool_.length, candidates: items.length, waiting: Math.max(0, waiting - rows.length), waiting_tier1: Math.max(0, waitTier[1] - rows.filter((r) => TRIAGE_TIER1.includes(r.kind)).length), label_window_h: TRIAGE.LABEL_WINDOW_H, requests_left: pace ? pace.left : undefined, run_share: pace ? pace.share : undefined, labelled: rows.length, joined: joined.length, rejects: res.rejects, unlabelled: res.missing, stop: res.stop || null, time_budget_spent: res.budget_stop || undefined, calls: res.calls, verify,
     published: await putDoc('triage', await triageDoc({ last_run: last })), ms: Date.now() - t0 };
   // A run whose requests all failed is a failed run, so the health record and the alert workflow see it.
   out.tier = tier.tier; out.cap = tier.cap;
@@ -585,7 +614,7 @@ export async function jobTriageeval(opts = {}) {
   // gold set's hash once a day (a changed gold set restarts the evaluation, as before).
   if (!opts.reset) {
     const prior = await kvGet('triage:eval');
-    if (prior && prior.complete && prior.prompt_version === TRIAGE.PROMPT_V && prior.gold_sha && Date.now() - (Date.parse(prior.gold_checked_at) || 0) < 86400e3) {
+    if (prior && prior.complete && prior.prompt_version === TRIAGE.PROMPT_V && prior.models_key === triageEvalKey() && prior.gold_sha && Date.now() - (Date.parse(prior.gold_checked_at) || 0) < 86400e3) {
       return { held: 'evaluation complete under prompt ' + TRIAGE.PROMPT_V + '; gold set checked ' + prior.gold_checked_at, scored: prior.items, ms: Date.now() - t0 };
     }
   }
@@ -593,7 +622,7 @@ export async function jobTriageeval(opts = {}) {
   if (!ref) throw new Error('ref/triage-gold.json is missing from the bucket (push asset=gold)');
   const gold = JSON.parse(ref.buf.toString('utf8'));
   let st = (await kvGet('triage:eval:state')) || {};
-  if (opts.reset || st.prompt_v !== TRIAGE.PROMPT_V || st.gold_sha !== gold.sha) st = { prompt_v: TRIAGE.PROMPT_V, gold_sha: gold.sha, started: new Date().toISOString(), done: {}, rejects: {}, models: {} };
+  if (opts.reset || st.prompt_v !== TRIAGE.PROMPT_V || st.gold_sha !== gold.sha || st.models_key !== triageEvalKey()) st = { prompt_v: TRIAGE.PROMPT_V, models_key: triageEvalKey(), gold_sha: gold.sha, started: new Date().toISOString(), done: {}, rejects: {}, models: {} };
   // Items a request left unlabelled go to the back of the queue and are given up after EVAL_TRIES attempts, so one batch a
   // model cannot answer does not hold the replay (items 51 to 75 did, for three runs on 16 November 2026).
   st.tries = st.tries || {};
@@ -615,7 +644,7 @@ export async function jobTriageeval(opts = {}) {
   const score = triageScore(st.done);
   const givenUp = Object.values(st.tries).filter((n) => n >= TRIAGE.EVAL_TRIES).length;
   const summary = score && { ...score, gold_items: gold.items.length, unanswered: givenUp, last_calls: st.last_calls || [], complete: Object.keys(st.done).length + givenUp >= gold.items.length, promoted: triagePromoted(score), thresholds: TRIAGE_PROMOTE, rejects: st.rejects, models: st.models,
-    prompt_version: TRIAGE.PROMPT_V, gold_sha: gold.sha, gold_checked_at: new Date().toISOString(), started: st.started, at: new Date().toISOString() };
+    prompt_version: TRIAGE.PROMPT_V, models_key: triageEvalKey(), gold_sha: gold.sha, gold_checked_at: new Date().toISOString(), started: st.started, at: new Date().toISOString() };
   if (summary) await kvPut('triage:eval', summary);
   return { scored: Object.keys(st.done).length, of: gold.items.length, stop, calls: calls.length, eval: summary, published: await putDoc('triage', await triageDoc()), ms: Date.now() - t0 };
 }

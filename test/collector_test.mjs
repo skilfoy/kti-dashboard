@@ -438,6 +438,11 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   NGA_DOWN = 'all';
   const mt3 = await M.runJob('maritime', {});
   ok(!mt3.ok && /no source answered/.test(mt3.error) && /NAVWARN[^\]]*503/.test(mt3.error), 'maritime: a maintenance page in place of the memoranda is not read as warnings ' + JSON.stringify(mt3).slice(0, 300));
+  // 3.10.7: the failed run keeps every source's answer, the memoranda's included, in its record.
+  const mt3r = (await db.query(`SELECT detail FROM ti.run WHERE job = 'maritime' ORDER BY started_at DESC LIMIT 1`)).rows[0].detail;
+  const nv3 = (mt3r.sources || []).find((x) => x.id === 'NAVWARN');
+  ok(nv3 && nv3.status === 503 && nv3.memo.length === M.NGA_MEMO_AREAS.length && nv3.memo.every((x) => !x.read && x.tried.length === 2 && x.tried.every((t) => t.status === 503 && /503/.test(t.error))),
+    'maritime: a failed run records the status of every memorandum fetch ' + JSON.stringify(nv3).slice(0, 300));
   // 3.13.0: every official source down, the maritime press in the source network keeps the document current.
   await db.query(`INSERT INTO ti.item (link, fp, feed, source, host, title, summary, published, category, region, lang, seen_at) VALUES
     ('https://mx.example/1', 'fp-mx-1', 'mx', 'Maritime Executive', 'maritime-executive.com', 'Tanker attacked by drone boat off Hodeidah', '', now() - interval '2 days', 'maritime', 'Global', 'en', now() - interval '2 days'),
@@ -671,24 +676,35 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   await db.query(`DELETE FROM ti.kv WHERE k = 'triage:tier'`); keyTier = 'free';
   const c3 = await M.triageCap(), c4 = await M.triageCap();
   ok(c1.tier === 'credited' && c1.cap === M.TRIAGE_CAPS.credited && c2.tier === 'free' && /key endpoint/.test(c2.note) && c3.cap === M.TRIAGE_CAPS.free && c4.at === c3.at, 'request cap follows the account tier and is cached ' + JSON.stringify([c1.cap, c2.cap, c3.cap]));
-  // 3.10.6: the scheduled :19 and :34 runs are held on the free tier; :49 and unscheduled runs are not.
+  // 3.10.6/3.10.7: the scheduled :04, :19 and :34 runs are held on the free tier; :49 and unscheduled runs are not.
   llm = [];
   const th = await M.runJob('triage', { at: '2026-11-20T10:19:00Z' });
-  ok(th.ok && /free tier/.test(th.held) && llm.length === 0 && M.TRIAGE.EXTRA_SLOTS.join() === '15,30' && M.TRIAGE.LABEL_WINDOW_H === 24
+  const th0 = await M.runJob('triage', { at: '2026-11-20T10:04:00Z' });
+  ok(th.ok && /free tier/.test(th.held) && /free tier/.test(th0.held) && llm.length === 0 && M.TRIAGE.EXTRA_SLOTS.join() === '0,15,30' && M.TRIAGE.LABEL_WINDOW_H === 30 * 24
     && M.TRIAGE_TIER1.includes('topic-cyber') && !M.TRIAGE_TIER1.includes('geopolitics'), 'free tier: no labelling in the extra slots ' + JSON.stringify(th).slice(0, 200));
-  // The label window and the tier order: a fresh world-news title waits behind a fresh cyber title, and a cyber title older
-  // than LABEL_WINDOW_H is not sent at all.
+  // 3.10.7: every stored title is labelled. A cyber title from yesterday and world news go out in the same run, the cyber
+  // title first; only a title older than a label's life (30 days) is not sent. Parallel requests spend the budget once each.
   await db.query(`INSERT INTO ti.item (link, fp, feed, source, host, title, published, category, region) VALUES
     ('https://w.example/geo1', 'fp-w-geo1', 'w', 'World Wire', 'w.example', 'Coalition talks resume in the capital', now() - interval '1 hour', 'geopolitics', 'Global'),
     ('https://w.example/cy1', 'fp-w-cy1', 'w', 'World Wire', 'w.example', 'Ransomware crew leaks hospital records', now() - interval '2 hours', 'topic-cyber', 'Global'),
-    ('https://w.example/cyold', 'fp-w-cyold', 'w', 'World Wire', 'w.example', 'Botnet takedown announced by police', now() - interval '30 hours', 'topic-cyber', 'Global')`);
+    ('https://w.example/cyold', 'fp-w-cyold', 'w', 'World Wire', 'w.example', 'Botnet takedown announced by police', now() - interval '30 hours', 'topic-cyber', 'Global'),
+    ('https://w.example/cyancient', 'fp-w-cyanc', 'w', 'World Wire', 'w.example', 'Spyware vendor sanctioned last month', now() - interval '31 days', 'topic-cyber', 'Global')`);
+  // Enough fresh world-news titles for more than four batches.
+  await db.query(`INSERT INTO ti.item (link, fp, feed, source, host, title, published, category, region)
+    SELECT 'https://w.example/g' || g, 'fp-w-g' || g, 'w', 'World Wire', 'w.example', concat_ws(' ', 'w' || substr(md5(g::text), 1, 7), 'x' || substr(md5(g::text), 8, 7), 'y' || substr(md5(g::text), 15, 7), 'z' || substr(md5(g::text), 22, 7), 'q' || substr(md5(g::text), 29, 4)), now() - make_interval(mins => g), 'geopolitics', 'Global' FROM generate_series(1, 210) g`);
   llm = []; await db.query(`DELETE FROM ti.kv WHERE k = 'triage:tier'`); keyTier = 'credited'; // the free tier's day of requests is spent by now
+  const bud0 = ((await M.kvGet('triage:budget')) || {}).used || 0;
   const tm = await M.runJob('triage', { at: '2026-11-20T10:49:00Z' });
+  const bud1 = ((await M.kvGet('triage:budget')) || {}).used || 0;
   await db.query(`DELETE FROM ti.kv WHERE k = 'triage:tier'`); keyTier = 'free';
   const sentAll = llm.map((x) => x.user).join('\n');
-  ok(llm.length >= 1 && sentAll.includes('Ransomware crew leaks') && !sentAll.includes('Botnet takedown') && (!sentAll.includes('Coalition talks') || sentAll.indexOf('Ransomware crew leaks') < sentAll.indexOf('Coalition talks')),
-    'tier 1 is sent before world news and titles past the 24-hour window are not sent ' + JSON.stringify({ calls: llm.length, candidates: tm.candidates, stop: tm.stop, joined: tm.joined, err: tm.error }));
-  ok(tm.ok && !tm.held && Number.isInteger(tm.waiting) && Number.isInteger(tm.waiting_tier1) && tm.label_window_h === 24, 'the :49 run labels and reports the queue by tier ' + JSON.stringify({ w: tm.waiting, w1: tm.waiting_tier1 }));
+  ok(llm.length >= 4 && llm.every((x) => x.user.split('\n').length - 1 <= M.TRIAGE.BATCH) && sentAll.includes('Ransomware crew leaks') && sentAll.includes('Botnet takedown') && sentAll.includes('Coalition talks') && !sentAll.includes('Spyware vendor sanctioned')
+    && sentAll.indexOf('Ransomware crew leaks') < sentAll.indexOf('Coalition talks') && bud1 - bud0 === llm.length,
+    'every stored title is labelled, tier 1 first, in parallel batches that each spend one request ' + JSON.stringify({ calls: llm.length, spent: bud1 - bud0, candidates: tm.candidates, stop: tm.stop, err: tm.error }));
+  ok(tm.ok && !tm.held && Number.isInteger(tm.waiting) && Number.isInteger(tm.waiting_tier1) && tm.label_window_h === 720 && tm.requests_left > 0 && tm.run_share >= 1, 'the :49 run labels, reports the queue by tier and its share of the day ' + JSON.stringify({ w: tm.waiting, w1: tm.waiting_tier1, left: tm.requests_left, share: tm.run_share }));
+  await db.query(`DELETE FROM ti.item WHERE link LIKE 'https://w.example/%'`); await db.query(`DELETE FROM ti.triage WHERE link LIKE 'https://w.example/%'`); M.resetMirrorMemory(); // leave the later checks the state they expect
+  const pc = await M.triagePace(560, new Date(new Date().toISOString().slice(0, 10) + 'T23:50:00Z'));
+  ok(pc.share >= 1 && pc.share <= Math.ceil(1.5 * pc.left), 'the last slot of the day may take what is left ' + JSON.stringify(pc));
   // Story clustering: same story from three publishers, a shared CVE with different wording, and an unrelated title.
   const cl = M.clusterTitles([{ title: 'Fortinet patches critical FortiOS SSL VPN authentication bypass', cves: [] }, { title: 'Critical FortiOS SSL VPN authentication bypass patched by Fortinet', cves: [] },
     { title: 'Exploitation of CVE-2026-33333 seen in the wild against gateways', cves: ['CVE-2026-33333'] }, { title: 'Gateways under attack: CVE-2026-33333 exploitation in the wild', cves: ['CVE-2026-33333'] },
@@ -713,9 +729,9 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   await db.query(`UPDATE ti.kv SET v = jsonb_set(v, '{used}', '0') WHERE k = 'triage:budget'`); // the evaluation spends only above labelling's reserve, which depends on the hour
   llmMode = 'eval'; llm = [];
   const e1 = await M.runJob('triageeval', { batches: 2 });
-  ok(e1.ok && e1.scored === 50 && e1.calls === 2 && e1.eval.items === 50 && e1.eval.promoted === false && e1.eval.complete === false && e1.eval.theater_accuracy <= 1, 'evaluation scores two batches and withholds promotion ' + JSON.stringify(e1.eval));
+  ok(e1.ok && e1.scored === 2 * M.TRIAGE.BATCH && e1.calls === 2 && e1.eval.items === 2 * M.TRIAGE.BATCH && e1.eval.promoted === false && e1.eval.complete === false && e1.eval.theater_accuracy <= 1, 'evaluation scores two batches and withholds promotion ' + JSON.stringify(e1.eval));
   const e2 = await M.runJob('triageeval', { batches: 1 });
-  ok(e2.ok && e2.scored === 75, 'evaluation resumes where it stopped');
+  ok(e2.ok && e2.scored === 3 * M.TRIAGE.BATCH, 'evaluation resumes where it stopped');
   // A batch the model cannot answer goes to the back of the queue; the replay moves on and the errors are kept.
   llmMode = 'limited-off'; let evalFail = true;
   const prevExtra = EXTRA;
@@ -723,7 +739,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const e3 = await M.runJob('triageeval', { batches: 1 });
   evalFail = false; llmMode = 'eval';
   const e4 = await M.runJob('triageeval', { batches: 1 });
-  ok(e3.ok && e3.scored === 75 && /finish_reason error/.test(e3.eval.last_calls[0].error) && e4.scored === 100 && e4.eval.unanswered === 0, 'an unanswered evaluation batch does not hold the replay ' + JSON.stringify([e3.scored, e4.scored]));
+  ok(e3.ok && e3.scored === 3 * M.TRIAGE.BATCH && /finish_reason error/.test(e3.eval.last_calls[0].error) && e4.scored === 4 * M.TRIAGE.BATCH && e4.eval.unanswered === 0, 'an unanswered evaluation batch does not hold the replay ' + JSON.stringify([e3.scored, e4.scored]));
   EXTRA = prevExtra;
   // A complete evaluation returns on its summary without reading the gold set; past a day, or with reset, it reads again.
   const sumNow = await M.kvGet('triage:eval');
@@ -1013,7 +1029,7 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   const st = await (await call('/status', bearer(mint()))).json();
   ok(st.gdelt_files.files >= 288 && st.version === M.VERSION && st.runs.length > 0, 'status ' + JSON.stringify(st.gdelt_files));
   ok(JSON.stringify(M.plan(new Date('2026-10-17T18:34:00Z'))) === '["gdelt","infra","snap","sources","translate","triage","entities","watch","sigma","reports"]', 'sources in every slot, Sigma drafts at :34, reports last');
-  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:00:00Z'))) === '["gdelt","infra","snap","sources","translate","entities","watch","foresight","reports"]' && JSON.stringify(M.plan(new Date('2026-10-17T18:45:00Z'))) === '["gdelt","health","ioda","retention","fires","maritime","sources","translate","triage","cyphys","entities","watch","reports"]'
+  ok(JSON.stringify(M.plan(new Date('2026-10-17T18:00:00Z'))) === '["gdelt","infra","snap","sources","translate","triage","entities","watch","foresight","reports"]' && JSON.stringify(M.plan(new Date('2026-10-17T18:45:00Z'))) === '["gdelt","health","ioda","retention","fires","maritime","sources","translate","triage","cyphys","entities","watch","reports"]'
     && M.plan(new Date('2026-10-17T07:19:00Z')).includes('psirt') && !M.plan(new Date('2026-10-17T08:19:00Z')).includes('psirt') && M.plan(new Date('2026-10-17T08:19:00Z')).includes('triageeval') && !M.plan(new Date('2026-10-17T08:49:00Z')).includes('triageeval'), 'plan');
 }
 
