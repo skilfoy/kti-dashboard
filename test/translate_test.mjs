@@ -160,4 +160,11 @@ await db.query(`INSERT INTO ti.kv (k, v, at) VALUES ('translate:budget', $1, now
 const got = await Promise.all(Array.from({ length: 10 }, () => M.translateBatch([{ link: 'z', title: 'خبر', lang: 'fa' }], { models: ['m:free'] }).catch((e) => ({ err: e.message }))));
 const used = (await db.query(`SELECT v FROM ti.kv WHERE k = 'translate:budget'`)).rows[0].v.used;
 ok(used === M.TR.DAILY && got.filter((g) => g.stop === 'daily allowance spent').length >= 7, 'parallel requests never overspend the allowance ' + JSON.stringify({ used, stops: got.map((g) => g.stop) }));
+// 3.13.2: the account's share. Other jobs' use today counts against ACCOUNT_DAILY.
+await db.query(`DELETE FROM ti.kv WHERE k IN ('translate:budget', 'triage:budget', 'report:budget')`);
+const today = new Date().toISOString().slice(0, 10);
+await db.query(`INSERT INTO ti.kv (k, v, at) VALUES ('triage:budget', $1, now()), ('report:budget', $2, now())`, [{ day: today, used: M.TR.ACCOUNT_DAILY - 3, cap: 600 }, { day: '2000-01-01', used: 200, cap: 240 }]);
+const share = await Promise.all(Array.from({ length: 6 }, () => M.translateBatch([{ link: 'z', title: 'خبر', lang: 'fa' }], { models: ['m:free'] }).catch((e) => ({ err: e.message }))));
+const used2 = (await db.query(`SELECT v FROM ti.kv WHERE k = 'translate:budget'`)).rows[0].v.used;
+ok(used2 === 3 && share.filter((g) => g.stop === 'daily allowance spent').length >= 3, 'translation stops where the account share runs out; yesterday\'s use of another job counts nothing ' + JSON.stringify({ used2, stops: share.map((g) => g.stop || g.err) }));
 console.log(`translate_test: ${pass} checks passed`);
