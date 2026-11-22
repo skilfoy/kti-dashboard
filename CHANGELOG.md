@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.13.1 (22 November 2026)
+
+- Press-reported maritime incidents, precision after the first live run, which kept 54 entries from 967. Market notes, sanctions stories, defence packages and a carrier deployment had passed on wording in their summaries, and one Black Sea story had been placed in the Red Sea by its summary.
+  - **Headline wording.** The incident words must now appear in the headline. The list adds fire, burning, sinking, struck, explosion, shots, abandoned and incident.
+  - **Exclusions.** Headlines about sanctions, pledges, transfers, packages, deliveries, exports, charts, weekly or market reports, drills, exercises and court cases are left out.
+  - **Placement.** The headline's own place names come before the summary's.
+  - **Evaluation.** On the same 967 entries, 49 are kept; on review each reports an attack, strike, mine, boarding, fire, sinking or official notice.
+  - **Wording.** The site calls these counts press reports, one outlet's headline each, so one incident can count more than once.
+- Collector 2026-11-22.2.
+
 ## 3.13.0 (22 November 2026)
 
 - Maritime incidents reported in the press keep the maritime document current when the official sources do not answer. Since 21 November 2026 none of the four official sources has answered the collector: MARAD and UKMTO refuse cloud addresses (HTTP 403), and NGA's API and daily memoranda answer HTTP 503. Until now the job failed every hour and the site held its last document.

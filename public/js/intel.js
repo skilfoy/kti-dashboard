@@ -58,7 +58,7 @@
         const src = kindRows('live_maritime', 'source').filter((s) => s.id !== 'PRESS');
         const okSrc = src.filter((s) => s.ok);
         const counts = mt && okSrc.length ? `${int(mt.advisories)} advisories in force, ${int(mt.incidents_30d)} ASAM incidents in 30 days, ${int(mt.warnings)} navigational warnings (${int(mt.warn_hostile)} hostile, ${int(mt.warn_mines)} mines, ${int(mt.warn_gnss)} GNSS, ${int(mt.warn_military)} military). ` : '';
-        const press = mt && +mt.press_14d ? `${int(mt.press_7d)} incidents reported in the maritime press in 7 days (${int(mt.press_14d)} in 14). ` : '';
+        const press = mt && +mt.press_14d ? `${int(mt.press_7d)} maritime press reports of security incidents in 7 days (${int(mt.press_14d)} in 14; one outlet's headline each, so one incident can count more than once). ` : '';
         const down = src.filter((s) => !s.ok).map((s) => `${s.id} ${s.stale ? 'stale' : 'unavailable'}`).join(', ');
         row('Maritime security', h('span', {}, counts, press, okSrc.length ? '' : 'No official maritime source is current: ', down ? down + '. ' : ''),
           h('span', { class: 'ti-ctx-note', text: 'The Theaters page lists what each source answered.' }));
@@ -109,7 +109,7 @@
       setCount(sec, 'maritime-asof', fresh(m));
       const src = kindRows('live_maritime', 'source');
       const off = src.filter((s) => s.id !== 'PRESS'), live = off.filter((s) => s.ok).length, pr = src.find((s) => s.id === 'PRESS');
-      const prn = pr && pr.ok ? `The maritime press reported ${int(pr.n)} incidents in 14 days. ` : '';
+      const prn = pr && pr.ok ? `The maritime press carried ${int(pr.n)} reports of security incidents in 14 days. ` : '';
       note(sec, 'maritime-note', (live ? `${live} of ${off.length} official maritime sources answered at the last run. ` : `None of the ${off.length} official maritime sources gives current data from the collector's network: each row says what it answered. Official warnings and incidents stay off the map until one does. `) + prn, m ? m.method || '' : '');
       TI.table(tm, src, [
         { field: 'id', label: 'Source', link: 'url' },
