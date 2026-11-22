@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.12.1 (21 November 2026)
+## 3.13.3 (22 November 2026)
 
 - Triage labels every title instead of only the last day's. 3.10.6 sent only titles of the last 24 hours, so most world news aged out unlabelled. The labelling window is now 30 days, the life of a label, and nothing ages out while it is stored. High-yield kinds still go first, and within each tier the newest titles go first, so the backlog takes the spare capacity.
 - Throughput, from about 1,700 titles a day to a capacity of about 28,000, 560 requests of 50 (intake is 18,000 to 23,000):
@@ -14,6 +14,54 @@
 - The day's request budget is spent in one statement, so parallel requests cannot both spend the same request.
 - The gold-set evaluation now re-runs when the model list changes, so the new lineup's accuracy is measured against the promotion thresholds.
 - Maritime: a failed run keeps every source's answer in its record, including the status and error of each NGA daily memorandum fetch. The error message used to be cut at 600 characters, before the memoranda.
+- Collector 2026-11-22.4.
+
+## 3.13.2 (22 November 2026)
+
+- Translation takes the account's spare share. Since 3.12.2 its daily allowance of 420 requests is all that bounds it, at roughly 11,000 titles a day against an inflow of about 8,800 and a backlog near 15,500.
+  - **Allowance.** It rises to 600 requests a day.
+  - **Shared limit.** A request is granted only while every job's use today, from the triage, reports, Sigma and threatcasting budgets in kv, stays under 950. That keeps the account inside OpenRouter's free tier of about 1,000 requests a day.
+  - **Recent use.** On 19 to 21 November the other jobs used about 120 to 145 requests a day between them, against caps that add up to 858.
+- Collector 2026-11-22.3.
+
+## 3.13.1 (22 November 2026)
+
+- Press-reported maritime incidents, precision after the first live run, which kept 54 entries from 967. Market notes, sanctions stories, defence packages and a carrier deployment had passed on wording in their summaries, and one Black Sea story had been placed in the Red Sea by its summary.
+  - **Headline wording.** The incident words must now appear in the headline. The list adds fire, burning, sinking, struck, explosion, shots, abandoned and incident.
+  - **Exclusions.** Headlines about sanctions, pledges, transfers, packages, deliveries, exports, charts, weekly or market reports, drills, exercises and court cases are left out.
+  - **Placement.** The headline's own place names come before the summary's.
+  - **Evaluation.** On the same 967 entries, 49 are kept; on review each reports an attack, strike, mine, boarding, fire, sinking or official notice.
+  - **Wording.** The site calls these counts press reports, one outlet's headline each, so one incident can count more than once.
+- Collector 2026-11-22.2.
+
+## 3.13.0 (22 November 2026)
+
+- Maritime incidents reported in the press keep the maritime document current when the official sources do not answer. Since 21 November 2026 none of the four official sources has answered the collector: MARAD and UKMTO refuse cloud addresses (HTTP 403), and NGA's API and daily memoranda answer HTTP 503. Until now the job failed every hour and the site held its last document.
+  - **Source.** The maritime job reads 14 days of entries the source network already collects: the maritime trade press (Maritime Executive, gCaptain, Lloyd's List, Safety4Sea, Splash, Seatrade, USNI News, Naval News and others) and UKMTO's own feed, which answers where UKMTO's API does not. No new outside request is made.
+  - **Selection.** An entry is kept when its title or summary reports a security incident: an attack, a boarding, piracy, a seizure, drones, missiles, mines, GNSS interference, a suspicious approach, or a JMIC, UKMTO or ReCAAP notice. Headlines that use those words for other things are left out, such as weapons programmes, market and insurance stories, meetings and cyber attacks.
+  - **Placement and counting.** Each kept entry is placed in a theater by the advisory wording rules, then by port and place names, then by the feed's theater, and counted once per headline.
+  - **Display.** The document gains a `PRESS` source row, `press_7d` and `press_14d` per theater, press rows with the publisher, and `degraded` when no official source is current. The theater context line and the Theaters page note report press counts apart from official advisories, incidents and warnings.
+  - **Warning indicators.** These still read only the official notices, so press reports never stand in for them.
+- Collector 2026-11-22.1.
+
+## 3.12.2 (21 November 2026)
+
+- Translation asks each model for the least reasoning it allows. The first 3.12.1 run's diagnostics showed the cause of the empty answers: with low effort, reasoning models spent 3,500 to 12,000 output tokens on 40 headlines whose answer needs about 1,200, and two came back empty with finish reason `length`.
+  - The model catalogue's reasoning controls are now kept in kv `report:models`: whether a model takes the parameter, whether reasoning is mandatory, its efforts, and whether it takes a token cap.
+  - Translation turns reasoning off where a model allows it. Otherwise it asks for the lowest effort the model lists, or caps reasoning at 1,024 tokens where the model takes a cap.
+  - A model that refuses the setting with HTTP 400 is asked once more with its default.
+  - Reports, Sigma and threatcasting keep their own settings.
+- Collector 2026-11-21.4.
+
+## 3.12.1 (21 November 2026)
+
+- Translation yield. In the first runs of 3.11.0, half of the translation requests were wasted: six of twelve at 21:37 UTC came back from four models as "no JSON object in the answer".
+  - **Answer shapes.** The reader takes the JSON object asked for, a bare JSON array, or numbered lines in the request's own layout. An answer cut short keeps the entries it completed.
+  - **Token allowance.** Requests allow 12,000 tokens, as triage does, because reasoning tokens count against the allowance.
+  - **Lines left out.** A line the answer left out waits for the next run and counts no failure. Only a line that fails the checks counts toward the two-failure limit.
+  - **Model order.** Each model's record of readable answers, decaying 3% a run, sets the order in which a run tries the models (kv `translate:models`; the top six appear in `translate:status`). A 429, or a timeout the run's own deadline forced, counts nothing.
+  - **Diagnostics.** Each request records its finish reason, answer length and output tokens.
+- Collector 2026-11-21.3.
 
 ## 3.12.0 (21 November 2026)
 

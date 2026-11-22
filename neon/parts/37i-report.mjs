@@ -67,18 +67,36 @@ async function step(id, text) { await sql(`UPDATE ti.report SET steps = steps ||
 // Models: free, with tools and reasoning, a large context; preference order first, then by context.
 export async function reportModels() {
   const c = await kvGet('report:models');
-  if (c && Date.now() - Date.parse(c.at) < 6 * 3600000 && c.ids && c.ids.length) return c.ids;
+  if (c && Date.now() - Date.parse(c.at) < 6 * 3600000 && c.ids && c.ids.length && c.reasoning) return c.ids;
   const r = await get(REPORT.MODELS_URL, { as: 'json', timeout: 20000 });
   let ids = [];
+  const reasoning = {};
   if (r.ok && r.json && Array.isArray(r.json.data)) {
     const free = r.json.data.filter((m) => /:free$/.test(m.id) && +((m.pricing || {}).prompt || 0) === 0 && +((m.pricing || {}).completion || 0) === 0
       && (m.supported_parameters || []).includes('tools') && (m.context_length || 0) >= REPORT.MIN_CONTEXT);
     const pref = new Map(REPORT.PREFER.map((id, i) => [id, i]));
     ids = free.sort((a, b) => (pref.has(a.id) ? pref.get(a.id) : 99) - (pref.has(b.id) ? pref.get(b.id) : 99) || (b.context_length || 0) - (a.context_length || 0)).map((m) => m.id);
+    // Each model's reasoning controls as the catalogue gives them (3.12.2), for jobs that want the least reasoning a
+    // model allows: whether it accepts the parameter at all, whether reasoning can be turned off, and which efforts.
+    for (const m of free) {
+      const x = m.reasoning || {}, params = m.supported_parameters || [];
+      reasoning[m.id] = { param: params.includes('reasoning') || params.includes('include_reasoning'), mandatory: !!x.mandatory,
+        efforts: Array.isArray(x.supported_efforts) ? x.supported_efforts : null, max_tokens: !!x.supports_max_tokens };
+    }
   }
   if (!ids.length) ids = REPORT.PREFER.slice();
-  await kvPut('report:models', { at: new Date().toISOString(), ids });
+  await kvPut('report:models', { at: new Date().toISOString(), ids, reasoning });
   return ids;
+}
+export async function modelReasoning() { const c = await kvGet('report:models'); return (c && c.reasoning) || {}; }
+// The least reasoning a model allows. Off where it can be turned off; otherwise the lowest effort it lists, and a
+// token cap where it takes one. A model the catalogue says nothing about gets low effort, as before.
+export function leastReasoning(meta) {
+  if (!meta) return { effort: 'low', exclude: true };
+  if (!meta.param && !meta.efforts) return { exclude: true };
+  if (!meta.mandatory) return { effort: 'none', exclude: true };
+  const e = ['none', 'minimal', 'low', 'medium'].find((x) => x !== 'none' && (!meta.efforts || meta.efforts.includes(x))) || 'low';
+  return meta.max_tokens ? { max_tokens: 1024, exclude: true } : { effort: e, exclude: true };
 }
 async function reportBudget() {
   const day = new Date().toISOString().slice(0, 10), b = (await kvGet('report:budget')) || {};

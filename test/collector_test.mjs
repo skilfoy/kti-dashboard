@@ -437,12 +437,34 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
     'maritime: memorandum warnings categorised and placed ' + JSON.stringify(md2.navwarn));
   NGA_DOWN = 'all';
   const mt3 = await M.runJob('maritime', {});
-  ok(!mt3.ok && /no source answered/.test(mt3.error) && /NAVWARN 503/.test(mt3.error), 'maritime: a maintenance page in place of the memoranda is not read as warnings ' + JSON.stringify(mt3).slice(0, 300));
+  ok(!mt3.ok && /no source answered/.test(mt3.error) && /NAVWARN[^\]]*503/.test(mt3.error), 'maritime: a maintenance page in place of the memoranda is not read as warnings ' + JSON.stringify(mt3).slice(0, 300));
   // 3.10.7: the failed run keeps every source's answer, the memoranda's included, in its record.
   const mt3r = (await db.query(`SELECT detail FROM ti.run WHERE job = 'maritime' ORDER BY started_at DESC LIMIT 1`)).rows[0].detail;
   const nv3 = (mt3r.sources || []).find((x) => x.id === 'NAVWARN');
   ok(nv3 && nv3.status === 503 && nv3.memo.length === M.NGA_MEMO_AREAS.length && nv3.memo.every((x) => !x.read && x.tried.length === 2 && x.tried.every((t) => t.status === 503 && /503/.test(t.error))),
     'maritime: a failed run records the status of every memorandum fetch ' + JSON.stringify(nv3).slice(0, 300));
+  // 3.13.0: every official source down, the maritime press in the source network keeps the document current.
+  await db.query(`INSERT INTO ti.item (link, fp, feed, source, host, title, summary, published, category, region, lang, seen_at) VALUES
+    ('https://mx.example/1', 'fp-mx-1', 'mx', 'Maritime Executive', 'maritime-executive.com', 'Tanker attacked by drone boat off Hodeidah', '', now() - interval '2 days', 'maritime', 'Global', 'en', now() - interval '2 days'),
+    ('https://ukmto.example/2', 'fp-mx-2', 'ukmto', 'UKMTO', 'ukmto.org', 'UKMTO WARNING 041/26: suspicious approach by skiff', 'Incident 60nm east of Eyl, Somalia', now() - interval '9 days', 'maritime', 'T-HOA', 'en', now() - interval '9 days'),
+    ('https://gc.example/3', 'fp-mx-3', 'gc', 'gCaptain', 'gcaptain.com', 'Container rates climb as Red Sea diversions continue', '', now() - interval '1 days', 'maritime', 'Global', 'en', now() - interval '1 days'),
+    ('https://gc.example/4', 'fp-mx-4', 'gc', 'gCaptain', 'gcaptain.com', 'Tanker attacked by drone boat off Hodeidah', '', now() - interval '2 days', 'maritime', 'Global', 'en', now() - interval '2 days'),
+    ('https://old.example/5', 'fp-mx-5', 'old', 'Old', 'old.example', 'Bulk carrier hijacked in the Gulf of Aden', '', now() - interval '20 days', 'maritime', 'Global', 'en', now() - interval '20 days')`);
+  NGA_DOWN = 'all';
+  const mt4 = await M.runJob('maritime', {});
+  const md4 = JSON.parse(zlib.gunzipSync(bucket.get('ti-docs/docs/maritime.json.gz')).toString());
+  const pr4 = md4.sources.find((x) => x.id === 'PRESS'), rows4 = md4.rows.filter((r) => r.kind === 'press');
+  ok(mt4.ok && md4.degraded === true && pr4.ok && pr4.n === 2 && rows4.length === 2 && md4.by_theater['T-RSY'].press_7d === 1 && md4.by_theater['T-HOA'].press_14d === 1 && md4.by_theater['T-HOA'].press_7d === 0,
+    'maritime: press-reported incidents keep the document current, one per headline, 14 days, placed by wording or feed theater ' + JSON.stringify({ mt4, pr4, by: md4.by_theater }).slice(0, 500));
+  ok(!rows4.some((r) => /Container rates/.test(r.title)) && rows4.every((r) => r.publisher && r.url && r.lat === undefined), 'maritime: market news is not an incident, and press rows carry no position');
+  ok(M.pressIncidents([{ title: 'Port strike ends at Rotterdam', region: 'T-EUH' }, { title: 'Determined crews mine data', region: 'T-EUH' }, { title: 'UK and Norway Commit Over £100M for Two New Fast Attack Craft for Ukraine' },
+    { title: 'Equinor: Cyber-attack stopped in the Baltic' }, { title: 'Clean tankers freight slumps as Persian Gulf transits slow amid attacks' }]).length === 0, 'maritime: labour strikes, weapons programmes, cyber and market stories are not incidents');
+  const pi = M.pressIncidents([{ title: 'Russian Military RoRo Attacked by Drones in the Baltic Near Finland' }, { title: 'Skiff Shoots at Bulker as Pirates Renewed Efforts in Gulf of Aden' }, { title: 'Armed skiff fires shots at bulk carrier off Yemen' }, { title: 'Kerch Strait Bridge Strike Cuts Off Sea of Azov Shipping' }]);
+  const pb = M.pressIncidents([{ title: 'Two ships struck in the Black Sea', summary: 'Insurers compare the risk with the Red Sea.' }, { title: 'Hong Kong drops criminal damage case against captain over Baltic pipeline incident' },
+    { title: 'Previous Ukraine port calls could put ships in Black Sea firing line', summary: 'Owners weigh drone attacks and missile strikes.' }]);
+  ok(pb.length === 1 && pb[0].theater === 'T-UKR', 'maritime: the headline places before the summary, needs an incident word itself, and court cases are left out ' + JSON.stringify(pb));
+  ok(pi.map((r) => r.theater).join() === 'T-EUH,T-HOA,T-RSY,T-UKR', 'maritime: live headlines of 18 to 21 November 2026 placed ' + JSON.stringify(pi.map((r) => r.theater)));
+  await db.query(`DELETE FROM ti.item WHERE fp LIKE 'fp-mx-%'`);
   NGA_DOWN = null;
   const ret = await M.runJob('retention', {});
   ok(ret.ok && ret.db_bytes > 0, 'retention');
