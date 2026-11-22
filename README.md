@@ -7,7 +7,7 @@ Author: Sean Kilfoy.
 ## How it fits together
 
 ```
-GitHub (skilfoy/kti-dashboard, private)
+GitHub (skilfoy/kti-dashboard, public since 22 November 2026)
   data/authored/        analyst-authored datasets, revised by the daily reassessment
   pipeline/             builds the machine-collected datasets and the site data
   public/               the static site: page, runtime, styles, vendored d3
