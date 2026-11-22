@@ -183,22 +183,56 @@ export function parseUkmto(j) {
   }
   return out;
 }
-export function maritimeDoc({ marad, asam, navwarn, ukmto, status, now = Date.now() }) {
+// Press-reported incidents (3.13.0). Since 21 November 2026 none of the four official sources has answered the collector
+// (MARAD 403 at the Akamai edge, NGA 503 on the API and the memoranda, UKMTO 403), while the source network keeps
+// collecting the maritime trade press and UKMTO's own feed. Entries of the last 14 days whose title or summary reports a
+// security incident are placed in a theater by the same wording rules as advisories, else by the feed's theater. They
+// are reports, not advisories: counted apart, and listed with the publisher.
+export const SEA_PRESS_RE = /\b(attack(?:ed|s)?|hijack\w*|boarded|boarding|pirac\w*|pirates?|armed robbery|robbers?|seiz(?:ed|ure|es)|detain(?:ed|s)?|missiles?|drones?|UAVs?|USVs?|explosions?|explosives?|limpet|sea ?mines?|naval mines?|GNSS|GPS (?:jamming|interference)|jamming|spoof\w*|suspicious approach|skiffs?|UKMTO|JMIC|ReCAAP|Houthis?|stowaways?|shadow fleet|dark fleet|(?:drone|missile|air|naval|bridge|tanker|vessel|ship)[- ]?strikes?|airstrikes?)\b/i;
+// Places the trade press names that the advisory wording rules do not, checked after them.
+const PRESS_PLACES = [[/Hodeida|Yemen|Mokha|Ras Isa|Salif|Eritrea|Jeddah|Yanbu/i, 'T-RSY'], [/\bIran|Bandar Abbas|Fujairah|Khor Fakkan|Kharg|IRGC/i, 'T-HRM'],
+  [/Somali|Puntland|\bEyl\b|Mogadishu|Djibouti|Berbera/i, 'T-HOA'], [/Ukrain|Odesa|Odessa|Novorossiysk|Crimea|Sevastopol|Kerch/i, 'T-UKR'],
+  [/Philippine|Second Thomas|Paracel|China Coast Guard/i, 'T-SCS'], [/Kinmen|Matsu/i, 'T-TWN'], [/Gulf of Finland|Estlink|Balticconnector|shadow fleet|dark fleet/i, 'T-EUH'],
+  [/Haifa|Ashdod|Beirut|Gaza/i, 'T-LEV'], [/North Korea|Yellow Sea/i, 'T-KOR'], [/Guyana/i, 'T-VEN']];
+const pressPlace = (text) => { for (const [re, t] of PRESS_PLACES) if (re.test(text)) return t; return null; };
+// Headlines that use incident words for something else: weapons programmes, market and insurance stories, meetings,
+// and cyber attacks, which the cyber side of the collection carries.
+export const SEA_PRESS_NOT = /\b(attack craft|attack submarines?|attack boats? (?:order|contract|programme|program)|cyber[- ]?attacks?|ransomware|insurance|premiums?|freight|rates|prices?|webinar|conference|meeting|summit|award\w*|contracts?|unveil\w*|develop\w*|concept|commission\w*|launch(?:es|ed)? (?:of|new)|order(?:s|ed)? for)\b/i;
+export function pressIncidents(items = []) {
+  const out = [], seen = new Set();
+  for (const it of items) {
+    const title = String(it.title || '').replace(/\s+/g, ' ').trim(), text = title + ' ' + String(it.summary || '');
+    if (!title || !SEA_PRESS_RE.test(text) || SEA_PRESS_NOT.test(title)) continue;
+    const theater = seaTheater(text) || pressPlace(text) || (/^T-[A-Z]{3}$/.test(it.region || '') ? it.region : null);
+    if (!theater) continue;
+    const key = title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 80);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const d = it.published || it.seen_at;
+    out.push({ kind: 'press', title, date: d ? new Date(d).toISOString().slice(0, 10) : null, url: it.link, publisher: it.host || null, theater, lang: it.lang || null });
+  }
+  return out.sort((x, y) => String(y.date).localeCompare(String(x.date)));
+}
+export function maritimeDoc({ marad, asam, navwarn, ukmto, press, status, now = Date.now() }) {
   const adv = (marad || []).filter((a) => a.status === 'active');
   const inc = (asam || []).filter((r) => r.date).sort((x, y) => String(y.date).localeCompare(String(x.date)));
   const byTheater = {};
   const d30 = isoDay(now - 30 * IX_DAY);
-  const T = (id) => (byTheater[id] = byTheater[id] || { advisories: 0, incidents_90d: 0, incidents_30d: 0, warnings: 0, warn_hostile: 0, warn_mines: 0, warn_gnss: 0, warn_military: 0 });
+  const T = (id) => (byTheater[id] = byTheater[id] || { advisories: 0, incidents_90d: 0, incidents_30d: 0, warnings: 0, warn_hostile: 0, warn_mines: 0, warn_gnss: 0, warn_military: 0, press_7d: 0, press_14d: 0 });
+  const d7 = isoDay(now - 7 * IX_DAY);
+  for (const r of press || []) { const t = T(r.theater); t.press_14d++; if (r.date >= d7) t.press_7d++; }
   for (const a of adv) if (a.in_force && a.theater) T(a.theater).advisories++;
   for (const r of inc) if (r.theater) { const t = T(r.theater); t.incidents_90d++; if (r.date >= d30) t.incidents_30d++; }
   for (const [id, c] of Object.entries((navwarn && navwarn.by_theater) || {})) { const t = T(id); for (const k of ['hostile', 'mines', 'gnss', 'military']) { t['warn_' + k] += c[k] || 0; t.warnings += c[k] || 0; } }
   // Warnings first in priority order, so the row cap drops military notices before hostile acts.
   const rank = { hostile: 0, mines: 1, gnss: 2, military: 3 };
   const warns = ((navwarn && navwarn.rows) || []).slice().sort((x, y) => rank[x.category] - rank[y.category] || (y.lat != null) - (x.lat != null));
-  const rows = adv.concat(inc.slice(0, 250), warns.slice(0, 220), (ukmto || []).slice(0, 100));
-  return { source: 'Maritime security: MARAD MSCI advisories, NGA ASAM reports and NGA broadcast navigational warnings (U.S. government works); UKMTO where reachable',
+  const rows = adv.concat(inc.slice(0, 250), warns.slice(0, 220), (ukmto || []).slice(0, 100), (press || []).slice(0, 150));
+  const official = (status || []).filter((x) => x.id !== 'PRESS');
+  return { source: 'Maritime security: MARAD MSCI advisories, NGA ASAM reports and NGA broadcast navigational warnings (U.S. government works); UKMTO where reachable; incidents reported in the maritime trade press and UKMTO\'s feed, from the source network',
+    degraded: official.length > 0 && !official.some((x) => x.ok), press_14d: (press || []).length,
     terms: 'U.S. government works are not subject to copyright in the United States; UKMTO material is Crown copyright under the Open Government Licence.',
-    method: 'Advisories in force are those MARAD lists as active whose expiry date has not passed; an active listing past its expiry is marked lapsed. ASAM reports cover 90 days and are placed in a theater by position. NGA broadcast warnings in force are sorted by their own wording into hostile acts, mines and ordnance, GNSS interference, military activity (firing, exercises, missile and rocket launches) and other navigation notices; each listed warning is placed at the mean of the positions it gives (its first position when they lie more than 5 degrees apart) and in a theater by that point. Warnings are notices of hazards declared by the issuing authority, not reports of incidents.',
+    method: 'Advisories in force are those MARAD lists as active whose expiry date has not passed; an active listing past its expiry is marked lapsed. ASAM reports cover 90 days and are placed in a theater by position. NGA broadcast warnings in force are sorted by their own wording into hostile acts, mines and ordnance, GNSS interference, military activity (firing, exercises, missile and rocket launches) and other navigation notices; each listed warning is placed at the mean of the positions it gives (its first position when they lie more than 5 degrees apart) and in a theater by that point. Warnings are notices of hazards declared by the issuing authority, not reports of incidents. Press-reported incidents are entries of the last 14 days from the maritime trade press and UKMTO\'s feed whose title or summary reports a security incident, placed in a theater by their wording or the feed\'s theater, one per headline; they are reports, counted apart from official advisories and incidents.',
     sources: status, by_theater: byTheater, advisories_in_force: adv.filter((a) => a.in_force).length, asam_90d: inc.length,
     gnss: navwarn ? { total_warnings: navwarn.total, gnss: navwarn.gnss, by_area: navwarn.by_area } : null,
     navwarn: navwarn ? { total: navwarn.total, by_category: navwarn.by_category, listed: warns.length, positioned: warns.filter((w) => w.lat != null).length } : null,
@@ -256,10 +290,18 @@ export async function jobMaritime() {
     error: navStale ? `stale: the newest warning listed in force was issued ${String(navAll.newest || 'at an unknown date').slice(0, 10)}; the list is not current` : null } : null);
   const ukmto = u.ok && u.json ? parseUkmto(u.json) : [];
   note('UKMTO', UKMTO_URL.api, u, ukmto.length, u.status === 403 ? { error: "refused by the site's Cloudflare rule (HTTP 403)" } : null);
-  if (!marad.length && !asam.length && !navAll && !ukmto.length) throw new Error('maritime: no source answered: ' + JSON.stringify(status).slice(0, 600));
-  const doc = maritimeDoc({ marad, asam: asamStale ? [] : asam, navwarn, ukmto, status });
+  let press = [];
+  try {
+    const items = await sql(`SELECT link, coalesce(title_en, title) AS title, left(summary, 400) AS summary, host, region, lang, published, seen_at FROM ti.item
+      WHERE (category = 'maritime' OR host IN ('ukmto.org', 'www.ukmto.org')) AND seen_at > now() - interval '14 days' ORDER BY seen_at DESC LIMIT 3000`);
+    press = pressIncidents(items);
+    status.push({ id: 'PRESS', url: '/api/search?category=maritime', ok: press.length > 0, status: 200, n: press.length, newest: press.length ? press[0].date : null,
+      via: `${new Set(press.map((r) => r.publisher)).size} publishers in the source network, ${items.length} maritime entries read`, error: press.length ? null : 'no incident reported in 14 days of maritime entries' });
+  } catch (e) { status.push({ id: 'PRESS', url: '/api/search?category=maritime', ok: false, status: 0, n: 0, error: String(e.message || e).slice(0, 160) }); }
+  if (!marad.length && !asam.length && !navAll && !ukmto.length && !press.length) throw new Error('maritime: no source answered: ' + JSON.stringify(status).slice(0, 600));
+  const doc = maritimeDoc({ marad, asam: asamStale ? [] : asam, navwarn, ukmto, press, status });
   doc.stale_sources = status.filter((x) => x.stale).map((x) => ({ id: x.id, newest: x.newest || null }));
-  await recordVolume([['marad', marad.length], ['asam', asam.length], ['navwarn_security', navwarn ? navwarn.rows.length : 0]]);
+  await recordVolume([['marad', marad.length], ['asam', asam.length], ['navwarn_security', navwarn ? navwarn.rows.length : 0], ['maritime_press', press.length]]);
   return { sources: status.map((x) => x.id + ':' + (x.ok ? x.n : 'fail ' + x.status)), published: await putDoc('maritime', doc), ms: Date.now() - t0 };
 }
 

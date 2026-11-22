@@ -73,7 +73,8 @@
     if (TI.ready('live_fires')) m.fires = TI.index(kind('live_fires', 'aoi'), 'id');
     if (TI.ready('warn_outages')) m.outages = TI.index(TI.rows('warn_outages'), 'cc');
     if (TI.ready('live_maritime')) {
-      const ok = kind('live_maritime', 'source').some((s) => s.ok === true || s.ok === 'true');
+      // Press reports (PRESS) do not stand in for the official notices these measures count.
+      const ok = kind('live_maritime', 'source').some((s) => s.id !== 'PRESS' && (s.ok === true || s.ok === 'true'));
       m.maritime = ok ? TI.index(kind('live_maritime', 'theater'), 'theater_id') : null;
       m.maritimeDown = !ok;
     }
