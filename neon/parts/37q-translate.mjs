@@ -20,7 +20,7 @@ export const TR = { WINDOW_H: 48, BATCH: 40, PARALLEL: 3, ROUNDS: 3, DAILY: 600,
   DECAY: 0.97,
   // The account's share (3.13.2). OpenRouter's credited free tier allows about 1,000 requests a day across every job on the
   // key. The jobs' own caps add up to more (triage 600, reports 240, translation 600, Sigma 6, threatcasting 12), though
-  // on 19 to 21 November they used 120 to 450 between them. Translation, the only job that can use more, takes a request
+  // on 19 to 21 November they used about 120 to 145 a day between them. Translation, the only job that can use more, takes a request
   // only while every job's use today stays under ACCOUNT_DAILY.
   ACCOUNT_DAILY: 950, OTHER_BUDGETS: ['triage:budget', 'report:budget', 'sigma:budget', 'foresight:budget'] };
 
