@@ -188,7 +188,7 @@ export function parseUkmto(j) {
 // collecting the maritime trade press and UKMTO's own feed. Entries of the last 14 days whose title or summary reports a
 // security incident are placed in a theater by the same wording rules as advisories, else by the feed's theater. They
 // are reports, not advisories: counted apart, and listed with the publisher.
-export const SEA_PRESS_RE = /\b(attack(?:ed|s)?|hijack\w*|boarded|boarding|pirac\w*|pirates?|armed robbery|robbers?|seiz(?:ed|ure|es)|detain(?:ed|s)?|missiles?|drones?|UAVs?|USVs?|explosions?|explosives?|limpet|sea ?mines?|naval mines?|GNSS|GPS (?:jamming|interference)|jamming|spoof\w*|suspicious approach|skiffs?|UKMTO|JMIC|ReCAAP|Houthis?|stowaways?|shadow fleet|dark fleet|(?:drone|missile|air|naval|bridge|tanker|vessel|ship)[- ]?strikes?|airstrikes?)\b/i;
+export const SEA_PRESS_RE = /\b(attack(?:ed|s)?|hijack\w*|boarded|boarding|pirac\w*|pirates?|armed robbery|robbers?|seiz(?:ed|ure|es)|detain(?:ed|s)?|missiles?|drones?|UAVs?|USVs?|explosions?|explosives?|limpet|sea ?mines?|naval mines?|GNSS|GPS (?:jamming|interference)|jamming|spoof\w*|suspicious approach|skiffs?|UKMTO|JMIC|ReCAAP|Houthis?|stowaways?|shadow fleet|dark fleet|(?:drone|missile|air|naval|bridge|tanker|vessel|ship)[- ]?strikes?|airstrikes?|fired?|fires|ablaze|burn(?:s|ing|ed)|sinks?|sank|sunk|struck|explod\w*|shots?|abandoned|incidents?|warning)\b/i;
 // Places the trade press names that the advisory wording rules do not, checked after them.
 const PRESS_PLACES = [[/Hodeida|Yemen|Mokha|Ras Isa|Salif|Eritrea|Jeddah|Yanbu/i, 'T-RSY'], [/\bIran|Bandar Abbas|Fujairah|Khor Fakkan|Kharg|IRGC/i, 'T-HRM'],
   [/Somali|Puntland|\bEyl\b|Mogadishu|Djibouti|Berbera/i, 'T-HOA'], [/Ukrain|Odesa|Odessa|Novorossiysk|Crimea|Sevastopol|Kerch/i, 'T-UKR'],
@@ -197,13 +197,15 @@ const PRESS_PLACES = [[/Hodeida|Yemen|Mokha|Ras Isa|Salif|Eritrea|Jeddah|Yanbu/i
 const pressPlace = (text) => { for (const [re, t] of PRESS_PLACES) if (re.test(text)) return t; return null; };
 // Headlines that use incident words for something else: weapons programmes, market and insurance stories, meetings,
 // and cyber attacks, which the cyber side of the collection carries.
-export const SEA_PRESS_NOT = /\b(attack craft|attack submarines?|attack boats? (?:order|contract|programme|program)|cyber[- ]?attacks?|ransomware|insurance|premiums?|freight|rates|prices?|webinar|conference|meeting|summit|award\w*|contracts?|unveil\w*|develop\w*|concept|commission\w*|launch(?:es|ed)? (?:of|new)|order(?:s|ed)? for)\b/i;
+export const SEA_PRESS_NOT = /\b(attack craft|attack submarines?|attack boats? (?:order|contract|programme|program)|cyber[- ]?attacks?|ransomware|insurance|premiums?|freight|rates|prices?|webinar|conference|meeting|summit|award\w*|contracts?|unveil\w*|develop\w*|concept|commission\w*|launch(?:es|ed)? (?:of|new)|order(?:s|ed)? for|sanction\w*|pledg\w*|transfer\w*|packages?|deliver\w*|exports?|imports?|charts?|weekly|market|trade shifts|S&P|SnP|fire[- ]?fighting|fire safety|drill|training|exercises?|crew change|bunker\w*|case|court|trial|lawsuits?|sues?)\b/i;
 export function pressIncidents(items = []) {
   const out = [], seen = new Set();
   for (const it of items) {
     const title = String(it.title || '').replace(/\s+/g, ' ').trim(), text = title + ' ' + String(it.summary || '');
-    if (!title || !SEA_PRESS_RE.test(text) || SEA_PRESS_NOT.test(title)) continue;
-    const theater = seaTheater(text) || pressPlace(text) || (/^T-[A-Z]{3}$/.test(it.region || '') ? it.region : null);
+    // The headline must report the incident; the summary only helps place it, after the headline's own place names
+    // (3.13.1: "Black Sea firing line" was placed in the Red Sea from its summary).
+    if (!title || !SEA_PRESS_RE.test(title) || SEA_PRESS_NOT.test(title)) continue;
+    const theater = seaTheater(title) || pressPlace(title) || seaTheater(text) || pressPlace(text) || (/^T-[A-Z]{3}$/.test(it.region || '') ? it.region : null);
     if (!theater) continue;
     const key = title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 80);
     if (seen.has(key)) continue;

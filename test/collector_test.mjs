@@ -455,6 +455,9 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   ok(M.pressIncidents([{ title: 'Port strike ends at Rotterdam', region: 'T-EUH' }, { title: 'Determined crews mine data', region: 'T-EUH' }, { title: 'UK and Norway Commit Over £100M for Two New Fast Attack Craft for Ukraine' },
     { title: 'Equinor: Cyber-attack stopped in the Baltic' }, { title: 'Clean tankers freight slumps as Persian Gulf transits slow amid attacks' }]).length === 0, 'maritime: labour strikes, weapons programmes, cyber and market stories are not incidents');
   const pi = M.pressIncidents([{ title: 'Russian Military RoRo Attacked by Drones in the Baltic Near Finland' }, { title: 'Skiff Shoots at Bulker as Pirates Renewed Efforts in Gulf of Aden' }, { title: 'Armed skiff fires shots at bulk carrier off Yemen' }, { title: 'Kerch Strait Bridge Strike Cuts Off Sea of Azov Shipping' }]);
+  const pb = M.pressIncidents([{ title: 'Two ships struck in the Black Sea', summary: 'Insurers compare the risk with the Red Sea.' }, { title: 'Hong Kong drops criminal damage case against captain over Baltic pipeline incident' },
+    { title: 'Previous Ukraine port calls could put ships in Black Sea firing line', summary: 'Owners weigh drone attacks and missile strikes.' }]);
+  ok(pb.length === 1 && pb[0].theater === 'T-UKR', 'maritime: the headline places before the summary, needs an incident word itself, and court cases are left out ' + JSON.stringify(pb));
   ok(pi.map((r) => r.theater).join() === 'T-EUH,T-HOA,T-RSY,T-UKR', 'maritime: live headlines of 18 to 21 November 2026 placed ' + JSON.stringify(pi.map((r) => r.theater)));
   await db.query(`DELETE FROM ti.item WHERE fp LIKE 'fp-mx-%'`);
   NGA_DOWN = null;
