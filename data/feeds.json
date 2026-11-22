@@ -1,26 +1,26 @@
 {
-"generated": "2026-11-20T04:34:41+00:00",
-"validated_in_s": 837,
+"generated": "2026-11-22T11:17:51+00:00",
+"validated_in_s": 840,
 "candidates": 2120,
-"count": 945,
-"carried": 11,
+"count": 937,
+"carried": 2,
 "by_category": {
-"community": 5,
+"community": 2,
 "cyber-news": 72,
 "defense": 5,
-"geopolitics": 234,
+"geopolitics": 232,
 "government": 30,
 "maritime": 11,
-"research": 416,
+"research": 413,
 "think-tank": 14,
 "topic-cyber": 89,
 "topic-theater": 57,
 "vulnerability": 12
 },
 "by_tier": {
-"1": 448,
-"2": 179,
-"3": 318
+"1": 437,
+"2": 172,
+"3": 328
 },
 "lists": [
 {
@@ -51,20 +51,6 @@
 ],
 "feeds": [
 {
-"id": "google-e0d137",
-"name": "Hacker News: security (via Google News)",
-"url": "https://news.google.com/rss/search?q=site%3Ahnrss.org+when%3A2d&hl=en-US&gl=US&ceid=US%3Aen",
-"category": "community",
-"region": "Global",
-"tier": 1,
-"lang": "en",
-"per_day": 0.2,
-"origin": "gnews",
-"publisher": "hnrss.org",
-"gnews": true,
-"healed_from": "https://hnrss.org/newest?q=breach+OR+ransomware+OR+vulnerability+OR+hacked&points=20"
-},
-{
 "id": "google-14b438",
 "name": "r/blueteamsec (via Google News)",
 "url": "https://news.google.com/rss/search?q=site%3Areddit.com+when%3A2d&hl=en-US&gl=US&ceid=US%3Aen",
@@ -86,7 +72,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 4.23,
+"per_day": 3.11,
 "origin": "core"
 },
 {
@@ -97,7 +83,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "ru",
-"per_day": 12.3,
+"per_day": 4.7,
 "origin": "core"
 },
 {
@@ -108,7 +94,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 10.11,
+"per_day": 5.8,
 "origin": "core"
 },
 {
@@ -118,8 +104,8 @@
 "category": "cyber-news",
 "region": "Global",
 "tier": 1,
-"lang": "ko",
-"per_day": 0.07,
+"lang": "en",
+"per_day": 0.2,
 "origin": "gnews",
 "publisher": "boannews.com",
 "gnews": true,
@@ -151,7 +137,9 @@
 "origin": "gnews",
 "publisher": "cpomagazine.com",
 "gnews": true,
-"healed_from": "https://www.cpomagazine.com/feed/"
+"healed_from": "https://www.cpomagazine.com/feed/",
+"carried": true,
+"carried_why": "HTTP 429"
 },
 {
 "id": "csoonline-0c9d36",
@@ -161,7 +149,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 3.27,
+"per_day": 3.36,
 "origin": "core"
 },
 {
@@ -172,7 +160,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 11.6,
+"per_day": 4.89,
 "origin": "core"
 },
 {
@@ -183,7 +171,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 16.68,
+"per_day": 5.63,
 "origin": "core"
 },
 {
@@ -194,22 +182,11 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 3.86,
+"per_day": 3.36,
 "origin": "gnews",
 "publisher": "cybernews.com",
 "gnews": true,
 "healed_from": "https://cybernews.com/feed/"
-},
-{
-"id": "cyberscoop-7aa708",
-"name": "CyberScoop",
-"url": "https://cyberscoop.com/feed/",
-"category": "cyber-news",
-"region": "Global",
-"tier": 1,
-"lang": "en",
-"per_day": 4.24,
-"origin": "core"
 },
 {
 "id": "google-d825ce",
@@ -219,7 +196,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 8.34,
+"per_day": 1.43,
 "origin": "gnews",
 "publisher": "cybersecurity-insiders.com",
 "gnews": true,
@@ -233,7 +210,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 3.67,
+"per_day": 3.9,
 "origin": "core"
 },
 {
@@ -244,7 +221,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 6.48,
+"per_day": 3.64,
 "origin": "core"
 },
 {
@@ -255,7 +232,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 6.56,
+"per_day": 3.57,
 "origin": "core"
 },
 {
@@ -280,7 +257,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 13.02,
+"per_day": 5.29,
 "origin": "core"
 },
 {
@@ -291,7 +268,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 5.47,
+"per_day": 3.37,
 "origin": "core"
 },
 {
@@ -302,7 +279,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 13.39,
+"per_day": 3.7,
 "origin": "core"
 },
 {
@@ -313,7 +290,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 4.29,
+"per_day": 3.93,
 "origin": "core"
 },
 {
@@ -324,11 +301,22 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.5,
+"per_day": 0.07,
 "origin": "gnews",
 "publisher": "itsecurityguru.org",
 "gnews": true,
 "healed_from": "https://www.itsecurityguru.org/feed/"
+},
+{
+"id": "malwarebytes-65ea2d",
+"name": "Malwarebytes Labs",
+"url": "https://www.malwarebytes.com/blog/feed",
+"category": "cyber-news",
+"region": "Global",
+"tier": 1,
+"lang": "en",
+"per_day": 3.26,
+"origin": "core"
 },
 {
 "id": "ransomware-cac761",
@@ -338,7 +326,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 83.86,
+"per_day": 31.48,
 "origin": "core"
 },
 {
@@ -349,7 +337,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.14,
+"per_day": 0.07,
 "origin": "gnews",
 "publisher": "redhotcyber.com",
 "gnews": true,
@@ -377,7 +365,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 3.07,
+"per_day": 2.79,
 "origin": "gnews",
 "publisher": "scworld.com",
 "gnews": true,
@@ -391,7 +379,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "ja",
-"per_day": 22.43,
+"per_day": 11.09,
 "origin": "core"
 },
 {
@@ -402,7 +390,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 5.47,
+"per_day": 3.63,
 "origin": "core"
 },
 {
@@ -413,7 +401,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 40.0,
+"per_day": 6.14,
 "origin": "core"
 },
 {
@@ -424,7 +412,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "ja",
-"per_day": 9.11,
+"per_day": 4.47,
 "origin": "core"
 },
 {
@@ -435,7 +423,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "nl",
-"per_day": 10.28,
+"per_day": 8.5,
 "origin": "core"
 },
 {
@@ -446,7 +434,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "de",
-"per_day": 10.74,
+"per_day": 5.54,
 "origin": "core"
 },
 {
@@ -471,7 +459,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 12.37,
+"per_day": 4.79,
 "origin": "core"
 },
 {
@@ -482,7 +470,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "pl",
-"per_day": 6.95,
+"per_day": 3.24,
 "origin": "core"
 },
 {
@@ -493,7 +481,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 7.69,
+"per_day": 0.29,
 "origin": "gnews",
 "publisher": "teiss.co.uk",
 "gnews": true,
@@ -507,7 +495,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 9.15,
+"per_day": 0.43,
 "origin": "gnews",
 "publisher": "thecyberwire.com",
 "gnews": true,
@@ -521,7 +509,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 7.42,
+"per_day": 8.49,
 "origin": "core"
 },
 {
@@ -532,7 +520,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 7.42,
+"per_day": 8.49,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -543,7 +531,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 5.39,
+"per_day": 5.04,
 "origin": "core"
 },
 {
@@ -554,7 +542,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 4.02,
+"per_day": 3.17,
 "origin": "core"
 },
 {
@@ -565,7 +553,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 8.51,
+"per_day": 0.57,
 "origin": "gnews",
 "publisher": "venturebeat.com",
 "gnews": true,
@@ -579,7 +567,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 5.39,
+"per_day": 5.04,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -590,7 +578,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "fr",
-"per_day": 5.7,
+"per_day": 3.6,
 "origin": "core"
 },
 {
@@ -601,7 +589,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 7.33,
+"per_day": 4.4,
 "origin": "core"
 },
 {
@@ -612,7 +600,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 3.0,
+"per_day": 1.57,
 "origin": "gnews",
 "publisher": "armyrecognition.com",
 "gnews": true,
@@ -626,7 +614,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 12.66,
+"per_day": 3.62,
 "origin": "core"
 },
 {
@@ -637,7 +625,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 3.07,
+"per_day": 1.93,
 "origin": "gnews",
 "publisher": "janes.com",
 "gnews": true,
@@ -651,7 +639,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 20.83,
+"per_day": 5.47,
 "origin": "core"
 },
 {
@@ -662,7 +650,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 4.26,
+"per_day": 3.83,
 "origin": "core"
 },
 {
@@ -673,7 +661,7 @@
 "region": "T-MEX",
 "tier": 1,
 "lang": "es",
-"per_day": 109.52,
+"per_day": 45.69,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -684,7 +672,7 @@
 "region": "T-CAS",
 "tier": 1,
 "lang": "en",
-"per_day": 26.18,
+"per_day": 21.57,
 "origin": "core"
 },
 {
@@ -695,7 +683,7 @@
 "region": "T-MEX",
 "tier": 1,
 "lang": "es",
-"per_day": 25.88,
+"per_day": 4.82,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -706,7 +694,7 @@
 "region": "T-SCS",
 "tier": 1,
 "lang": "en",
-"per_day": 19.01,
+"per_day": 11.86,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -717,7 +705,7 @@
 "region": "T-HOA",
 "tier": 1,
 "lang": "en",
-"per_day": 1.64,
+"per_day": 1.29,
 "origin": "gnews",
 "publisher": "addisstandard.com",
 "gnews": true
@@ -730,7 +718,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "it",
-"per_day": 28.61,
+"per_day": 48.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -741,7 +729,7 @@
 "region": "T-AFP",
 "tier": 1,
 "lang": "en",
-"per_day": 5.86,
+"per_day": 5.66,
 "origin": "core"
 },
 {
@@ -752,7 +740,7 @@
 "region": "T-SAH",
 "tier": 1,
 "lang": "en",
-"per_day": 20.26,
+"per_day": 20.02,
 "origin": "core"
 },
 {
@@ -763,7 +751,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "de",
-"per_day": 8.82,
+"per_day": 9.57,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -774,7 +762,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 75.08,
+"per_day": 56.22,
 "origin": "core"
 },
 {
@@ -785,7 +773,7 @@
 "region": "T-AFP",
 "tier": 1,
 "lang": "en",
-"per_day": 5.46,
+"per_day": 3.36,
 "origin": "core"
 },
 {
@@ -796,7 +784,7 @@
 "region": "T-RSY",
 "tier": 1,
 "lang": "en",
-"per_day": 3.5,
+"per_day": 3.29,
 "origin": "gnews",
 "publisher": "arabnews.com",
 "gnews": true,
@@ -810,7 +798,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 30.79,
+"per_day": 30.64,
 "origin": "gnews",
 "publisher": "apnews.com",
 "gnews": true
@@ -823,7 +811,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 18.81,
+"per_day": 0.07,
 "origin": "gnews",
 "publisher": "app.com.pk",
 "gnews": true
@@ -836,7 +824,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 19.56,
+"per_day": 12.84,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -847,7 +835,7 @@
 "region": "T-BAL",
 "tier": 1,
 "lang": "en",
-"per_day": 5.56,
+"per_day": 5.12,
 "origin": "core"
 },
 {
@@ -858,7 +846,7 @@
 "region": "T-MEX",
 "tier": 1,
 "lang": "es",
-"per_day": 7.25,
+"per_day": 5.9,
 "origin": "core"
 },
 {
@@ -869,7 +857,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 21.87,
+"per_day": 15.25,
 "origin": "core"
 },
 {
@@ -880,7 +868,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 5.48,
+"per_day": 3.3,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -891,7 +879,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 59.23,
+"per_day": 30.59,
 "origin": "gnews",
 "publisher": "bloomberg.com",
 "gnews": true
@@ -904,7 +892,7 @@
 "region": "T-HOA",
 "tier": 1,
 "lang": "en",
-"per_day": 0.29,
+"per_day": 0.36,
 "origin": "gnews",
 "publisher": "borkena.com",
 "gnews": true
@@ -917,7 +905,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 9.19,
+"per_day": 5.6,
 "origin": "core"
 },
 {
@@ -928,7 +916,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "ja",
-"per_day": 9.34,
+"per_day": 4.53,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -950,7 +938,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 110.63,
+"per_day": 73.86,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -961,7 +949,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 14.05,
+"per_day": 4.46,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -972,30 +960,8 @@
 "region": "T-SCS",
 "tier": 1,
 "lang": "en",
-"per_day": 46.92,
+"per_day": 14.19,
 "origin": "awesome-rss-feeds"
-},
-{
-"id": "feedburner-986aa6",
-"name": "Crikey (Australia)",
-"url": "https://feeds.feedburner.com/com/rCTl",
-"category": "geopolitics",
-"region": "Global",
-"tier": 1,
-"lang": "en",
-"per_day": 8.88,
-"origin": "awesome-rss-feeds"
-},
-{
-"id": "dabangasudan-49f8d8",
-"name": "Dabanga",
-"url": "https://www.dabangasudan.org/en/feed",
-"category": "geopolitics",
-"region": "T-SDN",
-"tier": 1,
-"lang": "en",
-"per_day": 4.26,
-"origin": "core"
 },
 {
 "id": "co-bf9a52",
@@ -1005,7 +971,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 4.91,
+"per_day": 4.19,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1016,7 +982,7 @@
 "region": "T-SAH",
 "tier": 1,
 "lang": "en",
-"per_day": 50.96,
+"per_day": 80.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1027,7 +993,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 30.92,
+"per_day": 30.23,
 "origin": "gnews",
 "publisher": "dawn.com",
 "gnews": true
@@ -1040,18 +1006,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 8.78,
-"origin": "core"
-},
-{
-"id": "dw-389e8b",
-"name": "DW Persian",
-"url": "https://rss.dw.com/rdf/rss-per-all",
-"category": "geopolitics",
-"region": "T-HRM",
-"tier": 1,
-"lang": "fa",
-"per_day": 3.05,
+"per_day": 9.8,
 "origin": "core"
 },
 {
@@ -1062,7 +1017,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "uk",
-"per_day": 26.88,
+"per_day": 21.69,
 "origin": "core"
 },
 {
@@ -1073,7 +1028,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "pl",
-"per_day": 72.38,
+"per_day": 54.97,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1084,7 +1039,7 @@
 "region": "T-MEX",
 "tier": 1,
 "lang": "es",
-"per_day": 131.2,
+"per_day": 43.43,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1095,7 +1050,7 @@
 "region": "T-MEX",
 "tier": 1,
 "lang": "es",
-"per_day": 200.0,
+"per_day": 117.67,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1106,7 +1061,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "es",
-"per_day": 34.59,
+"per_day": 5.56,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1117,7 +1072,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "es",
-"per_day": 36.51,
+"per_day": 4.14,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1128,7 +1083,7 @@
 "region": "T-MEX",
 "tier": 1,
 "lang": "es",
-"per_day": 31.79,
+"per_day": 40.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1139,7 +1094,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "en",
-"per_day": 18.0,
+"per_day": 22.97,
 "origin": "core"
 },
 {
@@ -1150,7 +1105,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 36.79,
+"per_day": 26.12,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1161,7 +1116,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 30.27,
+"per_day": 30.45,
 "origin": "gnews",
 "publisher": "ft.com",
 "gnews": true
@@ -1174,7 +1129,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "pt",
-"per_day": 237.56,
+"per_day": 104.11,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1185,7 +1140,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 100.0,
+"per_day": 59.26,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1196,7 +1151,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 44.62,
+"per_day": 28.38,
 "origin": "core"
 },
 {
@@ -1207,7 +1162,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "fr",
-"per_day": 43.34,
+"per_day": 13.18,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1218,7 +1173,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 172.0,
+"per_day": 220.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1229,7 +1184,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "pl",
-"per_day": 54.58,
+"per_day": 24.79,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1240,7 +1195,7 @@
 "region": "T-SCS",
 "tier": 1,
 "lang": "en",
-"per_day": 37.74,
+"per_day": 60.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1251,7 +1206,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 240.0,
+"per_day": 152.83,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1262,7 +1217,7 @@
 "region": "T-TWN",
 "tier": 1,
 "lang": "en",
-"per_day": 7.3,
+"per_day": 5.64,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1273,7 +1228,7 @@
 "region": "T-TWN",
 "tier": 1,
 "lang": "en",
-"per_day": 12.77,
+"per_day": 12.1,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1284,7 +1239,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 40.0,
+"per_day": 19.22,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1295,7 +1250,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "pl",
-"per_day": 80.0,
+"per_day": 77.45,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1306,7 +1261,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "es",
-"per_day": 64.36,
+"per_day": 50.96,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1317,7 +1272,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "it",
-"per_day": 25.59,
+"per_day": 27.12,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1328,7 +1283,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 4.29,
+"per_day": 4.14,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1339,7 +1294,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 12.85,
+"per_day": 15.39,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1361,7 +1316,7 @@
 "region": "T-SAH",
 "tier": 1,
 "lang": "en",
-"per_day": 3.57,
+"per_day": 3.64,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1372,7 +1327,7 @@
 "region": "T-SCS",
 "tier": 1,
 "lang": "en",
-"per_day": 43.1,
+"per_day": 21.77,
 "origin": "core"
 },
 {
@@ -1394,7 +1349,7 @@
 "region": "T-SCS",
 "tier": 1,
 "lang": "en",
-"per_day": 9.78,
+"per_day": 4.24,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1405,18 +1360,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 3.83,
-"origin": "awesome-rss-feeds"
-},
-{
-"id": "internazionale-63e7d2",
-"name": "Internazionale (Italy)",
-"url": "https://www.internazionale.it/sitemaps/rss.xml",
-"category": "geopolitics",
-"region": "T-EUH",
-"tier": 1,
-"lang": "en",
-"per_day": 76.46,
+"per_day": 9.95,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1427,7 +1371,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 45.54,
+"per_day": 27.69,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1438,7 +1382,7 @@
 "region": "T-HRM",
 "tier": 1,
 "lang": "en",
-"per_day": 10.64,
+"per_day": 12.41,
 "origin": "core"
 },
 {
@@ -1449,7 +1393,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 38.67,
+"per_day": 44.23,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1460,7 +1404,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 3.57,
+"per_day": 8.6,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1471,7 +1415,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 119.97,
+"per_day": 240.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1482,7 +1426,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 31.51,
+"per_day": 23.01,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1493,7 +1437,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "pt",
-"per_day": 80.0,
+"per_day": 28.72,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1504,7 +1448,7 @@
 "region": "T-CAS",
 "tier": 1,
 "lang": "en",
-"per_day": 8.5,
+"per_day": 5.24,
 "origin": "core"
 },
 {
@@ -1515,7 +1459,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "fr",
-"per_day": 41.46,
+"per_day": 80.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1548,7 +1492,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "fr",
-"per_day": 17.11,
+"per_day": 10.6,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1559,7 +1503,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "hi",
-"per_day": 44.0,
+"per_day": 17.44,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1570,7 +1514,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "fr",
-"per_day": 29.92,
+"per_day": 23.6,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1581,7 +1525,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "fr",
-"per_day": 27.33,
+"per_day": 21.88,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1592,7 +1536,7 @@
 "region": "T-SAH",
 "tier": 1,
 "lang": "en",
-"per_day": 67.67,
+"per_day": 46.05,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1625,7 +1569,7 @@
 "region": "T-MEX",
 "tier": 1,
 "lang": "es",
-"per_day": 192.78,
+"per_day": 92.18,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1636,7 +1580,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "en",
-"per_day": 6.81,
+"per_day": 6.09,
 "origin": "core"
 },
 {
@@ -1647,7 +1591,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "fr",
-"per_day": 17.41,
+"per_day": 10.52,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1658,7 +1602,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "en",
-"per_day": 35.95,
+"per_day": 11.47,
 "origin": "core"
 },
 {
@@ -1669,7 +1613,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "ru",
-"per_day": 38.25,
+"per_day": 18.04,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1680,7 +1624,7 @@
 "region": "T-VEN",
 "tier": 1,
 "lang": "en",
-"per_day": 6.83,
+"per_day": 3.02,
 "origin": "core"
 },
 {
@@ -1691,19 +1635,22 @@
 "region": "T-MEX",
 "tier": 1,
 "lang": "en",
-"per_day": 16.47,
+"per_day": 6.73,
 "origin": "core"
 },
 {
-"id": "middleeasteye-f4e1d7",
-"name": "Middle East Eye",
-"url": "https://www.middleeasteye.net/rss",
+"id": "google-7ba99f",
+"name": "Middle East Eye (via Google News)",
+"url": "https://news.google.com/rss/search?q=site%3Amiddleeasteye.net+when%3A2d&hl=en-US&gl=US&ceid=US%3Aen",
 "category": "geopolitics",
 "region": "T-LEV",
 "tier": 1,
 "lang": "en",
-"per_day": 58.14,
-"origin": "core"
+"per_day": 30.21,
+"origin": "gnews",
+"publisher": "middleeasteye.net",
+"gnews": true,
+"healed_from": "https://www.middleeasteye.net/rss"
 },
 {
 "id": "milannews-5f6475",
@@ -1713,7 +1660,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "it",
-"per_day": 60.75,
+"per_day": 80.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1724,7 +1671,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 36.74,
+"per_day": 7.21,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1746,7 +1693,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 50.3,
+"per_day": 29.85,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1757,7 +1704,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 14.84,
+"per_day": 11.99,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1768,7 +1715,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "pl",
-"per_day": 10.94,
+"per_day": 9.36,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1779,7 +1726,7 @@
 "region": "T-SAH",
 "tier": 1,
 "lang": "en",
-"per_day": 46.31,
+"per_day": 30.66,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1790,7 +1737,7 @@
 "region": "T-KOR",
 "tier": 1,
 "lang": "en",
-"per_day": 4.29,
+"per_day": 4.07,
 "origin": "core"
 },
 {
@@ -1801,7 +1748,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 35.26,
+"per_day": 17.68,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1812,7 +1759,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 6.12,
+"per_day": 4.89,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1823,7 +1770,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 24.42,
+"per_day": 9.13,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1834,7 +1781,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "fr",
-"per_day": 34.63,
+"per_day": 40.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1845,7 +1792,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 4.14,
+"per_day": 3.29,
 "origin": "gnews",
 "publisher": "pakistantoday.com.pk",
 "gnews": true
@@ -1858,7 +1805,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "it",
-"per_day": 16.29,
+"per_day": 11.51,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1869,7 +1816,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 69.61,
+"per_day": 34.9,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1880,7 +1827,7 @@
 "region": "T-SCS",
 "tier": 1,
 "lang": "en",
-"per_day": 19.08,
+"per_day": 12.44,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1891,7 +1838,7 @@
 "region": "T-MEX",
 "tier": 1,
 "lang": "es",
-"per_day": 34.78,
+"per_day": 14.83,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1902,7 +1849,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "en",
-"per_day": 80.0,
+"per_day": 49.93,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1913,7 +1860,7 @@
 "region": "T-SAH",
 "tier": 1,
 "lang": "en",
-"per_day": 50.32,
+"per_day": 60.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -1924,7 +1871,7 @@
 "region": "T-SDN",
 "tier": 1,
 "lang": "en",
-"per_day": 13.17,
+"per_day": 6.75,
 "origin": "core"
 },
 {
@@ -1935,19 +1882,8 @@
 "region": "T-SCS",
 "tier": 1,
 "lang": "en",
-"per_day": 16.87,
+"per_day": 33.2,
 "origin": "core"
-},
-{
-"id": "reforma-77603d",
-"name": "Reforma (Mexico)",
-"url": "https://www.reforma.com/rss/portada.xml",
-"category": "geopolitics",
-"region": "T-MEX",
-"tier": 1,
-"lang": "es",
-"per_day": 13.67,
-"origin": "awesome-rss-feeds"
 },
 {
 "id": "google-91c020",
@@ -1957,7 +1893,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 31.08,
+"per_day": 2.5,
 "origin": "gnews",
 "publisher": "reliefweb.int",
 "gnews": true
@@ -1981,7 +1917,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 73.74,
+"per_day": 30.34,
 "origin": "gnews",
 "publisher": "reuters.com",
 "gnews": true
@@ -1994,7 +1930,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "pl",
-"per_day": 73.42,
+"per_day": 49.63,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2005,7 +1941,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "it",
-"per_day": 18.9,
+"per_day": 14.39,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2016,7 +1952,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "en",
-"per_day": 33.39,
+"per_day": 24.48,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2027,7 +1963,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 22.3,
+"per_day": 20.88,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2038,7 +1974,7 @@
 "region": "T-HOA",
 "tier": 1,
 "lang": "en",
-"per_day": 11.96,
+"per_day": 40.0,
 "origin": "core"
 },
 {
@@ -2049,7 +1985,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 21.59,
+"per_day": 19.12,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2071,7 +2007,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "de",
-"per_day": 27.7,
+"per_day": 22.37,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2082,7 +2018,7 @@
 "region": "T-TWN",
 "tier": 1,
 "lang": "en",
-"per_day": 208.0,
+"per_day": 99.84,
 "origin": "core"
 },
 {
@@ -2093,7 +2029,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "en",
-"per_day": 102.29,
+"per_day": 44.99,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2104,7 +2040,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 7.79,
+"per_day": 5.05,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2115,7 +2051,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 17.53,
+"per_day": 10.93,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2137,7 +2073,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 14.09,
+"per_day": 6.63,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2148,7 +2084,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 63.78,
+"per_day": 35.15,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2159,7 +2095,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 9.34,
+"per_day": 10.54,
 "origin": "core"
 },
 {
@@ -2170,7 +2106,7 @@
 "region": "T-HOA",
 "tier": 1,
 "lang": "en",
-"per_day": 0.21,
+"per_day": 0.36,
 "origin": "gnews",
 "publisher": "theeastafrican.co.ke",
 "gnews": true
@@ -2194,7 +2130,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 12.19,
+"per_day": 10.56,
 "origin": "core"
 },
 {
@@ -2205,7 +2141,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 143.4,
+"per_day": 121.31,
 "origin": "core"
 },
 {
@@ -2216,7 +2152,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 184.47,
+"per_day": 240.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2227,7 +2163,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "en",
-"per_day": 13.1,
+"per_day": 10.3,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2238,7 +2174,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 4.87,
+"per_day": 4.4,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2249,7 +2185,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 31.1,
+"per_day": 30.65,
 "origin": "gnews",
 "publisher": "thenews.com.pk",
 "gnews": true
@@ -2262,7 +2198,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 6.0,
+"per_day": 5.49,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2297,7 +2233,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 43.74,
+"per_day": 35.37,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2308,7 +2244,7 @@
 "region": "T-CAS",
 "tier": 1,
 "lang": "en",
-"per_day": 13.52,
+"per_day": 4.93,
 "origin": "core"
 },
 {
@@ -2319,7 +2255,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 22.55,
+"per_day": 32.78,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2330,7 +2266,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 58.89,
+"per_day": 41.38,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2341,7 +2277,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 13.7,
+"per_day": 14.15,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2352,7 +2288,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 38.57,
+"per_day": 11.67,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2363,7 +2299,7 @@
 "region": "T-SAH",
 "tier": 1,
 "lang": "en",
-"per_day": 72.97,
+"per_day": 80.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2374,7 +2310,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "en",
-"per_day": 51.63,
+"per_day": 47.12,
 "origin": "core"
 },
 {
@@ -2385,19 +2321,8 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 4.48,
+"per_day": 5.02,
 "origin": "core"
-},
-{
-"id": "unbox-cf2325",
-"name": "UNBOX PH (Philippines)",
-"url": "https://www.unbox.ph/feed/",
-"category": "geopolitics",
-"region": "T-SCS",
-"tier": 1,
-"lang": "en",
-"per_day": 4.89,
-"origin": "awesome-rss-feeds"
 },
 {
 "id": "urdupoint-7c2efa",
@@ -2407,7 +2332,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "ur",
-"per_day": 118.54,
+"per_day": 240.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2418,7 +2343,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 25.21,
+"per_day": 12.14,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2429,7 +2354,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 4.21,
+"per_day": 4.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2440,18 +2365,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 7.45,
-"origin": "awesome-rss-feeds"
-},
-{
-"id": "huffpost-4bbf7d",
-"name": "World News - Breaking News, Top Stories (United States)",
-"url": "https://www.huffpost.com/section/world-news/feed",
-"category": "geopolitics",
-"region": "Global",
-"tier": 1,
-"lang": "en",
-"per_day": 4.38,
+"per_day": 5.81,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2462,7 +2376,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 48.58,
+"per_day": 80.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2473,7 +2387,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "pl",
-"per_day": 45.8,
+"per_day": 12.75,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2484,7 +2398,7 @@
 "region": "T-LEV",
 "tier": 1,
 "lang": "he",
-"per_day": 64.89,
+"per_day": 53.13,
 "origin": "core"
 },
 {
@@ -2495,7 +2409,7 @@
 "region": "T-KOR",
 "tier": 1,
 "lang": "en",
-"per_day": 70.87,
+"per_day": 27.02,
 "origin": "core"
 },
 {
@@ -2506,7 +2420,7 @@
 "region": "T-KOR",
 "tier": 1,
 "lang": "ko",
-"per_day": 18.28,
+"per_day": 12.09,
 "origin": "core"
 },
 {
@@ -2532,17 +2446,6 @@
 "origin": "awesome-rss-feeds"
 },
 {
-"id": "kommersant-e9373f",
-"name": "Газета (Russia)",
-"url": "https://www.kommersant.ru/RSS/main.xml",
-"category": "geopolitics",
-"region": "T-UKR",
-"tier": 1,
-"lang": "ru",
-"per_day": 49.14,
-"origin": "awesome-rss-feeds"
-},
-{
 "id": "gordonua-551ae4",
 "name": "Гордон - Самые популярные материалы (Ukraine)",
 "url": "https://gordonua.com/xml/rss_category/top.html",
@@ -2550,7 +2453,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "ru",
-"per_day": 10.27,
+"per_day": 10.07,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2561,7 +2464,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "ru",
-"per_day": 113.13,
+"per_day": 91.93,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2572,7 +2475,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "ru",
-"per_day": 119.33,
+"per_day": 160.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2583,7 +2486,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "uk",
-"per_day": 127.8,
+"per_day": 106.65,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2594,7 +2497,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "ru",
-"per_day": 60.93,
+"per_day": 71.67,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2605,7 +2508,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "ru",
-"per_day": 216.23,
+"per_day": 240.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2616,7 +2519,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "uk",
-"per_day": 47.39,
+"per_day": 80.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2627,7 +2530,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "ru",
-"per_day": 97.88,
+"per_day": 68.15,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2638,7 +2541,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "ur",
-"per_day": 73.43,
+"per_day": 104.4,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2649,7 +2552,7 @@
 "region": "T-HRM",
 "tier": 1,
 "lang": "fa",
-"per_day": 74.27,
+"per_day": 120.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2660,7 +2563,7 @@
 "region": "T-HRM",
 "tier": 1,
 "lang": "fa",
-"per_day": 93.03,
+"per_day": 120.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2671,7 +2574,7 @@
 "region": "T-HRM",
 "tier": 1,
 "lang": "fa",
-"per_day": 47.95,
+"per_day": 80.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2682,7 +2585,7 @@
 "region": "T-HRM",
 "tier": 1,
 "lang": "fa",
-"per_day": 89.3,
+"per_day": 120.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2704,7 +2607,7 @@
 "region": "T-HRM",
 "tier": 1,
 "lang": "fa",
-"per_day": 99.0,
+"per_day": 240.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2715,7 +2618,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "ur",
-"per_day": 51.3,
+"per_day": 49.77,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2726,7 +2629,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "hi",
-"per_day": 19.84,
+"per_day": 18.88,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2737,7 +2640,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 4.0,
+"per_day": 240.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2748,7 +2651,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 16.74,
+"per_day": 15.8,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2759,7 +2662,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "ja",
-"per_day": 10.45,
+"per_day": 10.09,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -2798,7 +2701,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "de",
-"per_day": 85.33,
+"per_day": 30.96,
 "origin": "core"
 },
 {
@@ -2809,7 +2712,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "sv",
-"per_day": 6.59,
+"per_day": 5.08,
 "origin": "core"
 },
 {
@@ -2820,7 +2723,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 7.12,
+"per_day": 53.69,
 "origin": "gnews",
 "publisher": "enisa.europa.eu",
 "gnews": true,
@@ -2834,7 +2737,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 4.82,
+"per_day": 3.11,
 "origin": "core"
 },
 {
@@ -2844,19 +2747,8 @@
 "category": "government",
 "region": "Global",
 "tier": 1,
-"lang": "es",
-"per_day": 12.24,
-"origin": "core"
-},
-{
-"id": "ncsc-3a01e8",
-"name": "NCSC-NL advisories",
-"url": "https://advisories.ncsc.nl/rss/advisories",
-"category": "government",
-"region": "Global",
-"tier": 1,
 "lang": "en",
-"per_day": 3.2,
+"per_day": 3.24,
 "origin": "core"
 },
 {
@@ -2867,7 +2759,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.14,
+"per_day": 0.2,
 "origin": "gnews",
 "publisher": "csa.gov.sg",
 "gnews": true,
@@ -2885,7 +2777,9 @@
 "origin": "gnews",
 "publisher": "ofac.treasury.gov",
 "gnews": true,
-"healed_from": "https://ofac.treasury.gov/recent-actions/rss.xml"
+"healed_from": "https://ofac.treasury.gov/recent-actions/rss.xml",
+"carried": true,
+"carried_why": "HTTP 429"
 },
 {
 "id": "google-c566bd",
@@ -2895,7 +2789,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 4.21,
+"per_day": 30.66,
 "origin": "gnews",
 "publisher": "justice.gov",
 "gnews": true,
@@ -2909,7 +2803,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 8.5,
+"per_day": 6.64,
 "origin": "core"
 },
 {
@@ -2920,7 +2814,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 73.05,
+"per_day": 12.87,
 "origin": "core"
 },
 {
@@ -2931,7 +2825,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 1.64,
+"per_day": 0.93,
 "origin": "gnews",
 "publisher": "lloydslist.com",
 "gnews": true
@@ -2944,7 +2838,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 4.32,
+"per_day": 3.71,
 "origin": "core"
 },
 {
@@ -2955,7 +2849,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 6.59,
+"per_day": 8.14,
 "origin": "core"
 },
 {
@@ -2966,7 +2860,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 3.71,
+"per_day": 1.29,
 "origin": "gnews",
 "publisher": "safety4sea.com",
 "gnews": true,
@@ -2980,7 +2874,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 5.71,
+"per_day": 4.96,
 "origin": "core"
 },
 {
@@ -2991,7 +2885,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 12.47,
+"per_day": 4.52,
 "origin": "core"
 },
 {
@@ -3002,7 +2896,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 20.16,
+"per_day": 13.71,
 "origin": "core"
 },
 {
@@ -3013,7 +2907,7 @@
 "region": "T-RSY",
 "tier": 1,
 "lang": "en",
-"per_day": 0.2,
+"per_day": 0.21,
 "origin": "gnews",
 "publisher": "ukmto.org",
 "gnews": true
@@ -3026,7 +2920,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 13.95,
+"per_day": 7.74,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -3037,7 +2931,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 24.53,
+"per_day": 18.14,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -3048,7 +2942,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 7.72,
+"per_day": 4.93,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -3059,7 +2953,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 9.63,
+"per_day": 11.18,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -3070,21 +2964,8 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 3.64,
+"per_day": 3.74,
 "origin": "CyberSecurityRSS"
-},
-{
-"id": "securityonline-7c5e65",
-"name": "Cybersecurity News",
-"url": "https://securityonline.info/feed/",
-"category": "research",
-"region": "Global",
-"tier": 1,
-"lang": "en",
-"per_day": 34.15,
-"origin": "CyberSecurityRSS",
-"carried": true,
-"carried_why": "HTTP 0"
 },
 {
 "id": "daringfireball-dca71c",
@@ -3105,7 +2986,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "ru",
-"per_day": 24.33,
+"per_day": 14.41,
 "origin": "core"
 },
 {
@@ -3116,7 +2997,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 28.58,
+"per_day": 12.93,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -3127,7 +3008,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "zh",
-"per_day": 5.13,
+"per_day": 3.73,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -3138,7 +3019,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 29.99,
+"per_day": 13.41,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -3149,7 +3030,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 6.99,
+"per_day": 11.61,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -3160,19 +3041,30 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 6.99,
+"per_day": 11.61,
 "origin": "CyberSecurityRSS"
 },
 {
-"id": "technologyreview-050dd3",
-"name": "MIT Technology Review",
-"url": "https://www.technologyreview.com/feed",
+"id": "malwarebytes-4c63eb",
+"name": "Malwarebytes",
+"url": "http://blog.malwarebytes.org/feed/",
 "category": "research",
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 3.78,
+"per_day": 3.26,
 "origin": "CyberSecurityRSS"
+},
+{
+"id": "malwarebytes-fb2bc7",
+"name": "Malwarebytes Labs",
+"url": "https://blog.malwarebytes.com/feed/",
+"category": "research",
+"region": "Global",
+"tier": 1,
+"lang": "en",
+"per_day": 3.26,
+"origin": "awesome-threat-intel-rss"
 },
 {
 "id": "openai-e99df8",
@@ -3182,7 +3074,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 4.0,
+"per_day": 3.79,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -3193,7 +3085,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 3.36,
+"per_day": 3.21,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -3204,7 +3096,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 5.47,
+"per_day": 3.63,
 "origin": "awesome-threat-intel-rss"
 },
 {
@@ -3226,7 +3118,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 17.23,
+"per_day": 8.2,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -3237,7 +3129,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 7.1,
+"per_day": 6.19,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -3248,7 +3140,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 23.94,
+"per_day": 10.76,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -3270,7 +3162,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 79.98,
+"per_day": 30.16,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -3292,7 +3184,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 28.86,
+"per_day": 22.52,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -3303,7 +3195,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "zh",
-"per_day": 4.0,
+"per_day": 3.86,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -3314,7 +3206,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "zh",
-"per_day": 4.0,
+"per_day": 3.86,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -3325,18 +3217,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "zh",
-"per_day": 10.61,
-"origin": "CyberSecurityRSS"
-},
-{
-"id": "sspai-d0fb9a",
-"name": "少数派",
-"url": "https://sspai.com/feed",
-"category": "research",
-"region": "Global",
-"tier": 1,
-"lang": "zh",
-"per_day": 4.84,
+"per_day": 8.99,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -3347,7 +3228,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "zh",
-"per_day": 6.61,
+"per_day": 4.97,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -3358,7 +3239,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "zh",
-"per_day": 5.6,
+"per_day": 8.34,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -3369,7 +3250,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 5.7,
+"per_day": 5.19,
 "origin": "core"
 },
 {
@@ -3380,7 +3261,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 1.07,
+"per_day": 0.57,
 "origin": "gnews",
 "publisher": "cfr.org",
 "gnews": true,
@@ -3394,7 +3275,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 2.43,
+"per_day": 0.93,
 "origin": "gnews",
 "publisher": "csis.org",
 "gnews": true,
@@ -3408,7 +3289,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 9.98,
+"per_day": 6.9,
 "origin": "core"
 },
 {
@@ -3419,7 +3300,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 5.77,
+"per_day": 0.5,
 "origin": "gnews",
 "publisher": "understandingwar.org",
 "gnews": true,
@@ -3433,7 +3314,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.93,
+"per_day": 0.21,
 "origin": "gnews",
 "publisher": "rusi.org",
 "gnews": true,
@@ -3447,7 +3328,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "ar",
-"per_day": 31.31,
+"per_day": 60.58,
 "origin": "gnews",
 "gnews": true
 },
@@ -3458,8 +3339,8 @@
 "category": "topic-cyber",
 "region": "Global",
 "tier": 1,
-"lang": "ar",
-"per_day": 0.14,
+"lang": "en",
+"per_day": 0.2,
 "origin": "gnews",
 "gnews": true
 },
@@ -3471,7 +3352,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "ar",
-"per_day": 60.61,
+"per_day": 31.34,
 "origin": "gnews",
 "gnews": true
 },
@@ -3483,7 +3364,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 23.64,
+"per_day": 21.13,
 "origin": "gnews",
 "gnews": true
 },
@@ -3495,7 +3376,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "pt",
-"per_day": 25.87,
+"per_day": 0.5,
 "origin": "gnews",
 "gnews": true
 },
@@ -3507,7 +3388,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.64,
+"per_day": 19.57,
 "origin": "gnews",
 "gnews": true
 },
@@ -3519,7 +3400,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "zh",
-"per_day": 18.42,
+"per_day": 14.46,
 "origin": "gnews",
 "gnews": true
 },
@@ -3531,7 +3412,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "es",
-"per_day": 14.72,
+"per_day": 0.43,
 "origin": "gnews",
 "gnews": true
 },
@@ -3543,7 +3424,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "de",
-"per_day": 61.07,
+"per_day": 21.81,
 "origin": "gnews",
 "gnews": true
 },
@@ -3555,7 +3436,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "de",
-"per_day": 0.14,
+"per_day": 0.07,
 "origin": "gnews",
 "gnews": true
 },
@@ -3567,7 +3448,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "es",
-"per_day": 79.9,
+"per_day": 60.94,
 "origin": "gnews",
 "gnews": true
 },
@@ -3579,7 +3460,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "fr",
-"per_day": 72.5,
+"per_day": 26.59,
 "origin": "gnews",
 "gnews": true
 },
@@ -3591,7 +3472,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "fr",
-"per_day": 13.81,
+"per_day": 0.43,
 "origin": "gnews",
 "gnews": true
 },
@@ -3603,7 +3484,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 26.47,
+"per_day": 22.66,
 "origin": "gnews",
 "gnews": true
 },
@@ -3615,7 +3496,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "id",
-"per_day": 62.62,
+"per_day": 47.58,
 "origin": "gnews",
 "gnews": true
 },
@@ -3627,7 +3508,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "he",
-"per_day": 14.74,
+"per_day": 10.12,
 "origin": "gnews",
 "gnews": true
 },
@@ -3639,7 +3520,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 27.81,
+"per_day": 22.28,
 "origin": "gnews",
 "gnews": true
 },
@@ -3651,7 +3532,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "hi",
-"per_day": 28.76,
+"per_day": 27.32,
 "origin": "gnews",
 "gnews": true
 },
@@ -3663,7 +3544,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "it",
-"per_day": 65.13,
+"per_day": 45.49,
 "origin": "gnews",
 "gnews": true
 },
@@ -3675,7 +3556,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "ja",
-"per_day": 73.26,
+"per_day": 38.75,
 "origin": "gnews",
 "gnews": true
 },
@@ -3687,7 +3568,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "ja",
-"per_day": 62.54,
+"per_day": 28.0,
 "origin": "gnews",
 "gnews": true
 },
@@ -3699,7 +3580,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "ko",
-"per_day": 56.53,
+"per_day": 27.08,
 "origin": "gnews",
 "gnews": true
 },
@@ -3711,7 +3592,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "ko",
-"per_day": 21.62,
+"per_day": 20.58,
 "origin": "gnews",
 "gnews": true
 },
@@ -3723,7 +3604,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "es",
-"per_day": 12.67,
+"per_day": 0.57,
 "origin": "gnews",
 "gnews": true
 },
@@ -3735,7 +3616,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 15.16,
+"per_day": 0.64,
 "origin": "gnews",
 "gnews": true
 },
@@ -3746,8 +3627,8 @@
 "category": "topic-cyber",
 "region": "Global",
 "tier": 1,
-"lang": "nl",
-"per_day": 57.43,
+"lang": "en",
+"per_day": 0.57,
 "origin": "gnews",
 "gnews": true
 },
@@ -3759,7 +3640,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "pl",
-"per_day": 61.07,
+"per_day": 19.81,
 "origin": "gnews",
 "gnews": true
 },
@@ -3771,7 +3652,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "fr",
-"per_day": 57.92,
+"per_day": 16.3,
 "origin": "gnews",
 "gnews": true
 },
@@ -3783,7 +3664,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "ru",
-"per_day": 60.98,
+"per_day": 45.38,
 "origin": "gnews",
 "gnews": true
 },
@@ -3795,7 +3676,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "ru",
-"per_day": 23.38,
+"per_day": 11.6,
 "origin": "gnews",
 "gnews": true
 },
@@ -3806,8 +3687,8 @@
 "category": "topic-cyber",
 "region": "Global",
 "tier": 1,
-"lang": "de",
-"per_day": 26.04,
+"lang": "sv",
+"per_day": 0.21,
 "origin": "gnews",
 "gnews": true
 },
@@ -3819,7 +3700,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 22.24,
+"per_day": 0.29,
 "origin": "gnews",
 "gnews": true
 },
@@ -3831,7 +3712,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "th",
-"per_day": 27.05,
+"per_day": 21.39,
 "origin": "gnews",
 "gnews": true
 },
@@ -3843,7 +3724,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "tr",
-"per_day": 60.85,
+"per_day": 46.5,
 "origin": "gnews",
 "gnews": true
 },
@@ -3855,7 +3736,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "zh",
-"per_day": 30.46,
+"per_day": 18.47,
 "origin": "gnews",
 "gnews": true
 },
@@ -3867,7 +3748,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "uk",
-"per_day": 46.98,
+"per_day": 15.47,
 "origin": "gnews",
 "gnews": true
 },
@@ -3879,7 +3760,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "vi",
-"per_day": 30.61,
+"per_day": 29.06,
 "origin": "gnews",
 "gnews": true
 },
@@ -3891,7 +3772,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.57,
+"per_day": 0.64,
 "origin": "gnews",
 "gnews": true
 },
@@ -3903,7 +3784,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 12.24,
+"per_day": 0.2,
 "origin": "gnews",
 "gnews": true
 },
@@ -3915,7 +3796,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 28.71,
+"per_day": 0.64,
 "origin": "gnews",
 "gnews": true
 },
@@ -3927,7 +3808,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.36,
+"per_day": 0.07,
 "origin": "gnews",
 "gnews": true
 },
@@ -3939,7 +3820,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 79.19,
+"per_day": 19.63,
 "origin": "gnews",
 "gnews": true
 },
@@ -3951,7 +3832,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.43,
+"per_day": 12.0,
 "origin": "gnews",
 "gnews": true
 },
@@ -3963,7 +3844,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.36,
+"per_day": 0.07,
 "origin": "gnews",
 "gnews": true
 },
@@ -3975,7 +3856,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.5,
+"per_day": 0.14,
 "origin": "gnews",
 "gnews": true
 },
@@ -3987,7 +3868,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 32.07,
+"per_day": 30.0,
 "origin": "gnews",
 "gnews": true
 },
@@ -3999,7 +3880,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 49.52,
+"per_day": 0.43,
 "origin": "gnews",
 "gnews": true
 },
@@ -4011,7 +3892,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0.2,
 "origin": "gnews",
 "gnews": true
 },
@@ -4023,7 +3904,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 18.14,
+"per_day": 0.21,
 "origin": "gnews",
 "gnews": true
 },
@@ -4035,7 +3916,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 29.38,
+"per_day": 19.58,
 "origin": "gnews",
 "gnews": true
 },
@@ -4047,7 +3928,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 27.66,
+"per_day": 47.57,
 "origin": "gnews",
 "gnews": true
 },
@@ -4059,7 +3940,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 26.09,
+"per_day": 11.76,
 "origin": "gnews",
 "gnews": true
 },
@@ -4071,7 +3952,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 77.48,
+"per_day": 61.03,
 "origin": "gnews",
 "gnews": true
 },
@@ -4083,7 +3964,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 86.43,
+"per_day": 66.28,
 "origin": "gnews",
 "gnews": true
 },
@@ -4095,7 +3976,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 17.05,
+"per_day": 10.75,
 "origin": "gnews",
 "gnews": true
 },
@@ -4107,7 +3988,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 18.61,
+"per_day": 0.21,
 "origin": "gnews",
 "gnews": true
 },
@@ -4119,7 +4000,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 12.68,
+"per_day": 0.29,
 "origin": "gnews",
 "gnews": true
 },
@@ -4131,7 +4012,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 11.87,
+"per_day": 0.36,
 "origin": "gnews",
 "gnews": true
 },
@@ -4143,7 +4024,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 15.98,
+"per_day": 0.29,
 "origin": "gnews",
 "gnews": true
 },
@@ -4155,7 +4036,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 35.85,
+"per_day": 23.53,
 "origin": "gnews",
 "gnews": true
 },
@@ -4167,7 +4048,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 21.98,
+"per_day": 0.36,
 "origin": "gnews",
 "gnews": true
 },
@@ -4179,7 +4060,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.43,
+"per_day": 0.29,
 "origin": "gnews",
 "gnews": true
 },
@@ -4191,7 +4072,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 20.21,
+"per_day": 0.36,
 "origin": "gnews",
 "gnews": true
 },
@@ -4203,7 +4084,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 28.6,
+"per_day": 33.43,
 "origin": "gnews",
 "gnews": true
 },
@@ -4215,7 +4096,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 22.35,
+"per_day": 0.07,
 "origin": "gnews",
 "gnews": true
 },
@@ -4227,7 +4108,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 27.2,
+"per_day": 0.29,
 "origin": "gnews",
 "gnews": true
 },
@@ -4239,7 +4120,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 22.32,
+"per_day": 14.34,
 "origin": "gnews",
 "gnews": true
 },
@@ -4251,7 +4132,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 16.68,
+"per_day": 0.64,
 "origin": "gnews",
 "gnews": true
 },
@@ -4263,7 +4144,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.29,
+"per_day": 0.2,
 "origin": "gnews",
 "gnews": true
 },
@@ -4275,7 +4156,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.29,
+"per_day": 0.07,
 "origin": "gnews",
 "gnews": true
 },
@@ -4287,7 +4168,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 27.24,
+"per_day": 17.17,
 "origin": "gnews",
 "gnews": true
 },
@@ -4299,7 +4180,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 23.37,
+"per_day": 0.64,
 "origin": "gnews",
 "gnews": true
 },
@@ -4311,7 +4192,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 10.39,
+"per_day": 0.07,
 "origin": "gnews",
 "gnews": true
 },
@@ -4323,7 +4204,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 31.38,
+"per_day": 12.29,
 "origin": "gnews",
 "gnews": true
 },
@@ -4335,7 +4216,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 16.3,
+"per_day": 0.64,
 "origin": "gnews",
 "gnews": true
 },
@@ -4347,7 +4228,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.14,
+"per_day": 0.07,
 "origin": "gnews",
 "gnews": true
 },
@@ -4359,7 +4240,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0.2,
 "origin": "gnews",
 "gnews": true
 },
@@ -4383,7 +4264,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 11.76,
+"per_day": 0.2,
 "origin": "gnews",
 "gnews": true
 },
@@ -4395,7 +4276,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 30.39,
+"per_day": 26.01,
 "origin": "gnews",
 "gnews": true
 },
@@ -4407,7 +4288,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 20.04,
 "origin": "gnews",
 "gnews": true
 },
@@ -4419,7 +4300,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 22.78,
+"per_day": 0.5,
 "origin": "gnews",
 "gnews": true
 },
@@ -4431,7 +4312,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 30.14,
+"per_day": 0.64,
 "origin": "gnews",
 "gnews": true
 },
@@ -4443,7 +4324,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.36,
+"per_day": 0.64,
 "origin": "gnews",
 "gnews": true
 },
@@ -4455,7 +4336,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.36,
+"per_day": 0.07,
 "origin": "gnews",
 "gnews": true
 },
@@ -4467,7 +4348,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 0.36,
+"per_day": 0.2,
 "origin": "gnews",
 "gnews": true
 },
@@ -4479,7 +4360,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 12.95,
+"per_day": 0.21,
 "origin": "gnews",
 "gnews": true
 },
@@ -4491,7 +4372,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 17.46,
+"per_day": 14.39,
 "origin": "gnews",
 "gnews": true
 },
@@ -4503,7 +4384,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 18.35,
+"per_day": 0.57,
 "origin": "gnews",
 "gnews": true
 },
@@ -4515,7 +4396,7 @@
 "region": "T-RSY",
 "tier": 1,
 "lang": "ar",
-"per_day": 31.19,
+"per_day": 27.75,
 "origin": "gnews",
 "gnews": true
 },
@@ -4527,7 +4408,7 @@
 "region": "T-LEV",
 "tier": 1,
 "lang": "ar",
-"per_day": 33.69,
+"per_day": 25.38,
 "origin": "gnews",
 "gnews": true
 },
@@ -4539,7 +4420,7 @@
 "region": "T-HRM",
 "tier": 1,
 "lang": "ar",
-"per_day": 62.62,
+"per_day": 61.17,
 "origin": "gnews",
 "gnews": true
 },
@@ -4551,7 +4432,7 @@
 "region": "T-SCS",
 "tier": 1,
 "lang": "zh",
-"per_day": 0.64,
+"per_day": 0.5,
 "origin": "gnews",
 "gnews": true
 },
@@ -4563,7 +4444,7 @@
 "region": "T-TWN",
 "tier": 1,
 "lang": "zh",
-"per_day": 0.57,
+"per_day": 0.21,
 "origin": "gnews",
 "gnews": true
 },
@@ -4575,7 +4456,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "de",
-"per_day": 0.21,
+"per_day": 0.43,
 "origin": "gnews",
 "gnews": true
 },
@@ -4587,7 +4468,7 @@
 "region": "T-HOA",
 "tier": 1,
 "lang": "ar",
-"per_day": 26.27,
+"per_day": 25.47,
 "origin": "gnews",
 "gnews": true
 },
@@ -4599,7 +4480,7 @@
 "region": "T-SDN",
 "tier": 1,
 "lang": "ar",
-"per_day": 47.32,
+"per_day": 55.55,
 "origin": "gnews",
 "gnews": true
 },
@@ -4611,7 +4492,7 @@
 "region": "T-SAH",
 "tier": 1,
 "lang": "fr",
-"per_day": 0.5,
+"per_day": 0.21,
 "origin": "gnews",
 "gnews": true
 },
@@ -4635,7 +4516,7 @@
 "region": "T-LEV",
 "tier": 1,
 "lang": "he",
-"per_day": 28.59,
+"per_day": 0.57,
 "origin": "gnews",
 "gnews": true
 },
@@ -4647,7 +4528,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "hi",
-"per_day": 29.37,
+"per_day": 26.81,
 "origin": "gnews",
 "gnews": true
 },
@@ -4659,7 +4540,7 @@
 "region": "T-KOR",
 "tier": 1,
 "lang": "ko",
-"per_day": 23.7,
+"per_day": 17.55,
 "origin": "gnews",
 "gnews": true
 },
@@ -4671,7 +4552,7 @@
 "region": "T-KOR",
 "tier": 1,
 "lang": "ko",
-"per_day": 20.07,
+"per_day": 15.36,
 "origin": "gnews",
 "gnews": true
 },
@@ -4683,7 +4564,7 @@
 "region": "T-MEX",
 "tier": 1,
 "lang": "es",
-"per_day": 27.07,
+"per_day": 59.57,
 "origin": "gnews",
 "gnews": true
 },
@@ -4695,7 +4576,7 @@
 "region": "T-VEN",
 "tier": 1,
 "lang": "es",
-"per_day": 27.53,
+"per_day": 24.54,
 "origin": "gnews",
 "gnews": true
 },
@@ -4707,7 +4588,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "pl",
-"per_day": 0.36,
+"per_day": 0.21,
 "origin": "gnews",
 "gnews": true
 },
@@ -4719,7 +4600,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "ru",
-"per_day": 63.25,
+"per_day": 61.99,
 "origin": "gnews",
 "gnews": true
 },
@@ -4731,7 +4612,7 @@
 "region": "T-RSY",
 "tier": 1,
 "lang": "ar",
-"per_day": 60.77,
+"per_day": 60.69,
 "origin": "gnews",
 "gnews": true
 },
@@ -4743,7 +4624,7 @@
 "region": "T-TWN",
 "tier": 1,
 "lang": "zh",
-"per_day": 15.75,
+"per_day": 12.61,
 "origin": "gnews",
 "gnews": true
 },
@@ -4755,7 +4636,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "uk",
-"per_day": 23.39,
+"per_day": 14.5,
 "origin": "gnews",
 "gnews": true
 },
@@ -4767,7 +4648,7 @@
 "region": "T-HOA",
 "tier": 1,
 "lang": "en",
-"per_day": 13.4,
+"per_day": 10.15,
 "origin": "gnews",
 "gnews": true
 },
@@ -4779,7 +4660,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "en",
-"per_day": 0.2,
+"per_day": 0.57,
 "origin": "gnews",
 "gnews": true
 },
@@ -4803,7 +4684,7 @@
 "region": "T-VEN",
 "tier": 1,
 "lang": "en",
-"per_day": 0.29,
+"per_day": 0.43,
 "origin": "gnews",
 "gnews": true
 },
@@ -4827,7 +4708,7 @@
 "region": "T-CAS",
 "tier": 1,
 "lang": "en",
-"per_day": 25.35,
+"per_day": 22.12,
 "origin": "gnews",
 "gnews": true
 },
@@ -4839,7 +4720,7 @@
 "region": "T-SDN",
 "tier": 1,
 "lang": "en",
-"per_day": 0.29,
+"per_day": 0.14,
 "origin": "gnews",
 "gnews": true
 },
@@ -4851,7 +4732,7 @@
 "region": "T-HOA",
 "tier": 1,
 "lang": "en",
-"per_day": 25.24,
+"per_day": 30.31,
 "origin": "gnews",
 "gnews": true
 },
@@ -4863,7 +4744,7 @@
 "region": "T-HOA",
 "tier": 1,
 "lang": "en",
-"per_day": 64.76,
+"per_day": 56.08,
 "origin": "gnews",
 "gnews": true
 },
@@ -4875,7 +4756,7 @@
 "region": "T-EUH",
 "tier": 1,
 "lang": "en",
-"per_day": 12.21,
+"per_day": 10.26,
 "origin": "gnews",
 "gnews": true
 },
@@ -4887,7 +4768,7 @@
 "region": "T-LEV",
 "tier": 1,
 "lang": "en",
-"per_day": 66.64,
+"per_day": 65.07,
 "origin": "gnews",
 "gnews": true
 },
@@ -4899,7 +4780,7 @@
 "region": "T-RSY",
 "tier": 1,
 "lang": "en",
-"per_day": 22.95,
+"per_day": 14.17,
 "origin": "gnews",
 "gnews": true
 },
@@ -4911,7 +4792,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 21.53,
+"per_day": 18.63,
 "origin": "gnews",
 "gnews": true
 },
@@ -4923,7 +4804,7 @@
 "region": "T-HRM",
 "tier": 1,
 "lang": "en",
-"per_day": 65.96,
+"per_day": 61.57,
 "origin": "gnews",
 "gnews": true
 },
@@ -4935,7 +4816,7 @@
 "region": "T-LEV",
 "tier": 1,
 "lang": "en",
-"per_day": 33.48,
+"per_day": 21.51,
 "origin": "gnews",
 "gnews": true
 },
@@ -4947,7 +4828,7 @@
 "region": "T-CAS",
 "tier": 1,
 "lang": "en",
-"per_day": 29.35,
+"per_day": 18.18,
 "origin": "gnews",
 "gnews": true
 },
@@ -4959,7 +4840,7 @@
 "region": "T-SAH",
 "tier": 1,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0.2,
 "origin": "gnews",
 "gnews": true
 },
@@ -4971,7 +4852,7 @@
 "region": "T-MEX",
 "tier": 1,
 "lang": "en",
-"per_day": 24.41,
+"per_day": 66.93,
 "origin": "gnews",
 "gnews": true
 },
@@ -4983,7 +4864,7 @@
 "region": "T-KOR",
 "tier": 1,
 "lang": "en",
-"per_day": 18.91,
+"per_day": 0.5,
 "origin": "gnews",
 "gnews": true
 },
@@ -4995,7 +4876,7 @@
 "region": "T-KOR",
 "tier": 1,
 "lang": "en",
-"per_day": 26.48,
+"per_day": 24.8,
 "origin": "gnews",
 "gnews": true
 },
@@ -5007,7 +4888,7 @@
 "region": "T-SAS",
 "tier": 1,
 "lang": "en",
-"per_day": 65.22,
+"per_day": 66.11,
 "origin": "gnews",
 "gnews": true
 },
@@ -5019,7 +4900,7 @@
 "region": "T-AFP",
 "tier": 1,
 "lang": "en",
-"per_day": 0.5,
+"per_day": 0.43,
 "origin": "gnews",
 "gnews": true
 },
@@ -5031,7 +4912,7 @@
 "region": "T-AFP",
 "tier": 1,
 "lang": "en",
-"per_day": 10.18,
+"per_day": 12.25,
 "origin": "gnews",
 "gnews": true
 },
@@ -5043,7 +4924,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "en",
-"per_day": 62.97,
+"per_day": 61.31,
 "origin": "gnews",
 "gnews": true
 },
@@ -5055,7 +4936,7 @@
 "region": "T-SAH",
 "tier": 1,
 "lang": "en",
-"per_day": 0.2,
+"per_day": 0.07,
 "origin": "gnews",
 "gnews": true
 },
@@ -5067,7 +4948,7 @@
 "region": "T-SCS",
 "tier": 1,
 "lang": "en",
-"per_day": 0.2,
+"per_day": 0.07,
 "origin": "gnews",
 "gnews": true
 },
@@ -5079,7 +4960,7 @@
 "region": "T-BAL",
 "tier": 1,
 "lang": "en",
-"per_day": 18.35,
+"per_day": 0.64,
 "origin": "gnews",
 "gnews": true
 },
@@ -5091,7 +4972,7 @@
 "region": "T-SCS",
 "tier": 1,
 "lang": "en",
-"per_day": 28.1,
+"per_day": 27.64,
 "origin": "gnews",
 "gnews": true
 },
@@ -5103,7 +4984,7 @@
 "region": "T-HRM",
 "tier": 1,
 "lang": "en",
-"per_day": 61.09,
+"per_day": 61.05,
 "origin": "gnews",
 "gnews": true
 },
@@ -5115,7 +4996,7 @@
 "region": "T-SDN",
 "tier": 1,
 "lang": "en",
-"per_day": 19.98,
+"per_day": 22.2,
 "origin": "gnews",
 "gnews": true
 },
@@ -5127,7 +5008,7 @@
 "region": "T-LEV",
 "tier": 1,
 "lang": "en",
-"per_day": 61.07,
+"per_day": 60.75,
 "origin": "gnews",
 "gnews": true
 },
@@ -5139,7 +5020,7 @@
 "region": "T-TWN",
 "tier": 1,
 "lang": "en",
-"per_day": 10.25,
+"per_day": 0.21,
 "origin": "gnews",
 "gnews": true
 },
@@ -5151,7 +5032,7 @@
 "region": "T-TWN",
 "tier": 1,
 "lang": "en",
-"per_day": 0.14,
+"per_day": 0.29,
 "origin": "gnews",
 "gnews": true
 },
@@ -5163,7 +5044,7 @@
 "region": "T-UKR",
 "tier": 1,
 "lang": "en",
-"per_day": 62.97,
+"per_day": 60.65,
 "origin": "gnews",
 "gnews": true
 },
@@ -5175,7 +5056,7 @@
 "region": "T-VEN",
 "tier": 1,
 "lang": "en",
-"per_day": 62.37,
+"per_day": 14.07,
 "origin": "gnews",
 "gnews": true
 },
@@ -5187,7 +5068,7 @@
 "region": "T-RSY",
 "tier": 1,
 "lang": "en",
-"per_day": 25.53,
+"per_day": 18.06,
 "origin": "gnews",
 "gnews": true
 },
@@ -5199,7 +5080,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 30.37,
+"per_day": 30.72,
 "origin": "gnews",
 "publisher": "github.com",
 "gnews": true,
@@ -5213,7 +5094,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 17.74,
+"per_day": 6.36,
 "origin": "core"
 },
 {
@@ -5238,7 +5119,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 8.64,
+"per_day": 6.51,
 "origin": "core"
 },
 {
@@ -5249,7 +5130,7 @@
 "region": "Global",
 "tier": 1,
 "lang": "en",
-"per_day": 8.64,
+"per_day": 6.51,
 "origin": "core"
 },
 {
@@ -5260,36 +5141,8 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.14,
-"origin": "core",
-"carried": true,
-"carried_why": "HTTP 502"
-},
-{
-"id": "reddit-72170d",
-"name": "r/blueteamsec",
-"url": "https://www.reddit.com/r/blueteamsec/.rss",
-"category": "community",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 1.71,
-"origin": "core",
-"carried": true,
-"carried_why": "HTTP 429"
-},
-{
-"id": "reddit-9a5721",
-"name": "r/threatintel",
-"url": "https://www.reddit.com/r/threatintel/.rss",
-"category": "community",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 1.71,
-"origin": "core",
-"carried": true,
-"carried_why": "HTTP 429"
+"per_day": 0.86,
+"origin": "core"
 },
 {
 "id": "bitdefender-3c98fd",
@@ -5299,7 +5152,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 2.21,
+"per_day": 1.74,
 "origin": "core"
 },
 {
@@ -5310,7 +5163,18 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 2.58,
+"per_day": 2.2,
+"origin": "core"
+},
+{
+"id": "cyberscoop-7aa708",
+"name": "CyberScoop",
+"url": "https://cyberscoop.com/feed/",
+"category": "cyber-news",
+"region": "Global",
+"tier": 2,
+"lang": "en",
+"per_day": 2.17,
 "origin": "core"
 },
 {
@@ -5321,7 +5185,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 2.83,
+"per_day": 2.08,
 "origin": "core"
 },
 {
@@ -5332,7 +5196,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.14,
+"per_day": 1.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -5354,19 +5218,8 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.36,
+"per_day": 0.43,
 "origin": "core"
-},
-{
-"id": "megaphone-22b22b",
-"name": "Hacking Humans",
-"url": "https://feeds.megaphone.fm/hacking-humans",
-"category": "cyber-news",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 0.36,
-"origin": "awesome-rss-feeds"
 },
 {
 "id": "industrialcyber-81c0d6",
@@ -5380,17 +5233,6 @@
 "origin": "core"
 },
 {
-"id": "malwarebytes-65ea2d",
-"name": "Malwarebytes Labs",
-"url": "https://www.malwarebytes.com/blog/feed",
-"category": "cyber-news",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 2.98,
-"origin": "core"
-},
-{
 "id": "risky-ad646c",
 "name": "Risky Business News",
 "url": "https://risky.biz/feeds/risky-business-news/",
@@ -5398,7 +5240,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.93,
+"per_day": 0.86,
 "origin": "core"
 },
 {
@@ -5409,7 +5251,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.94,
+"per_day": 0.91,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -5424,17 +5266,6 @@
 "origin": "core"
 },
 {
-"id": "securityweek-1115b0",
-"name": "Security Week Network (ICS)",
-"url": "https://www.securityweek.com/category/ics-ot/feed/",
-"category": "cyber-news",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 0.36,
-"origin": "core"
-},
-{
 "id": "siliconangle-55b662",
 "name": "SiliconANGLE (Security)",
 "url": "https://siliconangle.com/category/security/feed/",
@@ -5442,7 +5273,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 2.07,
+"per_day": 2.0,
 "origin": "core"
 },
 {
@@ -5453,7 +5284,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 2.1,
+"per_day": 2.34,
 "origin": "core"
 },
 {
@@ -5464,7 +5295,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.45,
+"per_day": 1.62,
 "origin": "core"
 },
 {
@@ -5486,7 +5317,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.14,
+"per_day": 1.07,
 "origin": "core"
 },
 {
@@ -5508,7 +5339,7 @@
 "region": "T-HOA",
 "tier": 2,
 "lang": "en",
-"per_day": 1.07,
+"per_day": 1.0,
 "origin": "core"
 },
 {
@@ -5519,7 +5350,7 @@
 "region": "T-RSY",
 "tier": 2,
 "lang": "ar",
-"per_day": 1.57,
+"per_day": 1.5,
 "origin": "core"
 },
 {
@@ -5530,7 +5361,7 @@
 "region": "T-TWN",
 "tier": 2,
 "lang": "zh",
-"per_day": 2.64,
+"per_day": 2.71,
 "origin": "core"
 },
 {
@@ -5541,7 +5372,7 @@
 "region": "T-SAH",
 "tier": 2,
 "lang": "pt",
-"per_day": 2.14,
+"per_day": 2.0,
 "origin": "core"
 },
 {
@@ -5552,7 +5383,7 @@
 "region": "T-SAS",
 "tier": 2,
 "lang": "hi",
-"per_day": 2.07,
+"per_day": 1.93,
 "origin": "core"
 },
 {
@@ -5574,7 +5405,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 2.21,
+"per_day": 2.43,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -5585,7 +5416,7 @@
 "region": "T-SAS",
 "tier": 2,
 "lang": "en",
-"per_day": 1.21,
+"per_day": 1.14,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -5596,7 +5427,7 @@
 "region": "T-HRM",
 "tier": 2,
 "lang": "fa",
-"per_day": 1.64,
+"per_day": 1.71,
 "origin": "core"
 },
 {
@@ -5607,7 +5438,7 @@
 "region": "T-UKR",
 "tier": 2,
 "lang": "ru",
-"per_day": 2.14,
+"per_day": 2.57,
 "origin": "core"
 },
 {
@@ -5618,7 +5449,7 @@
 "region": "T-HOA",
 "tier": 2,
 "lang": "en",
-"per_day": 1.79,
+"per_day": 1.86,
 "origin": "core"
 },
 {
@@ -5640,7 +5471,7 @@
 "region": "T-UKR",
 "tier": 2,
 "lang": "uk",
-"per_day": 2.5,
+"per_day": 2.63,
 "origin": "core"
 },
 {
@@ -5651,8 +5482,19 @@
 "region": "T-SAS",
 "tier": 2,
 "lang": "ur",
-"per_day": 1.43,
+"per_day": 1.36,
 "origin": "core"
+},
+{
+"id": "feedburner-986aa6",
+"name": "Crikey (Australia)",
+"url": "https://feeds.feedburner.com/com/rCTl",
+"category": "geopolitics",
+"region": "Global",
+"tier": 2,
+"lang": "en",
+"per_day": 2.94,
+"origin": "awesome-rss-feeds"
 },
 {
 "id": "currentph-5b6fca",
@@ -5662,8 +5504,19 @@
 "region": "T-SCS",
 "tier": 2,
 "lang": "en",
-"per_day": 0.83,
+"per_day": 0.71,
 "origin": "awesome-rss-feeds"
+},
+{
+"id": "dabangasudan-49f8d8",
+"name": "Dabanga",
+"url": "https://www.dabangasudan.org/en/feed",
+"category": "geopolitics",
+"region": "T-SDN",
+"tier": 2,
+"lang": "en",
+"per_day": 2.35,
+"origin": "core"
 },
 {
 "id": "defenseone-98d853",
@@ -5673,7 +5526,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 2.77,
+"per_day": 2.55,
 "origin": "core"
 },
 {
@@ -5684,7 +5537,7 @@
 "region": "T-LEV",
 "tier": 2,
 "lang": "ar",
-"per_day": 2.29,
+"per_day": 2.43,
 "origin": "core"
 },
 {
@@ -5695,7 +5548,18 @@
 "region": "T-TWN",
 "tier": 2,
 "lang": "zh",
-"per_day": 2.79,
+"per_day": 2.57,
+"origin": "core"
+},
+{
+"id": "dw-389e8b",
+"name": "DW Persian",
+"url": "https://rss.dw.com/rdf/rss-per-all",
+"category": "geopolitics",
+"region": "T-HRM",
+"tier": 2,
+"lang": "fa",
+"per_day": 2.17,
 "origin": "core"
 },
 {
@@ -5717,7 +5581,7 @@
 "region": "T-SAS",
 "tier": 2,
 "lang": "ur",
-"per_day": 0.71,
+"per_day": 0.92,
 "origin": "core"
 },
 {
@@ -5739,7 +5603,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "es",
-"per_day": 0.64,
+"per_day": 1.0,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -5750,7 +5614,7 @@
 "region": "T-SAS",
 "tier": 2,
 "lang": "en",
-"per_day": 1.14,
+"per_day": 1.07,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -5761,8 +5625,19 @@
 "region": "T-MEX",
 "tier": 2,
 "lang": "en",
-"per_day": 1.7,
+"per_day": 1.97,
 "origin": "core"
+},
+{
+"id": "internazionale-63e7d2",
+"name": "Internazionale (Italy)",
+"url": "https://www.internazionale.it/sitemaps/rss.xml",
+"category": "geopolitics",
+"region": "T-EUH",
+"tier": 2,
+"lang": "fr",
+"per_day": 0.5,
+"origin": "awesome-rss-feeds"
 },
 {
 "id": "feedburner-df0e3e",
@@ -5783,7 +5658,7 @@
 "region": "T-EUH",
 "tier": 2,
 "lang": "en",
-"per_day": 2.18,
+"per_day": 2.38,
 "origin": "core"
 },
 {
@@ -5798,6 +5673,17 @@
 "origin": "awesome-rss-feeds"
 },
 {
+"id": "reforma-77603d",
+"name": "Reforma (Mexico)",
+"url": "https://www.reforma.com/rss/portada.xml",
+"category": "geopolitics",
+"region": "T-MEX",
+"tier": 2,
+"lang": "es",
+"per_day": 0.43,
+"origin": "awesome-rss-feeds"
+},
+{
 "id": "somaliguardian-e23348",
 "name": "Somali Guardian",
 "url": "https://www.somaliguardian.com/feed/",
@@ -5805,7 +5691,7 @@
 "region": "T-HOA",
 "tier": 2,
 "lang": "en",
-"per_day": 1.81,
+"per_day": 1.49,
 "origin": "core"
 },
 {
@@ -5816,7 +5702,7 @@
 "region": "T-SCS",
 "tier": 2,
 "lang": "en",
-"per_day": 0.79,
+"per_day": 0.64,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -5838,7 +5724,7 @@
 "region": "T-EUH",
 "tier": 2,
 "lang": "en",
-"per_day": 0.93,
+"per_day": 1.07,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -5849,7 +5735,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.07,
+"per_day": 0.93,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -5864,6 +5750,17 @@
 "origin": "awesome-rss-feeds"
 },
 {
+"id": "unbox-cf2325",
+"name": "UNBOX PH (Philippines)",
+"url": "https://www.unbox.ph/feed/",
+"category": "geopolitics",
+"region": "T-SCS",
+"tier": 2,
+"lang": "en",
+"per_day": 2.96,
+"origin": "awesome-rss-feeds"
+},
+{
 "id": "warontherocks-b14e5d",
 "name": "War on the Rocks",
 "url": "https://warontherocks.com/feed/",
@@ -5871,28 +5768,15 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.79,
+"per_day": 1.64,
 "origin": "core"
 },
 {
-"id": "reddit-c6a24b",
-"name": "World News",
-"url": "https://www.reddit.com/r/worldnews/.rss",
+"id": "huffpost-4bbf7d",
+"name": "World News - Breaking News, Top Stories (United States)",
+"url": "https://www.huffpost.com/section/world-news/feed",
 "category": "geopolitics",
 "region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 2.81,
-"origin": "awesome-rss-feeds",
-"carried": true,
-"carried_why": "HTTP 429"
-},
-{
-"id": "gazeta-769417",
-"name": "Газета.Ru - Первая полоса (Russia)",
-"url": "https://www.gazeta.ru/export/rss/first.xml",
-"category": "geopolitics",
-"region": "T-UKR",
 "tier": 2,
 "lang": "en",
 "per_day": 0.5,
@@ -5906,7 +5790,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.93,
+"per_day": 1.07,
 "origin": "awesome-threat-intel-rss"
 },
 {
@@ -5950,7 +5834,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 2.0,
+"per_day": 1.86,
 "origin": "core"
 },
 {
@@ -5972,7 +5856,18 @@
 "region": "Global",
 "tier": 2,
 "lang": "ja",
-"per_day": 1.86,
+"per_day": 1.93,
+"origin": "core"
+},
+{
+"id": "ncsc-3a01e8",
+"name": "NCSC-NL advisories",
+"url": "https://advisories.ncsc.nl/rss/advisories",
+"category": "government",
+"region": "Global",
+"tier": 2,
+"lang": "en",
+"per_day": 2.51,
 "origin": "core"
 },
 {
@@ -5983,7 +5878,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 2.26,
+"per_day": 1.49,
 "origin": "awesome-threat-intel-rss"
 },
 {
@@ -6016,7 +5911,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 2.92,
+"per_day": 2.78,
 "origin": "core"
 },
 {
@@ -6038,7 +5933,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.71,
+"per_day": 0.93,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6049,18 +5944,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.57,
-"origin": "awesome_threat_intel_blogs"
-},
-{
-"id": "aquasec-43652b",
-"name": "AquaSec",
-"url": "https://www.aquasec.com/blog/rss.xml",
-"category": "research",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 0.36,
+"per_day": 0.5,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6071,7 +5955,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.2,
+"per_day": 1.04,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6097,28 +5981,6 @@
 "origin": "awesome_threat_intel_blogs"
 },
 {
-"id": "bensbites-d4b4ef",
-"name": "Ben's Bites",
-"url": "https://www.bensbites.com/feed",
-"category": "research",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 0.36,
-"origin": "CyberSecurityRSS"
-},
-{
-"id": "bishopfox-8a513d",
-"name": "bishopfox.com",
-"url": "https://bishopfox.com/feed/",
-"category": "research",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 0.36,
-"origin": "CyberSecurityRSS"
-},
-{
 "id": "broadcom-90313a",
 "name": "Broadcom Symantec blogs",
 "url": "https://sed-cms.broadcom.com/rss/v1/blogs/rss.xml",
@@ -6128,6 +5990,17 @@
 "lang": "en",
 "per_day": 0.64,
 "origin": "awesome-threat-intel-rss"
+},
+{
+"id": "medium-657dcb",
+"name": "Bug Bounty in InfoSec Write-ups on Medium",
+"url": "https://medium.com/feed/bugbountywriteup/tagged/bug-bounty",
+"category": "research",
+"region": "Global",
+"tier": 2,
+"lang": "en",
+"per_day": 0.5,
+"origin": "CyberSecurityRSS"
 },
 {
 "id": "bytebytego-926327",
@@ -6152,15 +6025,15 @@
 "origin": "awesome_threat_intel_blogs"
 },
 {
-"id": "censys-f39090",
-"name": "Censys",
-"url": "https://censys.com/feed/",
+"id": "ccc-49b5ca",
+"name": "CCC Event Blog",
+"url": "https://events.ccc.de/feed/",
 "category": "research",
 "region": "Global",
 "tier": 2,
-"lang": "en",
-"per_day": 0.5,
-"origin": "awesome_threat_intel_blogs"
+"lang": "de",
+"per_day": 0.43,
+"origin": "CyberSecurityRSS"
 },
 {
 "id": "cisecurity-5653b0",
@@ -6170,7 +6043,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.93,
+"per_day": 1.07,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6192,7 +6065,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.43,
+"per_day": 0.36,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6214,7 +6087,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.57,
+"per_day": 0.43,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6225,7 +6098,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.57,
+"per_day": 0.5,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6236,7 +6109,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.57,
+"per_day": 0.5,
 "origin": "awesome-threat-intel-rss"
 },
 {
@@ -6269,7 +6142,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.64,
+"per_day": 0.57,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6291,7 +6164,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.5,
+"per_day": 0.43,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6302,7 +6175,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.07,
+"per_day": 1.0,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6335,7 +6208,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.57,
+"per_day": 0.73,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -6357,7 +6230,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.71,
+"per_day": 0.78,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -6368,7 +6241,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.36,
+"per_day": 0.43,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6379,7 +6252,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.64,
+"per_day": 0.79,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -6390,7 +6263,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.64,
+"per_day": 0.57,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6412,7 +6285,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.64,
+"per_day": 0.43,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6423,30 +6296,8 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.93,
+"per_day": 0.86,
 "origin": "CyberSecurityRSS"
-},
-{
-"id": "deepmind-35da0a",
-"name": "Google DeepMind Blog",
-"url": "https://deepmind.google/blog/feed/",
-"category": "research",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 0.64,
-"origin": "CyberSecurityRSS"
-},
-{
-"id": "group-ib-7f0b05",
-"name": "Group IB",
-"url": "https://www.group-ib.com/blog/feed/",
-"category": "research",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 0.36,
-"origin": "awesome_threat_intel_blogs"
 },
 {
 "id": "theguardian-e8b219",
@@ -6460,28 +6311,6 @@
 "origin": "awesome-threat-intel-rss"
 },
 {
-"id": "guidepointsecurity-2c0b4b",
-"name": "GuidePoint Security",
-"url": "https://www.guidepointsecurity.com/feed/",
-"category": "research",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 0.36,
-"origin": "CyberSecurityRSS"
-},
-{
-"id": "heimdalsecurity-d1db4b",
-"name": "Heimdal",
-"url": "https://heimdalsecurity.com/blog/posts/feed/",
-"category": "research",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 0.36,
-"origin": "awesome_threat_intel_blogs"
-},
-{
 "id": "huggingface-fbb731",
 "name": "Hugging Face Blog",
 "url": "https://huggingface.co/blog/feed.xml",
@@ -6489,7 +6318,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.21,
+"per_day": 1.29,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -6500,19 +6329,8 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.29,
+"per_day": 1.14,
 "origin": "awesome_threat_intel_blogs"
-},
-{
-"id": "idiallo-bbf2c9",
-"name": "idiallo.com",
-"url": "https://idiallo.com/feed.rss",
-"category": "research",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 0.43,
-"origin": "CyberSecurityRSS"
 },
 {
 "id": "ieee-22c1f3",
@@ -6522,7 +6340,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.36,
+"per_day": 1.14,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -6544,7 +6362,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.07,
+"per_day": 1.0,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6555,7 +6373,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.43,
+"per_day": 0.36,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6566,7 +6384,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.93,
+"per_day": 1.0,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -6577,7 +6395,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.05,
+"per_day": 1.13,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6603,28 +6421,6 @@
 "origin": "awesome-threat-intel-rss"
 },
 {
-"id": "malwarebytes-4c63eb",
-"name": "Malwarebytes",
-"url": "http://blog.malwarebytes.org/feed/",
-"category": "research",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 2.98,
-"origin": "CyberSecurityRSS"
-},
-{
-"id": "malwarebytes-fb2bc7",
-"name": "Malwarebytes Labs",
-"url": "https://blog.malwarebytes.com/feed/",
-"category": "research",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 2.98,
-"origin": "awesome-threat-intel-rss"
-},
-{
 "id": "microsoft-012664",
 "name": "Microsoft Security Blog",
 "url": "https://www.microsoft.com/en-us/security/blog/feed/",
@@ -6632,7 +6428,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.76,
+"per_day": 0.79,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6643,8 +6439,30 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.76,
+"per_day": 0.79,
 "origin": "awesome-threat-intel-rss"
+},
+{
+"id": "technologyreview-050dd3",
+"name": "MIT Technology Review",
+"url": "https://www.technologyreview.com/feed",
+"category": "research",
+"region": "Global",
+"tier": 2,
+"lang": "en",
+"per_day": 2.12,
+"origin": "CyberSecurityRSS"
+},
+{
+"id": "morphisec-04e44d",
+"name": "Morphisec Breach Prevention Blog",
+"url": "https://www.morphisec.com/blog/?feed=rss2",
+"category": "research",
+"region": "Global",
+"tier": 2,
+"lang": "en",
+"per_day": 0.36,
+"origin": "awesome_threat_intel_blogs"
 },
 {
 "id": "nesbitt-62b21f",
@@ -6654,7 +6472,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.43,
+"per_day": 0.36,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -6665,7 +6483,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.89,
+"per_day": 1.52,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -6676,19 +6494,8 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.57,
+"per_day": 0.5,
 "origin": "awesome_threat_intel_blogs"
-},
-{
-"id": "paloaltonetworks-e6d5b7",
-"name": "PaloAlto Networks Blog",
-"url": "https://www.paloaltonetworks.com/blog/rss",
-"category": "research",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 0.36,
-"origin": "awesome-threat-intel-rss"
 },
 {
 "id": "paloaltonetworks-ebed4a",
@@ -6700,19 +6507,6 @@
 "lang": "en",
 "per_day": 0.43,
 "origin": "awesome_threat_intel_blogs"
-},
-{
-"id": "reddit-361841",
-"name": "Pentesting",
-"url": "https://www.reddit.com/r/Pentesting/.rss",
-"category": "research",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 1.71,
-"origin": "CyberSecurityRSS",
-"carried": true,
-"carried_why": "HTTP 429"
 },
 {
 "id": "pluralistic-d22cb9",
@@ -6733,8 +6527,19 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 2.54,
+"per_day": 1.63,
 "origin": "awesome_threat_intel_blogs"
+},
+{
+"id": "quantakrypto-56683e",
+"name": "quantakrypto - post-quantum cryptography",
+"url": "https://quantakrypto.com/rss.xml",
+"category": "research",
+"region": "Global",
+"tier": 2,
+"lang": "en",
+"per_day": 0.36,
+"origin": "CyberSecurityRSS"
 },
 {
 "id": "github-b3cfe2",
@@ -6744,7 +6549,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.93,
+"per_day": 1.07,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -6759,19 +6564,6 @@
 "origin": "awesome_threat_intel_blogs"
 },
 {
-"id": "reddit-14ba9b",
-"name": "Red Team Security",
-"url": "https://www.reddit.com/r/redteamsec/.rss",
-"category": "research",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 1.71,
-"origin": "CyberSecurityRSS",
-"carried": true,
-"carried_why": "HTTP 429"
-},
-{
 "id": "reliaquest-7ca881",
 "name": "Reliaquest",
 "url": "https://reliaquest.com/rss.xml",
@@ -6779,7 +6571,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.93,
+"per_day": 0.77,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6812,7 +6604,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.94,
+"per_day": 0.91,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6823,7 +6615,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.94,
+"per_day": 0.91,
 "origin": "awesome-threat-intel-rss"
 },
 {
@@ -6845,7 +6637,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.73,
+"per_day": 0.64,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -6856,7 +6648,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.73,
+"per_day": 0.64,
 "origin": "awesome-threat-intel-rss"
 },
 {
@@ -6878,8 +6670,19 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.79,
+"per_day": 0.71,
 "origin": "CyberSecurityRSS"
+},
+{
+"id": "sentinelone-21bc81",
+"name": "SentinelOne",
+"url": "https://www.sentinelone.com/blog/feed/",
+"category": "research",
+"region": "Global",
+"tier": 2,
+"lang": "en",
+"per_day": 0.36,
+"origin": "awesome_threat_intel_blogs"
 },
 {
 "id": "shkspr-b945aa",
@@ -6900,7 +6703,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 2.99,
+"per_day": 2.77,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -6911,7 +6714,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.17,
+"per_day": 2.04,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6922,7 +6725,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.17,
+"per_day": 2.04,
 "origin": "awesome-threat-intel-rss"
 },
 {
@@ -6933,7 +6736,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 2.59,
+"per_day": 1.71,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6944,7 +6747,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.74,
+"per_day": 0.57,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -6977,19 +6780,8 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.36,
+"per_day": 0.5,
 "origin": "awesome_threat_intel_blogs"
-},
-{
-"id": "taxodium-788fa1",
-"name": "Taxodium",
-"url": "https://taxodium.ink/index.xml",
-"category": "research",
-"region": "Global",
-"tier": 2,
-"lang": "zh",
-"per_day": 0.36,
-"origin": "CyberSecurityRSS"
 },
 {
 "id": "techrepublic-c06857",
@@ -6999,7 +6791,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 2.07,
+"per_day": 1.81,
 "origin": "awesome-threat-intel-rss"
 },
 {
@@ -7010,7 +6802,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.64,
+"per_day": 0.8,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -7021,7 +6813,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.86,
+"per_day": 0.79,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -7032,7 +6824,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.71,
+"per_day": 0.64,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -7043,7 +6835,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.97,
+"per_day": 0.79,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -7054,7 +6846,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.36,
+"per_day": 0.43,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -7064,8 +6856,8 @@
 "category": "research",
 "region": "Global",
 "tier": 2,
-"lang": "zh",
-"per_day": 0.5,
+"lang": "en",
+"per_day": 0.43,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -7098,7 +6890,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.36,
+"per_day": 1.14,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -7109,7 +6901,18 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.4,
+"per_day": 1.06,
+"origin": "CyberSecurityRSS"
+},
+{
+"id": "sspai-d0fb9a",
+"name": "少数派",
+"url": "https://sspai.com/feed",
+"category": "research",
+"region": "Global",
+"tier": 2,
+"lang": "zh",
+"per_day": 2.99,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -7120,7 +6923,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "zh",
-"per_day": 1.47,
+"per_day": 3.0,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -7131,7 +6934,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "zh",
-"per_day": 1.14,
+"per_day": 0.98,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -7142,7 +6945,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.5,
+"per_day": 0.43,
 "origin": "core"
 },
 {
@@ -7157,17 +6960,6 @@
 "origin": "core"
 },
 {
-"id": "lawfaremedia-7a2db4",
-"name": "Lawfare",
-"url": "https://www.lawfaremedia.org/feeds/articles",
-"category": "think-tank",
-"region": "Global",
-"tier": 2,
-"lang": "en",
-"per_day": 0.36,
-"origin": "core"
-},
-{
 "id": "longwarjournal-18c639",
 "name": "Long War Journal",
 "url": "https://www.longwarjournal.org/feed",
@@ -7175,7 +6967,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.36,
+"per_day": 1.29,
 "origin": "core"
 },
 {
@@ -7197,7 +6989,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 2.1,
+"per_day": 1.59,
 "origin": "core"
 },
 {
@@ -7208,7 +7000,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.36,
+"per_day": 2.05,
 "origin": "core"
 },
 {
@@ -7219,7 +7011,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 1.07,
+"per_day": 1.0,
 "origin": "core"
 },
 {
@@ -7230,7 +7022,7 @@
 "region": "Global",
 "tier": 2,
 "lang": "en",
-"per_day": 0.5,
+"per_day": 0.57,
 "origin": "core"
 },
 {
@@ -7278,6 +7070,17 @@
 "origin": "core"
 },
 {
+"id": "megaphone-22b22b",
+"name": "Hacking Humans",
+"url": "https://feeds.megaphone.fm/hacking-humans",
+"category": "cyber-news",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.29,
+"origin": "awesome-rss-feeds"
+},
+{
 "id": "audioboom-f501d2",
 "name": "ISF Podcast",
 "url": "https://audioboom.com/channels/4991893.rss",
@@ -7322,6 +7125,17 @@
 "origin": "awesome-rss-feeds"
 },
 {
+"id": "securityweek-1115b0",
+"name": "Security Week Network (ICS)",
+"url": "https://www.securityweek.com/category/ics-ot/feed/",
+"category": "cyber-news",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.21,
+"origin": "core"
+},
+{
 "id": "smashingsecurity-147760",
 "name": "Smashing Security",
 "url": "http://www.smashingsecurity.com/rss",
@@ -7351,7 +7165,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0.14,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -7384,17 +7198,6 @@
 "region": "T-EUH",
 "tier": 3,
 "lang": "pl",
-"per_day": 0,
-"origin": "awesome-rss-feeds"
-},
-{
-"id": "newsnblogs-d50e8d",
-"name": "News Blog (Pakistan)",
-"url": "https://newsnblogs.com/feed/",
-"category": "geopolitics",
-"region": "T-SAS",
-"tier": 3,
-"lang": "en",
 "per_day": 0,
 "origin": "awesome-rss-feeds"
 },
@@ -7438,8 +7241,30 @@
 "category": "geopolitics",
 "region": "Global",
 "tier": 3,
-"lang": "en",
+"lang": "de",
 "per_day": 0.2,
+"origin": "awesome-rss-feeds"
+},
+{
+"id": "kommersant-e9373f",
+"name": "Газета (Russia)",
+"url": "https://www.kommersant.ru/RSS/main.xml",
+"category": "geopolitics",
+"region": "T-UKR",
+"tier": 3,
+"lang": "ru",
+"per_day": 0.14,
+"origin": "awesome-rss-feeds"
+},
+{
+"id": "gazeta-769417",
+"name": "Газета.Ru - Первая полоса (Russia)",
+"url": "https://www.gazeta.ru/export/rss/first.xml",
+"category": "geopolitics",
+"region": "T-UKR",
+"tier": 3,
+"lang": "en",
+"per_day": 0.29,
 "origin": "awesome-rss-feeds"
 },
 {
@@ -7472,7 +7297,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.14,
+"per_day": 0.07,
 "origin": "core"
 },
 {
@@ -7582,7 +7407,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "zh",
-"per_day": 0.14,
+"per_day": 0.07,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -7729,6 +7554,17 @@
 "origin": "CyberSecurityRSS"
 },
 {
+"id": "aquasec-43652b",
+"name": "AquaSec",
+"url": "https://www.aquasec.com/blog/rss.xml",
+"category": "research",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.29,
+"origin": "awesome_threat_intel_blogs"
+},
+{
 "id": "aresluna-4047b2",
 "name": "aresluna.org",
 "url": "https://aresluna.org/main.rss",
@@ -7737,9 +7573,7 @@
 "tier": 3,
 "lang": "en",
 "per_day": 0,
-"origin": "CyberSecurityRSS",
-"carried": true,
-"carried_why": "HTTP 429"
+"origin": "CyberSecurityRSS"
 },
 {
 "id": "ares-x-ba82cc",
@@ -7805,9 +7639,18 @@
 "tier": 3,
 "lang": "en",
 "per_day": 0,
-"origin": "CyberSecurityRSS",
-"carried": true,
-"carried_why": "HTTP 0"
+"origin": "CyberSecurityRSS"
+},
+{
+"id": "bensbites-d4b4ef",
+"name": "Ben's Bites",
+"url": "https://www.bensbites.com/feed",
+"category": "research",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.29,
+"origin": "CyberSecurityRSS"
 },
 {
 "id": "bernsteinbear-fb2311",
@@ -7817,7 +7660,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.21,
+"per_day": 0.29,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -7854,6 +7697,17 @@
 "origin": "CyberSecurityRSS"
 },
 {
+"id": "bishopfox-8a513d",
+"name": "bishopfox.com",
+"url": "https://bishopfox.com/feed/",
+"category": "research",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.29,
+"origin": "CyberSecurityRSS"
+},
+{
 "id": "bitdefender-32f271",
 "name": "Bitdefender Labs",
 "url": "https://www.bitdefender.com/blog/api/rss/labs/",
@@ -7872,7 +7726,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.21,
+"per_day": 0.14,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -7883,7 +7737,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0.14,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -7927,7 +7781,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -7938,7 +7792,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.21,
+"per_day": 0.29,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -7964,17 +7818,6 @@
 "origin": "CyberSecurityRSS"
 },
 {
-"id": "medium-657dcb",
-"name": "Bug Bounty in InfoSec Write-ups on Medium",
-"url": "https://medium.com/feed/bugbountywriteup/tagged/bug-bounty",
-"category": "research",
-"region": "Global",
-"tier": 3,
-"lang": "en",
-"per_day": 0.14,
-"origin": "CyberSecurityRSS"
-},
-{
 "id": "bunniestudios-b1716d",
 "name": "bunnie's blog",
 "url": "https://www.bunniestudios.com/blog/?feed=rss2",
@@ -7986,9 +7829,9 @@
 "origin": "CyberSecurityRSS"
 },
 {
-"id": "bushidotoken-611656",
+"id": "bushidotoken-e13295",
 "name": "BushidoToken Threat Intel",
-"url": "https://blog.bushidotoken.net/rss.xml",
+"url": "https://blog.bushidotoken.net/feeds/posts/default",
 "category": "research",
 "region": "Global",
 "tier": 3,
@@ -8019,15 +7862,15 @@
 "origin": "CyberSecurityRSS"
 },
 {
-"id": "ccc-49b5ca",
-"name": "CCC Event Blog",
-"url": "https://events.ccc.de/feed/",
+"id": "censys-f39090",
+"name": "Censys",
+"url": "https://censys.com/feed/",
 "category": "research",
 "region": "Global",
 "tier": 3,
 "lang": "en",
 "per_day": 0.29,
-"origin": "CyberSecurityRSS"
+"origin": "awesome_threat_intel_blogs"
 },
 {
 "id": "cerbero-blog-ed288f",
@@ -8092,7 +7935,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0.14,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -8147,7 +7990,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.21,
+"per_day": 0.14,
 "origin": "awesome-threat-intel-rss"
 },
 {
@@ -8169,7 +8012,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0.14,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -8279,7 +8122,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.14,
+"per_day": 0.07,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -8290,7 +8133,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.29,
+"per_day": 0.14,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -8302,6 +8145,17 @@
 "tier": 3,
 "lang": "en",
 "per_day": 0.29,
+"origin": "CyberSecurityRSS"
+},
+{
+"id": "darrenmartyn-f690b4",
+"name": "Darren Martyn",
+"url": "https://darrenmartyn.ie/feed/",
+"category": "research",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.07,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -8345,7 +8199,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.29,
+"per_day": 0.21,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -8378,7 +8232,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0,
+"per_day": 0.07,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -8444,7 +8298,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.21,
+"per_day": 0.14,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -8499,7 +8353,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0.14,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -8532,7 +8386,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -8577,9 +8431,7 @@
 "tier": 3,
 "lang": "en",
 "per_day": 0.14,
-"origin": "CyberSecurityRSS",
-"carried": true,
-"carried_why": "HTTP 0"
+"origin": "CyberSecurityRSS"
 },
 {
 "id": "filippo-d5a3c3",
@@ -8659,6 +8511,17 @@
 "origin": "CyberSecurityRSS"
 },
 {
+"id": "blog-8f734f",
+"name": "Google Online Security",
+"url": "https://blog.google/security/rss",
+"category": "research",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.14,
+"origin": "awesome_threat_intel_blogs"
+},
+{
 "id": "blogspot-0b2664",
 "name": "Google Project Zero",
 "url": "https://googleprojectzero.blogspot.com/feeds/posts/default",
@@ -8670,25 +8533,14 @@
 "origin": "awesome-threat-intel-rss"
 },
 {
-"id": "blogspot-731a06",
+"id": "projectzero-bc53eb",
 "name": "Google Project Zero (Legacy)",
-"url": "https://googleprojectzero.blogspot.com/rss.xml",
+"url": "https://projectzero.google/feed.xml",
 "category": "research",
 "region": "Global",
 "tier": 3,
 "lang": "en",
 "per_day": 0.07,
-"origin": "awesome_threat_intel_blogs"
-},
-{
-"id": "blog-8f734f",
-"name": "Google Threat Analysis Group",
-"url": "https://blog.google/security/rss",
-"category": "research",
-"region": "Global",
-"tier": 3,
-"lang": "en",
-"per_day": 0.14,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -8703,6 +8555,17 @@
 "origin": "CyberSecurityRSS"
 },
 {
+"id": "group-ib-7f0b05",
+"name": "Group IB",
+"url": "https://www.group-ib.com/blog/feed/",
+"category": "research",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.21,
+"origin": "awesome_threat_intel_blogs"
+},
+{
 "id": "blogspot-98fe52",
 "name": "GT's Blog",
 "url": "http://ganeshtiwaridotcomdotnp.blogspot.com/feeds/posts/default",
@@ -8711,6 +8574,17 @@
 "tier": 3,
 "lang": "en",
 "per_day": 0,
+"origin": "CyberSecurityRSS"
+},
+{
+"id": "guidepointsecurity-2c0b4b",
+"name": "GuidePoint Security",
+"url": "https://www.guidepointsecurity.com/feed/",
+"category": "research",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.29,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -8787,7 +8661,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.14,
+"per_day": 0,
 "origin": "awesome-threat-intel-rss"
 },
 {
@@ -8824,6 +8698,17 @@
 "origin": "CyberSecurityRSS"
 },
 {
+"id": "heimdalsecurity-d1db4b",
+"name": "Heimdal",
+"url": "https://heimdalsecurity.com/blog/posts/feed/",
+"category": "research",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.29,
+"origin": "awesome_threat_intel_blogs"
+},
+{
 "id": "bearblog-0509eb",
 "name": "herman.bearblog.dev",
 "url": "https://herman.bearblog.dev/feed/",
@@ -8842,20 +8727,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
-"origin": "CyberSecurityRSS",
-"carried": true,
-"carried_why": "HTTP 0"
-},
-{
-"id": "hey-053ac4",
-"name": "hey.paris",
-"url": "https://hey.paris/index.xml",
-"category": "research",
-"region": "Global",
-"tier": 3,
-"lang": "en",
-"per_day": 0,
+"per_day": 0.21,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -8881,6 +8753,17 @@
 "origin": "CyberSecurityRSS"
 },
 {
+"id": "idiallo-bbf2c9",
+"name": "idiallo.com",
+"url": "https://idiallo.com/feed.rss",
+"category": "research",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.29,
+"origin": "CyberSecurityRSS"
+},
+{
 "id": "intigriti-e2593a",
 "name": "Intigriti",
 "url": "https://blog.intigriti.com/feed/",
@@ -8899,7 +8782,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "fr",
-"per_day": 0.21,
+"per_day": 0.14,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -8921,7 +8804,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0,
+"per_day": 0.07,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -8943,7 +8826,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "zh",
-"per_day": 0.07,
+"per_day": 0,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -9009,7 +8892,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.14,
+"per_day": 0.21,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -9053,7 +8936,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.14,
+"per_day": 0.21,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -9108,7 +8991,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -9141,7 +9024,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.14,
+"per_day": 0.07,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -9207,19 +9090,8 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0,
 "origin": "CyberSecurityRSS"
-},
-{
-"id": "morphisec-04e44d",
-"name": "Morphisec Breach Prevention Blog",
-"url": "https://www.morphisec.com/blog/?feed=rss2",
-"category": "research",
-"region": "Global",
-"tier": 3,
-"lang": "en",
-"per_day": 0.29,
-"origin": "awesome_threat_intel_blogs"
 },
 {
 "id": "mozilla-be9117",
@@ -9350,7 +9222,18 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0.14,
+"origin": "CyberSecurityRSS"
+},
+{
+"id": "openai-36f62a",
+"name": "OpenAI Newsroom | Engineering",
+"url": "https://openai.com/news/engineering/rss.xml",
+"category": "research",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.14,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -9363,6 +9246,17 @@
 "lang": "en",
 "per_day": 0,
 "origin": "CyberSecurityRSS"
+},
+{
+"id": "paloaltonetworks-e6d5b7",
+"name": "PaloAlto Networks Blog",
+"url": "https://www.paloaltonetworks.com/blog/rss",
+"category": "research",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.29,
+"origin": "awesome-threat-intel-rss"
 },
 {
 "id": "cnpanda-a0d7b9",
@@ -9519,17 +9413,6 @@
 "origin": "awesome_threat_intel_blogs"
 },
 {
-"id": "pwndefend-927812",
-"name": "PwnDefend",
-"url": "https://www.pwndefend.com/feed/",
-"category": "research",
-"region": "Global",
-"tier": 3,
-"lang": "en",
-"per_day": 0,
-"origin": "CyberSecurityRSS"
-},
-{
 "id": "pwning-1e41c0",
 "name": "pwning.systems",
 "url": "https://pwning.systems/index.xml",
@@ -9548,19 +9431,8 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.14,
+"per_day": 0,
 "origin": "awesome_threat_intel_blogs"
-},
-{
-"id": "quantakrypto-56683e",
-"name": "quantakrypto - post-quantum cryptography",
-"url": "https://quantakrypto.com/rss.xml",
-"category": "research",
-"region": "Global",
-"tier": 3,
-"lang": "en",
-"per_day": 0.29,
-"origin": "CyberSecurityRSS"
 },
 {
 "id": "quarkslab-40950e",
@@ -9603,7 +9475,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.21,
+"per_day": 0.14,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -9669,7 +9541,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0.14,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -9691,7 +9563,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.14,
+"per_day": 0.29,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -9805,17 +9677,6 @@
 "origin": "awesome-threat-intel-rss"
 },
 {
-"id": "sentinelone-21bc81",
-"name": "SentinelOne",
-"url": "https://www.sentinelone.com/blog/feed/",
-"category": "research",
-"region": "Global",
-"tier": 3,
-"lang": "en",
-"per_day": 0.29,
-"origin": "awesome_threat_intel_blogs"
-},
-{
 "id": "sentinelone-f53feb",
 "name": "SentinelOne Labs",
 "url": "https://www.sentinelone.com/labs/feed/",
@@ -9834,7 +9695,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -9845,7 +9706,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -9856,7 +9717,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -9878,7 +9739,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -9937,6 +9798,17 @@
 "origin": "CyberSecurityRSS"
 },
 {
+"id": "sublime-1a596d",
+"name": "Sublime Security",
+"url": "https://sublime.security/blog/rss.xml",
+"category": "research",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.21,
+"origin": "awesome_threat_intel_blogs"
+},
+{
 "id": "feedburner-edd534",
 "name": "Sucuri Blog",
 "url": "http://feeds.feedburner.com/sucuri/blog",
@@ -9981,17 +9853,6 @@
 "origin": "CyberSecurityRSS"
 },
 {
-"id": "susam-9b48d0",
-"name": "susam.net",
-"url": "https://susam.net/feed.xml",
-"category": "research",
-"region": "Global",
-"tier": 3,
-"lang": "en",
-"per_day": 0,
-"origin": "CyberSecurityRSS"
-},
-{
 "id": "bestwing-543727",
 "name": "Swing'Blog 浮生若梦",
 "url": "http://bestwing.me/atom.xml",
@@ -10010,7 +9871,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -10022,6 +9883,17 @@
 "tier": 3,
 "lang": "en",
 "per_day": 0.14,
+"origin": "CyberSecurityRSS"
+},
+{
+"id": "taxodium-788fa1",
+"name": "Taxodium",
+"url": "https://taxodium.ink/index.xml",
+"category": "research",
+"region": "Global",
+"tier": 3,
+"lang": "zh",
+"per_day": 0.21,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -10109,7 +9981,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0,
+"per_day": 0.07,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -10175,7 +10047,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -10197,7 +10069,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.21,
+"per_day": 0.29,
 "origin": "awesome_threat_intel_blogs"
 },
 {
@@ -10219,7 +10091,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0,
 "origin": "awesome-threat-intel-rss"
 },
 {
@@ -10278,17 +10150,6 @@
 "origin": "CyberSecurityRSS"
 },
 {
-"id": "virustotal-a950fd",
-"name": "VirusTotal Blog",
-"url": "https://blog.virustotal.com/rss.xml",
-"category": "research",
-"region": "Global",
-"tier": 3,
-"lang": "en",
-"per_day": 0,
-"origin": "awesome_threat_intel_blogs"
-},
-{
 "id": "virustotal-321df0",
 "name": "VirusTotal Blog",
 "url": "https://blog.virustotal.com/feeds/posts/default",
@@ -10296,8 +10157,19 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
+"per_day": 0.07,
+"origin": "awesome_threat_intel_blogs"
+},
+{
+"id": "wallarm-b51ff5",
+"name": "Wallarm",
+"url": "https://lab.wallarm.com/rss.xml",
+"category": "research",
+"region": "Global",
+"tier": 3,
+"lang": "en",
 "per_day": 0,
-"origin": "awesome-threat-intel-rss"
+"origin": "CyberSecurityRSS"
 },
 {
 "id": "watchguard-b92ed3",
@@ -10396,6 +10268,17 @@
 "tier": 3,
 "lang": "zh",
 "per_day": 0,
+"origin": "CyberSecurityRSS"
+},
+{
+"id": "zdziarski-0892c3",
+"name": "Zdziarski",
+"url": "http://www.zdziarski.com/blog/?feed=rss2",
+"category": "research",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.07,
 "origin": "CyberSecurityRSS"
 },
 {
@@ -10681,7 +10564,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0,
 "origin": "core"
 },
 {
@@ -10704,6 +10587,17 @@
 "tier": 3,
 "lang": "en",
 "per_day": 0,
+"origin": "core"
+},
+{
+"id": "lawfaremedia-7a2db4",
+"name": "Lawfare",
+"url": "https://www.lawfaremedia.org/feeds/articles",
+"category": "think-tank",
+"region": "Global",
+"tier": 3,
+"lang": "en",
+"per_day": 0.07,
 "origin": "core"
 },
 {
@@ -10736,7 +10630,7 @@
 "region": "Global",
 "tier": 3,
 "lang": "en",
-"per_day": 0.07,
+"per_day": 0,
 "origin": "core"
 }
 ],
@@ -11327,7 +11221,7 @@
 "name": "Brendan Gregg's Blog",
 "url": "http://www.brendangregg.com/blog/rss.xml",
 "origin": "CyberSecurityRSS",
-"why": "HTTP 0"
+"why": "dormant: newest entry 2026-02-07"
 },
 {
 "name": "Brightiup Blog",
@@ -11606,6 +11500,12 @@
 "why": "dormant: newest entry 2018-07-06"
 },
 {
+"name": "Cybersecurity News",
+"url": "https://securityonline.info/feed/",
+"origin": "CyberSecurityRSS",
+"why": "HTTP 0"
+},
+{
 "name": "Cytosineの有被小窝~",
 "url": "https://cyto.top/atom.xml",
 "origin": "CyberSecurityRSS",
@@ -11676,12 +11576,6 @@
 "url": "https://wechat2rss.xlab.app/feed/0d4ffa4a2127cb603c2da49daa678b0e780fd66b.xml",
 "origin": "CyberSecurityRSS",
 "why": "fourth feed of one host"
-},
-{
-"name": "Darren Martyn",
-"url": "https://darrenmartynie.wordpress.com/feed/",
-"origin": "CyberSecurityRSS",
-"why": "dormant: newest entry 2022-02-12"
 },
 {
 "name": "DataCon大数据安全分析比赛",
@@ -11975,7 +11869,7 @@
 "name": "Flanker论安全",
 "url": "https://wechat2rss.xlab.app/feed/18cb4f6ce17f4be6e5062dfb47a6036fe9c36a25.xml",
 "origin": "CyberSecurityRSS",
-"why": "fourth feed of one host"
+"why": "dormant: newest entry 2026-05-24"
 },
 {
 "name": "Fleetsmith Blog",
@@ -12092,6 +11986,12 @@
 "why": "dormant: newest entry 2014-01-26"
 },
 {
+"name": "Google DeepMind Blog",
+"url": "https://deepmind.google/blog/rss.xml",
+"origin": "CyberSecurityRSS",
+"why": "answer is not a feed"
+},
+{
 "name": "Google Online Security Blog",
 "url": "http://googleonlinesecurity.blogspot.com/feeds/posts/default",
 "origin": "CyberSecurityRSS",
@@ -12179,7 +12079,7 @@
 "name": "Hacking Tutorials",
 "url": "https://www.hackingtutorials.org/feed/",
 "origin": "CyberSecurityRSS",
-"why": "dormant: newest entry 2025-08-07"
+"why": "HTTP 502"
 },
 {
 "name": "Hacking就是好玩",
@@ -12258,6 +12158,12 @@
 "url": "https://blog.sari3l.com/atom.xml",
 "origin": "CyberSecurityRSS",
 "why": "dormant: newest entry 2022-06-08"
+},
+{
+"name": "hey.paris",
+"url": "https://hey.paris/index.xml",
+"origin": "CyberSecurityRSS",
+"why": "HTTP 404"
 },
 {
 "name": "HhhM",
@@ -12431,7 +12337,7 @@
 "name": "Indistinguishable from Jesse",
 "url": "http://www.squarefree.com/feed/atom/",
 "origin": "CyberSecurityRSS",
-"why": "HTTP 0"
+"why": "dormant: newest entry 2015-07-28"
 },
 {
 "name": "Infosec Resources",
@@ -12971,7 +12877,7 @@
 "name": "mr_raptor的专栏",
 "url": "http://blog.csdn.net/mr_raptor/rss/list",
 "origin": "CyberSecurityRSS",
-"why": "HTTP 521"
+"why": "HTTP 0"
 },
 {
 "name": "Muuu Nya's Blog",
@@ -13043,7 +12949,7 @@
 "name": "Neal Poole",
 "url": "https://nealpoole.com/blog/feeds/all.rss.xml",
 "origin": "CyberSecurityRSS",
-"why": "HTTP 0"
+"why": "dormant: newest entry 2013-07-23"
 },
 {
 "name": "Nearg1e",
@@ -13109,7 +13015,7 @@
 "name": "NOP Team",
 "url": "https://wechat2rss.xlab.app/feed/3f56e6d80d7e3e5f73983bfa6c06045ff62f1530.xml",
 "origin": "CyberSecurityRSS",
-"why": "dormant: newest entry 2026-05-09"
+"why": "fourth feed of one host"
 },
 {
 "name": "NorthShad0w’s Blog",
@@ -13188,12 +13094,6 @@
 "url": "https://wechat2rss.xlab.app/feed/71d830505c0eb2d4e2627dbf1dfc2b2971bc240b.xml",
 "origin": "CyberSecurityRSS",
 "why": "fourth feed of one host"
-},
-{
-"name": "OpenAI Newsroom | Engineering",
-"url": "https://rss.app/feeds/75Fpp0Mbx9x4TbDs.xml",
-"origin": "CyberSecurityRSS",
-"why": "HTTP 402"
 },
 {
 "name": "OpnSec",
@@ -13296,6 +13196,12 @@
 "url": "https://pentester.land/blog/index.xml",
 "origin": "CyberSecurityRSS",
 "why": "dormant: newest entry 2023-01-03"
+},
+{
+"name": "Pentesting",
+"url": "https://www.reddit.com/r/Pentesting/.rss",
+"origin": "CyberSecurityRSS",
+"why": "HTTP 429"
 },
 {
 "name": "pentestmonkey",
@@ -13454,6 +13360,12 @@
 "why": "dormant: newest entry 2018-06-16"
 },
 {
+"name": "PwnDefend",
+"url": "https://www.pwndefend.com/feed/",
+"origin": "CyberSecurityRSS",
+"why": "HTTP 403"
+},
+{
 "name": "PwnDizzle",
 "url": "http://pwndizzle.blogspot.com/feeds/posts/default",
 "origin": "CyberSecurityRSS",
@@ -13596,6 +13508,12 @@
 "url": "https://blog.rebirthwyw.top/atom.xml",
 "origin": "CyberSecurityRSS",
 "why": "dormant: newest entry 2021-11-01"
+},
+{
+"name": "Red Team Security",
+"url": "https://www.reddit.com/r/redteamsec/.rss",
+"origin": "CyberSecurityRSS",
+"why": "HTTP 429"
 },
 {
 "name": "Red Teaming",
@@ -13907,7 +13825,7 @@
 "name": "Seebug 最新漏洞",
 "url": "https://www.seebug.org/rss/new/",
 "origin": "CyberSecurityRSS",
-"why": "feed has no entries"
+"why": "HTTP 0"
 },
 {
 "name": "Seebug漏洞平台",
@@ -14138,6 +14056,12 @@
 "why": "HTTP 521"
 },
 {
+"name": "susam.net",
+"url": "https://susam.net/feed.xml",
+"origin": "CyberSecurityRSS",
+"why": "dormant: newest entry 2026-05-24"
+},
+{
 "name": "SuspeK",
 "url": "https://www.suspekt.org/feed/",
 "origin": "CyberSecurityRSS",
@@ -14283,9 +14207,9 @@
 },
 {
 "name": "The Safe Mac",
-"url": "https://www.thesafemac.com/feed/",
+"url": "http://reedcorner.net/feed/",
 "origin": "CyberSecurityRSS",
-"why": "dormant: newest entry 2023-12-08"
+"why": "dormant: newest entry 2026-01-07"
 },
 {
 "name": "The Sakurity Blog",
@@ -14546,12 +14470,6 @@
 "why": "HTTP 0"
 },
 {
-"name": "Wallarm",
-"url": "https://lab.wallarm.com/feed/",
-"origin": "CyberSecurityRSS",
-"why": "answer is not a feed"
-},
-{
 "name": "Web Reflection",
 "url": "http://webreflection.blogspot.com/feeds/posts/default",
 "origin": "CyberSecurityRSS",
@@ -14754,12 +14672,6 @@
 "url": "http://0haxor.blogspot.com/feeds/posts/default",
 "origin": "CyberSecurityRSS",
 "why": "dormant: newest entry 2013-01-11"
-},
-{
-"name": "Zdziarski",
-"url": "http://www.zdziarski.com/blog/?feed=rss2",
-"origin": "CyberSecurityRSS",
-"why": "HTTP 0"
 },
 {
 "name": "ZecOps Blog",
@@ -15293,7 +15205,7 @@
 "name": "太阳风的专栏",
 "url": "http://blog.csdn.net/u012528173/rss/list",
 "origin": "CyberSecurityRSS",
-"why": "HTTP 0"
+"why": "HTTP 521"
 },
 {
 "name": "奇安信A-TEAM技术博客",
@@ -16601,7 +16513,7 @@
 "name": "Live Hindustan Rss feed (India)",
 "url": "https://feed.livehindustan.com/rss/3127",
 "origin": "awesome-rss-feeds",
-"why": "HTTP 503"
+"why": "dormant: newest entry 2024-10-15"
 },
 {
 "name": "Loksattaदेश-विदेश – Loksatta (India)",
@@ -16680,6 +16592,12 @@
 "url": "https://rss.unian.net/site/news_eng.rss",
 "origin": "awesome-rss-feeds",
 "why": "dormant: newest entry 2024-05-24"
+},
+{
+"name": "News Blog (Pakistan)",
+"url": "https://newsnblogs.com/feed/",
+"origin": "awesome-rss-feeds",
+"why": "answer is not a feed"
 },
 {
 "name": "News, Latest News, Today's News Headlines, Breaking News, LIVE News - Oneindia (India)",
@@ -16775,7 +16693,7 @@
 "name": "Tempo – The Nation's Fastest Growing Newspaper (Philippines)",
 "url": "http://tempo.com.ph/feed/",
 "origin": "awesome-rss-feeds",
-"why": "HTTP 522"
+"why": "HTTP 523"
 },
 {
 "name": "The Courier Mail (Australia)",
@@ -16877,13 +16795,19 @@
 "name": "Tribunnews.com (Indonesia)",
 "url": "https://www.tribunnews.com/rss",
 "origin": "awesome-rss-feeds",
-"why": "HTTP 403"
+"why": "HTTP 202"
 },
 {
 "name": "Tu Periódico Quequi (Mexico)",
 "url": "https://quequi.com.mx/feed/",
 "origin": "awesome-rss-feeds",
 "why": "HTTP 0"
+},
+{
+"name": "World News",
+"url": "https://www.reddit.com/r/worldnews/.rss",
+"origin": "awesome-rss-feeds",
+"why": "HTTP 429"
 },
 {
 "name": "WSJ.com: World News (United States)",
@@ -17279,7 +17203,7 @@
 "name": "Der Ver­fas­sungs­schutz",
 "url": "https://www.verfassungsschutz.de/",
 "origin": "awesome_threat_intel_blogs",
-"why": "no feed found"
+"why": "home page 0"
 },
 {
 "name": "FalconForce",
@@ -17304,12 +17228,6 @@
 "url": "https://cloud.google.com/blog/topics/threat-intelligence",
 "origin": "awesome_threat_intel_blogs",
 "why": "no feed found"
-},
-{
-"name": "Google Online Security",
-"url": "https://security.googleblog.com/rss.xml",
-"origin": "awesome_threat_intel_blogs",
-"why": "dormant: newest entry 2026-04-23"
 },
 {
 "name": "Government of Canada Alerts and Advisories",
@@ -17474,12 +17392,6 @@
 "why": "dormant: newest entry 2025-11-24"
 },
 {
-"name": "Sublime Security",
-"url": "https://sublime.security/blog/",
-"origin": "awesome_threat_intel_blogs",
-"why": "home page 429"
-},
-{
 "name": "TeamT5",
 "url": "https://teamt5.org/en/blog/",
 "origin": "awesome_threat_intel_blogs",
@@ -17529,7 +17441,7 @@
 },
 {
 "name": "Will's Root",
-"url": "https://www.willsroot.io/rss.xml",
+"url": "https://www.willsroot.io/feeds/posts/default",
 "origin": "awesome_threat_intel_blogs",
 "why": "dormant: newest entry 2025-09-14"
 },
@@ -17654,10 +17566,22 @@
 "why": "HTTP 404"
 },
 {
+"name": "Middle East Eye",
+"url": "https://www.middleeasteye.net/rss",
+"origin": "core",
+"why": "answer is not a feed"
+},
+{
 "name": "Packet Storm",
 "url": "https://rss.packetstormsecurity.com/files/",
 "origin": "core",
 "why": "HTTP 0"
+},
+{
+"name": "r/blueteamsec",
+"url": "https://www.reddit.com/r/blueteamsec/.rss",
+"origin": "core",
+"why": "HTTP 429"
 },
 {
 "name": "r/cybersecurity",
@@ -17668,6 +17592,12 @@
 {
 "name": "r/netsec",
 "url": "https://www.reddit.com/r/netsec/.rss",
+"origin": "core",
+"why": "HTTP 429"
+},
+{
+"name": "r/threatintel",
+"url": "https://www.reddit.com/r/threatintel/.rss",
 "origin": "core",
 "why": "HTTP 404"
 },
