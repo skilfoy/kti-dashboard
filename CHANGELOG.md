@@ -1,5 +1,27 @@
 # Changelog
 
+## 3.14.0 (22 November 2026)
+
+- **Weakness base rates by product family.** The Vulnerabilities page now gives the exploitation rate of each weakness in each kind of product. It covers CVEs published in the 36 months that end 90 days before the build, so every CVE counted has had at least 90 days for exploitation evidence to appear.
+  - **Source.** Every CVE List V5 record, from the CVE Program's daily midnight archive (`pipeline/fetch_cvelist.py`, about 670 MB, 430,000 records), joined to the CVSS-BT signals and the KEV catalog the build already reads. No new outside source.
+  - **Families.** `pipeline/families.py` holds one taxonomy for every vulnerability row. The five edge-device classes come first, unchanged, then fourteen more families: small web applications, WordPress, AI and machine learning software, browsers, desktop and office applications, developer and CI/CD tools, virtualization and cloud, industrial and OT, IoT and peripherals, chipsets and firmware, mobile platforms, operating systems, enterprise applications, and open-source projects. `build_data.py` now imports its edge rules from there.
+  - **Rates.** For each family and CWE the page shows CVEs, share, exploited (CISA KEV or VulnCheck KEV), a Wilson 95% interval, lift over the family's rate, and weaponized and PoC rates. Each has an All families row.
+  - **Per CVE.** The KEV and early-warning tables gain Family, CWE and Base rate columns. The base is the CVE's first CWE in its family when that cell holds 30 CVEs, else across all families.
+  - **First build, 22 November.** 153,492 CVEs in the window, 1.5% exploited. Network edge: 3.4% overall, 33% for authentication bypass by an alternate path (CWE-288, 42 CVEs). Small web applications: 0.07%.
+  - **Datasets.** `weakness_rates`, `weakness_families`, `weakness_cve`. Method: docs/weakness-base-rates.md.
+- **Open-source disclosure watch.** A new collector job, `osswatch`, runs every three hours at :04. It lists flaws in widely deployed open-source projects disclosed in the last 30 days and sets each against its CVE record.
+  - **Sources.** OSV.dev's export: GitHub-reviewed advisories and fourteen other ecosystems' databases, among them OSS-Fuzz. The oss-security list. HackerOne Hacktivity reports to open-source programs. Each is read where it publishes.
+  - **Reach.** A package is widely deployed when ecosyste.ms marks it critical or ranks it in the top 1% of its registry by usage. A project is when it is in OSS-Fuzz.
+  - **CVE record.** CVE Services answers for each disclosure's first CVE id: no id, reserved with no record, incomplete (missing CVSS, a CWE or affected versions) or complete. An incomplete record is asked about again every six hours. Lead is the days from disclosure to the record's publication.
+  - **Bug-bounty weaknesses.** Hacktivity disclosures are also counted by weakness and shown beside each CWE in the base rates card. Counts only.
+  - **Content kept.** Titles, links, dates, identifiers and counts only; no report text or AI summary is kept.
+  - **First live runs.** Three runs cleared the 30-day backlog in 13 to 17 seconds each. They found 524 disclosures in widely deployed projects, 86 of them ahead of a complete record. Of the 470 with a record, 33 had it published a day or more after the disclosure, with a median of 9.3 days.
+  - **Keys.** None needed. `HACKERONE_API_USERNAME` and `HACKERONE_API_TOKEN` give documented Hacktivity access and the API's weakness list; `GITHUB_TOKEN` lifts the GitHub limit for the OSS-Fuzz list (docs/secrets-and-keys.md).
+  - **Collector changes.** New health probes: `osv`, `cve_services`, `ecosystems`, `oss_security`, `hackerone`. New tables `ti.osw_item`, `ti.osw_seen` and `ti.pkg_reach`, and lease row `osswatch`.
+  - **Registry.** Six new source rows. GitHub Security Advisories moves from "not implemented" to live, read through OSV.dev. Method: docs/oss-disclosure-watch.md.
+- **Site workflow.** A machine-built dataset the catalog names but the restored feeds lack now forces a feed rebuild, on every event, so a commit that adds a dataset builds it before the site is assembled.
+- Collector 2026-11-22.4.
+
 ## 3.13.2 (22 November 2026)
 
 - Translation takes the account's spare share. Since 3.12.2 its daily allowance of 420 requests is all that bounds it, at roughly 11,000 titles a day against an inflow of about 8,800 and a backlog near 15,500.

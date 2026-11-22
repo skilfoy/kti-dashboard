@@ -1,6 +1,6 @@
 # Global threat intelligence
 
-An open-source threat intelligence platform at https://intel.kilfoycyber.com, reassessed daily: seventeen geopolitical theaters with ThreatCon levels and warning indicators, threat vectors calibrated per critical-infrastructure sector, exploited vulnerabilities with weaponization timing, ransomware and extortion activity, threat actors, threat-informed defense priorities, and a live world map. Every judgment cites dated items from named public sources graded on the Admiralty scale, and a deterministic validator decides what ships.
+An open-source threat intelligence platform at https://intel.kilfoycyber.com, reassessed daily: seventeen geopolitical theaters with ThreatCon levels and warning indicators, threat vectors calibrated per critical-infrastructure sector, exploited vulnerabilities with weaponization timing and weakness base rates by product family, open-source disclosures ahead of the CVE record, ransomware and extortion activity, threat actors, threat-informed defense priorities, and a live world map. Every judgment cites dated items from named public sources graded on the Admiralty scale, and a deterministic validator decides what ships.
 
 Author: Sean Kilfoy.
 
@@ -16,7 +16,8 @@ GitHub (skilfoy/kti-dashboard, public since 22 November 2026)
                         builds the entity graph over everything collected (docs/entity-graph.md); its sigma job
                         drafts Sigma rules from current reporting under deterministic checks (docs/sigma-drafts.md); its
                         foresight job threatcasts each high-level theater's futures and signposts (docs/threatcasting.md); its
-                        translate job puts non-English titles into English for search and matching (docs/non-english.md)
+                        translate job puts non-English titles into English for search and matching (docs/non-english.md); its
+                        osswatch job sets open-source disclosures against their CVE records (docs/oss-disclosure-watch.md)
   .github/workflows/    Site: build, test, deploy; Collector alerts and Reassessment watch: issues without a model;
                         Collector deploy: build and approval gate
 

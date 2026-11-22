@@ -47,6 +47,15 @@ export const EGRESS_REFUSED = [429, 0];
 KNOWN_GAPS.gdelt_doc_api = { ...KNOWN_GAPS.gdelt_doc_api, expect: EGRESS_REFUSED, answer_class: 'refused at cloud egress (429, timeout or failed fetch)' };
 // The HIBP and GreyNoise probes left on 19 November 2026 with the exposure monitor they served (Sean: the platform is a
 // public piece with no organizational estate).
+// Sources of the open-source disclosure watch (3.14.0, 37r-osswatch.mjs). HackerOne's probe sends the API token when the
+// function holds one, as the job does.
+const H1_PROBE_HEADERS = () => {
+  const E = ENV();
+  return E.HACKERONE_API_USERNAME && E.HACKERONE_API_TOKEN ? { accept: 'application/json', authorization: 'Basic ' + Buffer.from(`${E.HACKERONE_API_USERNAME}:${E.HACKERONE_API_TOKEN}`).toString('base64') } : { accept: 'application/json' };
+};
+PROBES.push(['osv', 'https://osv-vulnerabilities.storage.googleapis.com/ecosystems.txt'], ['cve_services', 'https://cveawg.mitre.org/api/cve/CVE-2024-3094'],
+  ['ecosystems', 'https://packages.ecosyste.ms/api/v1/registries?per_page=1'], ['oss_security', 'https://seclists.org/rss/oss-sec.rss'],
+  ['hackerone', 'https://api.hackerone.com/v1/hackers/hacktivity?page%5Bsize%5D=1', null, H1_PROBE_HEADERS]);
 // Open-data sources of the cables job (37e-cables.mjs): Overpass's status page and a one-line Wikidata SPARQL ASK, sent
 // with the same identifying User-Agent and an Accept header (overpass-api.de answers a bare request with HTTP 406).
 const OPEN_DATA_HEADERS = (accept) => () => ({ accept, 'user-agent': cableUserAgent(ENV().SEC_USER_AGENT || 'contact not set') });

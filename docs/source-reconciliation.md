@@ -23,7 +23,7 @@ the ones Sean listed, and each status comes from the repository alone. The same 
 | GPSJam | not implemented | No code reads it. GNSS interference is read from NGA navigational warnings, a known gap [plan-gpsjam, nga-navwarn]. |
 | State Department advisories | not implemented as a feed | Travel advisories are not collected; State Department statements are cited as items under S-STATE (`data/authored/sources.json`) [plan-state-advisories]. |
 | MalwareBazaar | live | On-demand enrichment analyzer `mbazaar` with the abuse.ch Auth-Key (`neon/parts/39-enrich.mjs`, dataset `live_enrich`) [abusech-malwarebazaar]. |
-| GitHub Security Advisories | not implemented | No code reads them [ghsa]. |
+| GitHub Security Advisories | live (3.14.0) | Read through OSV.dev's export of the GitHub-reviewed advisories by the open-source disclosure watch (`neon/parts/37r-osswatch.mjs`, dataset `live_osswatch`) [ghsa, osv-dev]. |
 | UKMTO | known_gap | Read hourly by the maritime job; Cloudflare refuses cloud addresses with HTTP 403 since 22 Oct 2026 (`neon/parts/37b-sea.mjs`, `KNOWN_GAPS` in `neon/parts/40-ops.mjs`, dataset `live_maritime`) [ukmto]. |
 | MARAD | known_gap | Read hourly; Akamai refuses cloud addresses with HTTP 403 since 22 Oct 2026 (same files) [marad]. |
 | Maritime trade press | live (fallback) | Since 3.13.0 the maritime job reads 14 days of maritime-category entries and UKMTO's own feed from the source network and keeps those reporting a security incident, placed in a theater by wording, place names or the feed's theater (`pressIncidents` in `neon/parts/37b-sea.mjs`, source row `PRESS` in `live_maritime`). Counted apart from official notices; never used by the warning indicators. |

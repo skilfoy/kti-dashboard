@@ -18,6 +18,9 @@ Object.assign(LEASE_S, { sources: 240, reports: 900 });
 // that collected it.
 Object.assign(JOBS, { entities: jobEntities, watch: jobWatch, score: jobScore, cyphys: jobCyphys, sigma: jobSigma, foresight: jobForesight, translate: jobTranslate });
 Object.assign(LEASE_S, { entities: 240, watch: 180, score: 120, cyphys: 120, sigma: 330, foresight: 330, translate: 160 });
+// Open-source disclosure watch (3.14.0, 37r-osswatch.mjs): every three hours in the :04 quarter hour (02:04, 05:04 ...).
+JOBS.osswatch = jobOsswatch;
+LEASE_S.osswatch = 240;
 export async function runJob(job, opts = {}) {
   const fn = JOBS[job];
   if (!fn) return { job, ok: false, error: 'unknown job' };
@@ -84,6 +87,8 @@ export function plan(at) {
   if (m >= 30 && m < 45) jobs.push('sigma');
   // Threatcasting futures (37p-foresight.mjs) in the :04 quarter hour.
   if (m < 15) jobs.push('foresight');
+  // Open-source disclosures against the CVE record (37r-osswatch.mjs), every third hour at :04.
+  if (m < 15 && h % 3 === 2) jobs.push('osswatch');
   jobs.push('reports');
   return jobs;
 }

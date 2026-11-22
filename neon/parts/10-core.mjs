@@ -23,11 +23,14 @@
 //              public collection added 22 October 2026 (37-intel, 37b-sea, 37c-reg, 37d-sec); on-demand enrichment behind GET /enrich
 //              (39-enrich.mjs). FIRMS_MAP_KEY, CLOQ_API_KEY, SEC_USER_AGENT and ABUSECH_AUTH_KEY (when set) live only in
 //              this function's environment.
+//   osswatch   open-source disclosures (OSV.dev, oss-security, HackerOne Hacktivity) set against their CVE records, with
+//              reach from ecosyste.ms and OSS-Fuzz (37r-osswatch.mjs, 3.14.0); HACKERONE_API_USERNAME, HACKERONE_API_TOKEN and
+//              GITHUB_TOKEN are optional and live only in this function's environment.
 import { createHash, createHmac, createPrivateKey, createPublicKey, generateKeyPairSync, sign, timingSafeEqual, verify } from 'node:crypto';
 import { request as httpsRequest } from 'node:https';
 import { gzipSync, gunzipSync, inflateRawSync } from 'node:zlib';
 
-export const VERSION = '2026-11-22.3';
+export const VERSION = '2026-11-22.4';
 const UA = 'threat-feeds-collector/1.0 (+https://github.com/skilfoy; OSINT dashboard collector)';
 const ENV = () => process.env;
 const BUCKET = () => ENV().TI_BUCKET || 'ti-docs';

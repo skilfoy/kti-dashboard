@@ -166,3 +166,15 @@ INSERT INTO ti.lease (job) VALUES ('translate') ON CONFLICT DO NOTHING;
 -- 2026-11-18: pg_stat_statements is enabled on the production database (CREATE EXTENSION pg_stat_statements, as the
 -- owner) to rank the collector's reads by the Postgres transfer they cost (Free plan: 5 GB a month). It is left out of
 -- this file because PGlite, which the tests load this schema into, does not ship it.
+-- Open-source disclosure watch (3.14.0, 37r-osswatch.mjs): disclosures from OSV.dev, oss-security and HackerOne
+-- Hacktivity with their reach and CVE-record state; the OSV records already read at their modification time; package
+-- usage from ecosyste.ms, cached a week. Titles, links, dates, identifiers and counts only.
+CREATE TABLE IF NOT EXISTS ti.osw_item (id text PRIMARY KEY, src text NOT NULL, ecosystem text, project text, title text, link text, published timestamptz,
+  modified timestamptz, aliases jsonb NOT NULL DEFAULT '[]'::jsonb, cwes jsonb NOT NULL DEFAULT '[]'::jsonb, severity text, oss boolean NOT NULL DEFAULT true,
+  reach text, reach_note text, cve text, cve_state text, cve_published timestamptz, cve_gaps jsonb, cve_checked_at timestamptz, cve_complete_at timestamptz,
+  extra jsonb NOT NULL DEFAULT '{}'::jsonb, seen_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS osw_item_published ON ti.osw_item (published);
+CREATE TABLE IF NOT EXISTS ti.osw_seen (id text PRIMARY KEY, modified text NOT NULL, at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS ti.pkg_reach (system text NOT NULL, name text NOT NULL, ok boolean NOT NULL, critical boolean, rank real, dependents int, dependent_repos int,
+  downloads bigint, checked_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (system, name));
+INSERT INTO ti.lease (job) VALUES ('osswatch') ON CONFLICT DO NOTHING;

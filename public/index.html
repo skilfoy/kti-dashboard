@@ -491,7 +491,7 @@
       </div>
       <div class="ti-card ti-section" id="vuln-kev">
         <h3 class="ti-h3">Known exploited vulnerabilities</h3>
-        <p class="ti-card-note">Ordered by date added. Weaponized means a Metasploit module or Nuclei template exists. Data gaps flag missing CVSS v3+, CWE or SSVC (Kuhn p182-192). ATT&amp;CK exploitation and impact are CTID's KEV mappings (419 CVEs, July 2025); the Defense page ranks those techniques.</p>
+        <p class="ti-card-note">Ordered by date added. Weaponized means a Metasploit module or Nuclei template exists. Data gaps flag missing CVSS v3+, CWE or SSVC (Kuhn p182-192). Base rate is the exploitation rate of the CVE's first CWE in its product family; hover for the interval and lift. ATT&amp;CK exploitation and impact are CTID's KEV mappings (419 CVEs, July 2025); the Defense page ranks those techniques.</p>
         <div class="ti-tools">
           <input class="ti-input" id="kev-q" type="search" placeholder="Search CVE, vendor, product" aria-label="Search KEV">
           <button class="ti-chip" type="button" id="kev-edge" aria-pressed="false">Edge devices</button>
@@ -504,13 +504,40 @@
       </div>
       <div class="ti-card ti-section" id="vuln-ew">
         <h3 class="ti-h3">Pre-KEV early warning</h3>
-        <p class="ti-card-note">CVEs from the last 200 days that CISA has not listed but that VulnCheck lists as exploited, that have a Metasploit module or Nuclei template, or that carry EPSS of 0.10 or more. Triage owned products weekly.</p>
+        <p class="ti-card-note">CVEs from the last 200 days that CISA has not listed but that VulnCheck lists as exploited, that have a Metasploit module or Nuclei template, or that carry EPSS of 0.10 or more. Base rate is how often that CWE in that product family reached exploitation. Triage owned products weekly.</p>
         <div class="ti-tools">
           <input class="ti-input" id="ew-q" type="search" placeholder="Search CVE, vendor, product" aria-label="Search early warning">
           <select class="ti-select" id="ew-stage" aria-label="Stage"><option value="">All stages</option><option>Exploited</option><option>Weaponized</option><option>PoC public</option><option>Published only</option></select>
           <span class="ti-count" id="ew-count"></span>
         </div>
         <div class="ti-tbox"><table class="ti-table" id="tbl-ew" data-source="early_warning" data-row-key="cve"></table></div>
+      </div>
+      <div class="ti-card ti-section" id="vuln-oss">
+        <h3 class="ti-h3">Open-source disclosures ahead of the CVE record <span class="ti-count" id="oss-asof"></span></h3>
+        <p class="ti-card-note">Flaws in widely deployed open-source projects disclosed in the last 30 days: GitHub-reviewed and ecosystem advisories (OSV.dev), OSS-Fuzz reports, oss-security posts and HackerOne reports to open-source programs. Widely deployed means a package ecosyste.ms marks critical or ranks in the top 1% of its registry by usage, or a project in OSS-Fuzz. The CVE record column is CVE Services' answer for the first CVE id, checked again until the record carries CVSS, a CWE and affected versions. Lead is days from disclosure to the record's publication; a negative lead means the CVE came first.</p>
+        <p class="ti-card-note" id="oss-sum"></p>
+        <div class="ti-tools">
+          <input class="ti-input" id="oss-q" type="search" placeholder="Search project, title, CVE" aria-label="Search open-source disclosures">
+          <select class="ti-select" id="oss-src" aria-label="Source"><option value="">All sources</option><option value="osv">OSV.dev advisories</option><option value="oss-security">oss-security</option><option value="hacktivity">HackerOne</option></select>
+          <button class="ti-chip" type="button" id="oss-ahead" aria-pressed="true">Ahead of the CVE record</button>
+          <button class="ti-chip" type="button" id="oss-unmeasured" aria-pressed="false">Include reach not measured</button>
+          <span class="ti-count" id="oss-count"></span>
+        </div>
+        <div class="ti-tbox"><table class="ti-table" id="tbl-oss" data-source="live_osswatch" data-row-key="id"></table></div>
+        <p class="ti-card-note" id="oss-sources"></p>
+      </div>
+      <div class="ti-card ti-section" id="vuln-baserates">
+        <h3 class="ti-h3">Weakness base rates by product family <span class="ti-pir">PIR-2</span></h3>
+        <p class="ti-card-note">How often each weakness (CWE), in each kind of product, reached exploitation: CVEs published in the 36 months that end 90 days before the build, each with at least 90 days for evidence to appear. Exploited means CISA KEV or VulnCheck KEV lists it; the interval is Wilson 95%; lift is the rate over the family's own rate. The KEV and early-warning tables show each CVE's base rate in their Base rate column. A base rate describes past CVEs of the same kind and makes no forecast for any one CVE.</p>
+        <p class="ti-card-note" id="br-window"></p>
+        <div class="ti-tbox ti-short"><table class="ti-table" id="tbl-br-fam" data-source="weakness_families" data-row-key="family"></table></div>
+        <div class="ti-tools">
+          <select class="ti-select" id="br-family" aria-label="Product family"></select>
+          <input class="ti-input" id="br-q" type="search" placeholder="Search CWE or name" aria-label="Search weaknesses">
+          <button class="ti-chip" type="button" id="br-small" aria-pressed="false">Include cells under 30 CVEs</button>
+          <span class="ti-count" id="br-count"></span>
+        </div>
+        <div class="ti-tbox"><table class="ti-table" id="tbl-br" data-source="weakness_rates" data-row-key="family,cwe"></table></div>
       </div>
       <div class="ti-card ti-section" id="vuln-live-epss">
         <h3 class="ti-h3">Live: highest EPSS today <span class="ti-pir">FIRST EPSS via threat-feeds</span></h3>
