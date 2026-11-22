@@ -15,7 +15,14 @@
 //    - for a non-Latin source, text that differs from the source.
 //    A title that fails twice is left untranslated. The entities job reads translated titles as a third source (by
 //    tr_at), triage labels the English title, and search matches it.
-export const TR = { WINDOW_H: 48, BATCH: 40, PARALLEL: 3, ROUNDS: 3, DAILY: 420, MIN_THREATCON: 4, MAX_FAILS: 2, BUDGET_MS: 120000, CALL_MS: 75000, MIN_CALL_MS: 20000, MAX_TOKENS: 6000, PROMPT_V: 1 };
+export const TR = { WINDOW_H: 48, BATCH: 40, PARALLEL: 3, ROUNDS: 3, DAILY: 600, MIN_THREATCON: 4, MAX_FAILS: 2, BUDGET_MS: 120000, CALL_MS: 75000, MIN_CALL_MS: 20000, MAX_TOKENS: 12000, PROMPT_V: 1,
+  // Model order (3.12.1): each model's record of readable answers, decayed by DECAY a run so the order follows the last day.
+  DECAY: 0.97,
+  // The account's share (3.13.2). OpenRouter's credited free tier allows about 1,000 requests a day across every job on the
+  // key. The jobs' own caps add up to more (triage 600, reports 240, translation 600, Sigma 6, threatcasting 12), though
+  // on 19 to 21 November they used about 120 to 145 a day between them. Translation, the only job that can use more, takes a request
+  // only while every job's use today stays under ACCOUNT_DAILY.
+  ACCOUNT_DAILY: 950, OTHER_BUDGETS: ['triage:budget', 'report:budget', 'sigma:budget', 'foresight:budget'] };
 
 // --- language identification -----------------------------------------------------------------------------------------------
 const LATIN_LANGS = {
@@ -95,15 +102,46 @@ export function checkTranslation(src, lang, en) {
   if (NON_LATIN.has(lang) && t.toLowerCase() === String(src).trim().toLowerCase()) fail.push('same as the source');
   return fail;
 }
+// Models answer in three shapes: the JSON object asked for, a bare JSON array of the same entries, or numbered lines in
+// the request's own layout ("1<tab>[ru]<tab>Hackers attacked a bank"). On 21 November 2026, 21:37 UTC, six of twelve
+// requests came back as "no JSON object" from four models. An answer cut off before its closing brace keeps the entries
+// it completed.
+const TR_ENTRY = /"i"\s*:\s*"?(\d+)"?\s*,\s*"en"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
+const TR_LINE = /^\s*(\d{1,3})\s*(?:[\t.):|-]+\s*|\s+)(?:\[[a-z]{2,3}\]\s*)?(.+?)\s*$/;
 export function parseTranslations(content, n) {
-  const s = String(content || '').replace(/^```(?:json)?\s*|\s*```\s*$/g, '');
-  const a = s.indexOf('{'), b = s.lastIndexOf('}');
-  if (a < 0 || b <= a) throw new Error('no JSON object in the answer');
-  const j = JSON.parse(s.slice(a, b + 1));
+  const s = String(content || '').replace(/^```(?:json)?\s*|\s*```\s*$/g, '').trim();
   const out = new Map();
-  for (const r of Array.isArray(j.t) ? j.t : []) {
-    const i = +r.i;
-    if (Number.isInteger(i) && i >= 1 && i <= n && !out.has(i)) out.set(i, String(r.en == null ? '' : r.en));
+  const put = (i, en) => { i = +i; if (Number.isInteger(i) && i >= 1 && i <= n && !out.has(i)) out.set(i, String(en == null ? '' : en)); };
+  const a = s.indexOf('{'), b = s.lastIndexOf('}');
+  if (a >= 0 && b > a) {
+    try {
+      const j = JSON.parse(s.slice(s[0] === '[' ? 0 : a, s[0] === '[' ? s.lastIndexOf(']') + 1 : b + 1));
+      for (const r of Array.isArray(j) ? j : Array.isArray(j.t) ? j.t : []) if (r && typeof r === 'object') put(r.i, r.en);
+      if (out.size) return out;
+    } catch { /* an answer cut short: the entries it completed */ }
+    for (const m of s.matchAll(TR_ENTRY)) { try { put(m[1], JSON.parse(`"${m[2]}"`)); } catch { /* a broken escape */ } }
+    if (out.size) return out;
+  }
+  for (const line of s.split('\n')) { const m = line.match(TR_LINE); if (m && !/^[\[{"]/.test(m[2])) put(m[1], m[2].replace(/^["']|["']$/g, '')); }
+  if (!out.size) throw new Error(s ? 'no numbered translations in the answer' : 'empty answer');
+  return out;
+}
+// Readable answers per model, decayed each run. Models never tried rank at the prior of one half; a 429, or a timeout on a
+// request the run's own deadline cut short, says nothing about the model and counts nothing.
+export function rankModels(ids, stats = {}) {
+  const score = (id) => { const x = stats[id] || {}; return ((x.ok || 0) + 1) / ((x.ok || 0) + (x.bad || 0) + 2); };
+  return ids.map((id, k) => ({ id, k, s: score(id) })).sort((p, q) => q.s - p.s || p.k - q.k).map((x) => x.id);
+}
+export function updateModelStats(stats = {}, calls = []) {
+  const out = {};
+  for (const [id, x] of Object.entries(stats)) {
+    const ok = (x.ok || 0) * TR.DECAY, bad = (x.bad || 0) * TR.DECAY;
+    if (ok + bad >= 0.05) out[id] = { ok: +ok.toFixed(3), bad: +bad.toFixed(3) };
+  }
+  for (const c of calls) {
+    if (!c.model || c.status === 429 || (c.short && c.error === 'deadline passed')) continue;
+    const x = out[c.model] || (out[c.model] = { ok: 0, bad: 0 });
+    if (c.ok && !c.error) x.ok += 1; else x.bad += 1;
   }
   return out;
 }
@@ -117,7 +155,10 @@ async function trBudget() {
   const day = new Date().toISOString().slice(0, 10);
   await sql(`INSERT INTO ti.kv (k, v, at) VALUES ('translate:budget', jsonb_build_object('day', $1::text, 'used', 0, 'cap', $2::int), now()) ON CONFLICT (k) DO NOTHING`, [day, TR.DAILY]);
   const r = await sql(`UPDATE ti.kv SET v = jsonb_build_object('day', $1::text, 'cap', $2::int, 'used', CASE WHEN v->>'day' = $1 THEN (v->>'used')::int ELSE 0 END + 1), at = now()
-    WHERE k = 'translate:budget' AND (v->>'day' IS DISTINCT FROM $1 OR (v->>'used')::int < $2::int) RETURNING (v->>'used')::int AS used`, [day, TR.DAILY]);
+    WHERE k = 'translate:budget' AND (v->>'day' IS DISTINCT FROM $1 OR (v->>'used')::int < $2::int)
+      AND CASE WHEN v->>'day' = $1 THEN (v->>'used')::int ELSE 0 END + 1
+        + (SELECT coalesce(sum((o.v->>'used')::int), 0) FROM ti.kv o WHERE o.k = ANY(ARRAY(SELECT jsonb_array_elements_text($4::jsonb))) AND o.v->>'day' = $1) <= $3::int
+    RETURNING (v->>'used')::int AS used`, [day, TR.DAILY, TR.ACCOUNT_DAILY, JSON.stringify(TR.OTHER_BUDGETS)]);
   return r.length > 0;
 }
 // The queue's order: cyber categories, then theater and geopolitical press from theaters at ThreatCon MIN_THREATCON
@@ -138,6 +179,7 @@ async function hotTheaters() {
 // less than MIN_CALL_MS left. Translation needs little reasoning, so requests ask for low effort and a short answer.
 export async function translateBatch(rows, opts = {}, deadline = Date.now() + TR.BUDGET_MS, offset = 0) {
   const chat = opts.chat || orChat, all = opts.models || (await reportModels());
+  const rmeta = opts.reasoning || (opts.chat ? {} : await modelReasoning());
   // Parallel batches start on different models, so one upstream provider's rate limit meets one batch, not all.
   const models = all.length ? [...all.slice(offset % all.length), ...all.slice(0, offset % all.length)] : all;
   const user = rows.map((r, n) => `${n + 1}\t[${r.lang}]\t${String(r.title).replace(/\s+/g, ' ').slice(0, 300)}`).join('\n');
@@ -146,9 +188,19 @@ export async function translateBatch(rows, opts = {}, deadline = Date.now() + TR
     const left = deadline - Date.now();
     if (left < TR.MIN_CALL_MS) return { done: null, calls, stop: 'run time spent', answered: calls.some((c) => c.ok) };
     if (!opts.chat && !(await trBudget())) return { done: null, calls, stop: 'daily allowance spent' };
-    const a = await chat(model, [{ role: 'system', content: TR_SYS }, { role: 'user', content: user }], null, Math.min(TR.CALL_MS, left - 5000),
-      { reasoning: { effort: 'low', exclude: true }, max_tokens: TR.MAX_TOKENS, temperature: 0.1 });
-    const call = { model, ok: a.ok, status: a.status || null, error: a.ok ? null : String(a.error || '').slice(0, 120) };
+    const ms = Math.min(TR.CALL_MS, left - 5000);
+    // The least reasoning the model allows (3.12.2). With low effort, reasoning models spent 3,500 to 12,000 output
+    // tokens on 40 headlines whose answer needs about 1,200 (21 November 2026, 22:57 UTC), and two answered nothing.
+    const reasoning = leastReasoning(rmeta[model]);
+    let a = await chat(model, [{ role: 'system', content: TR_SYS }, { role: 'user', content: user }], null, ms,
+      { reasoning, max_tokens: TR.MAX_TOKENS, temperature: 0.1 });
+    // A model that refuses the reasoning setting is asked once more with the catalogue's default.
+    if (a.status === 400 && reasoning.effort !== 'low' && Date.now() + TR.MIN_CALL_MS < deadline && (opts.chat || (await trBudget())))
+      a = await chat(model, [{ role: 'system', content: TR_SYS }, { role: 'user', content: user }], null, Math.min(TR.CALL_MS, deadline - Date.now() - 5000),
+        { reasoning: { exclude: true }, max_tokens: TR.MAX_TOKENS, temperature: 0.1 });
+    const call = { model, reasoning: reasoning.effort || (reasoning.max_tokens ? 'capped' : 'default'), ok: a.ok, status: a.status || null, error: a.ok ? null : String(a.error || '').slice(0, 120),
+      ...(ms < TR.CALL_MS ? { short: true } : {}),
+      ...(a.ok ? { finish: a.finish || null, chars: String((a.msg && a.msg.content) || '').length, out_tokens: (a.usage && a.usage.completion_tokens) || null } : {}) };
     calls.push(call);
     // A refused key or balance stops the run. A 429 is often one upstream provider's limit on one free model
     // (20 November 2026: two of three runs met one on the first model), so the next model is tried.
@@ -156,11 +208,13 @@ export async function translateBatch(rows, opts = {}, deadline = Date.now() + TR
     if (a.status === 429) continue;
     if (!a.ok) continue;
     let got;
-    try { got = parseTranslations(a.msg.content, rows.length); } catch (e) { call.error = 'unreadable answer: ' + e.message; continue; }
+    try { got = parseTranslations(a.msg.content, rows.length); } catch (e) { call.error = 'unreadable answer: ' + e.message + (a.finish && a.finish !== 'stop' ? ` (finish_reason ${a.finish})` : ''); continue; }
     if (got.size < rows.length / 2) { call.error = `answered ${got.size} of ${rows.length} lines`; continue; }
     const done = rows.map((r, n) => {
       const en = got.get(n + 1);
-      const f = en == null ? ['not answered'] : checkTranslation(r.title, r.lang, en);
+      // A line the answer left out (often an answer cut short) waits for the next run and counts nothing against it.
+      if (en == null) return { link: r.link, ok: false, skip: true, en: null, why: ['not answered'], model };
+      const f = checkTranslation(r.title, r.lang, en);
       return { link: r.link, ok: !f.length, en: f.length ? null : en.replace(/\s+/g, ' ').trim(), why: f, model };
     });
     return { done, calls, model };
@@ -175,6 +229,9 @@ export async function jobTranslate(opts = {}) {
   // A title tried in this run waits for the next one (and, as models fail over, perhaps another model). Each round
   // sends up to PARALLEL batches at once; a round whose batches all stop early ends the run.
   const tried = [], hot = await hotTheaters();
+  const mstats = (await kvGet('translate:models')) || {};
+  const models = rankModels(opts.models || (await reportModels()), mstats.stats || {});
+  const bopts = { ...opts, models };
   const store = async (rows, r) => {
     out.calls.push(...r.calls);
     out.batches++; out.sent += rows.length;
@@ -184,7 +241,8 @@ export async function jobTranslate(opts = {}) {
       if (r.answered) await sql(`UPDATE ti.item SET tr_fail = tr_fail + 1 WHERE link = ANY(ARRAY(SELECT jsonb_array_elements_text($1::jsonb)))`, [rows.map((x) => x.link)]);
       return r.stop;
     }
-    const ok = r.done.filter((d) => d.ok), bad = r.done.filter((d) => !d.ok);
+    const ok = r.done.filter((d) => d.ok), bad = r.done.filter((d) => !d.ok && !d.skip);
+    out.unanswered = (out.unanswered || 0) + r.done.filter((d) => d.skip).length;
     await sqlTx([
       ...(ok.length ? [[`UPDATE ti.item i SET title_en = x.en, tr_model = x.model, tr_at = now() FROM jsonb_to_recordset($1::jsonb) AS x(link text, en text, model text) WHERE i.link = x.link`, [ok.map(({ link, en, model }) => ({ link, en, model }))]]] : []),
       ...(bad.length ? [[`UPDATE ti.item SET tr_fail = tr_fail + 1 WHERE link = ANY(ARRAY(SELECT jsonb_array_elements_text($1::jsonb)))`, [bad.map((d) => d.link)]]] : []),
@@ -199,7 +257,7 @@ export async function jobTranslate(opts = {}) {
     if (!rows.length) break;
     const chunks = [];
     for (let k = 0; k < rows.length; k += TR.BATCH) chunks.push(rows.slice(k, k + TR.BATCH));
-    const res = await Promise.all(chunks.map((c, k) => translateBatch(c, opts, t0 + TR.BUDGET_MS, round * TR.PARALLEL + k)));
+    const res = await Promise.all(chunks.map((c, k) => translateBatch(c, bopts, t0 + TR.BUDGET_MS, round * TR.PARALLEL + k)));
     const stops = [];
     for (const [k, r] of res.entries()) stops.push(await store(chunks[k], r));
     if (stops.every(Boolean)) { out.stop = stops[0]; break; }
@@ -208,7 +266,9 @@ export async function jobTranslate(opts = {}) {
   const [q] = await sql(`SELECT count(*) FILTER (WHERE title_en IS NULL AND tr_fail < $1)::int AS waiting, count(*) FILTER (WHERE title_en IS NOT NULL)::int AS translated,
       count(*) FILTER (WHERE title_en IS NULL AND tr_fail >= $1)::int AS given_up FROM ti.item WHERE lang <> 'en' AND seen_at > now() - make_interval(hours => $2::int)`, [TR.MAX_FAILS, TR.WINDOW_H]);
   const langs = await sql(`SELECT lang, count(*)::int AS n, count(title_en)::int AS translated FROM ti.item WHERE seen_at > now() - interval '24 hours' GROUP BY 1 ORDER BY 2 DESC`);
-  await kvPut('translate:status', { at: new Date().toISOString(), window_h: TR.WINDOW_H, ...q, langs_24h: langs });
+  const stats = updateModelStats(mstats.stats || {}, out.calls);
+  await kvPut('translate:models', { at: new Date().toISOString(), stats, order: rankModels(models, stats) });
+  await kvPut('translate:status', { at: new Date().toISOString(), window_h: TR.WINDOW_H, ...q, langs_24h: langs, models: rankModels(models, stats).slice(0, 6) });
   await recordVolume([['titles_translated', out.translated]]);
   return { ...out, calls: out.calls.slice(0, 12), queue: q, ms: Date.now() - t0 };
 }

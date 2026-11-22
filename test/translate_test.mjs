@@ -53,6 +53,22 @@ ok(ck('网络安全漏洞预警', 'zh', '').includes('empty') && ck('漏洞', 'z
 ok(!ck('Cyberangriff auf Stadtwerke', 'de', 'Cyberattack on municipal utilities').length, 'German passes');
 const pa = M.parseTranslations('```json\n{"t":[{"i":1,"en":"a"},{"i":1,"en":"dup"},{"i":3,"en":"c"},{"i":9,"en":"out of range"}]}\n```', 3);
 ok(pa.size === 2 && pa.get(1) === 'a' && pa.get(3) === 'c', 'duplicates and out-of-range lines are dropped');
+// 3.12.1: the other shapes models answer in.
+const arr = M.parseTranslations('[{"i":1,"en":"a"},{"i":2,"en":"b"}]', 2);
+ok(arr.size === 2 && arr.get(2) === 'b', 'a bare JSON array is read');
+const cut = M.parseTranslations('{"t": [{"i": 1, "en": "Hackers attacked a bank"}, {"i": 2, "en": "Leak of \\"15,000\\" records"}, {"i": 3, "en": "Cyber', 3);
+ok(cut.size === 2 && cut.get(2) === 'Leak of "15,000" records', 'an answer cut short keeps its complete entries ' + JSON.stringify([...cut]));
+const lines = M.parseTranslations('1\t[ru]\tHackers attacked a bank\n2. Vulnerability in routers\n3) Cyber warning\nNote: done', 3);
+ok(lines.size === 3 && lines.get(1) === 'Hackers attacked a bank' && lines.get(3) === 'Cyber warning', 'numbered lines in the request layout are read ' + JSON.stringify([...lines]));
+let pe = ''; try { M.parseTranslations('', 2); } catch (e) { pe = e.message; }
+ok(pe === 'empty answer', 'an empty answer says so');
+pe = ''; try { M.parseTranslations('Sorry, I cannot help.', 2); } catch (e) { pe = e.message; }
+ok(pe === 'no numbered translations in the answer', 'prose is unreadable');
+ok(M.rankModels(['a', 'b', 'c'], {}).join() === 'a,b,c', 'without a record the list order stands');
+ok(M.rankModels(['a', 'b', 'c'], { a: { ok: 0, bad: 6 }, c: { ok: 5, bad: 0 } }).join() === 'c,b,a', 'the record orders the models');
+const ms1 = M.updateModelStats({ a: { ok: 10, bad: 0 }, z: { ok: 0.01, bad: 0.01 } }, [{ model: 'a', ok: true, error: null }, { model: 'b', ok: true, error: 'unreadable answer: empty answer' },
+  { model: 'c', ok: false, status: 429 }, { model: 'd', ok: false, error: 'deadline passed', short: true }, { model: 'e', ok: false, error: 'deadline passed' }]);
+ok(ms1.a.ok === 10.7 && ms1.b.bad === 1 && !ms1.c && !ms1.d && ms1.e.bad === 1 && !ms1.z, 'stats decay; 429s and run-shortened timeouts count nothing ' + JSON.stringify(ms1));
 
 // ---------------------------------------------------------------- the job
 const item = (link, title, lang, category, hoursAgo) => db.query(`INSERT INTO ti.item (link, fp, feed, host, title, summary, published, category, lang, seen_at) VALUES ($1, $1, 'f', 'h.example', $2, '', now() - make_interval(hours => $5), $3, $4, now() - make_interval(hours => $5))`, [link, title, category, lang, hoursAgo]);
@@ -96,6 +112,23 @@ ok(k429 >= 1 && r6.translated >= 1 && r6.calls.some((c) => c.model === 'b:free' 
 await db.query(`UPDATE ti.item SET title_en = NULL, tr_at = NULL, tr_fail = 1 WHERE link = 'https://ko/1'`);
 const r5 = await M.runJob('translate', { chat: async () => ({ ok: false, status: 429, error: 'rate limited' }), models: ['a:free'] });
 ok(r5.stop === 'every model answered HTTP 429' && (await db.query(`SELECT tr_fail FROM ti.item WHERE link = 'https://ko/1'`)).rows[0].tr_fail === 1, 'a rate limit stops the run and counts nothing against the titles');
+// An answer that leaves lines out: the lines answered are stored, the others wait without a failure counted.
+await db.query(`UPDATE ti.item SET title_en = NULL, tr_at = NULL, tr_fail = 0 WHERE link = 'https://ko/1'`);
+await item('https://ko/2', '사이버 공격으로 은행 서비스 중단', 'ko', 'topic-cyber', 1);
+await db.query(`DELETE FROM ti.kv WHERE k = 'translate:models'`);
+const rh = await M.runJob('translate', { chat: async () => ({ ok: true, finish: 'length', msg: { content: '{"t":[{"i":1,"en":"Hacking of a domestic financial institution disrupts service"},{"i":2,"en":"Cyber attack' } }), models: ['h:free'] });
+const kos = Object.fromEntries((await db.query(`SELECT link, title_en, tr_fail FROM ti.item WHERE link LIKE 'https://ko/%'`)).rows.map((r) => [r.link, r]));
+ok(rh.translated === 1 && rh.unanswered === 1 && Object.values(kos).filter((r) => r.title_en).length === 1 && Object.values(kos).every((r) => r.tr_fail === 0), 'a cut-short answer stores what it completed; the rest waits ' + JSON.stringify({ rh: { t: rh.translated, u: rh.unanswered, f: rh.failed }, kos }));
+const mk = (await db.query(`SELECT v FROM ti.kv WHERE k = 'translate:models'`)).rows[0].v;
+ok(mk.stats['h:free'].ok === 1 && mk.order[0] === 'h:free', 'the model record is kept in kv ' + JSON.stringify(mk));
+// 3.12.2: the least reasoning each model allows, and one retry when a model refuses the setting.
+const LR = M.leastReasoning;
+ok(LR(undefined).effort === 'low' && LR({ param: false, efforts: null }).effort === undefined && LR({ param: true, mandatory: false }).effort === 'none'
+  && LR({ param: true, mandatory: true, efforts: ['high', 'medium', 'low', 'minimal'] }).effort === 'minimal' && LR({ param: true, mandatory: true, max_tokens: true }).max_tokens === 1024, 'least reasoning per catalogue entry');
+const sent = [];
+const rchat = async (model, messages, tools, ms, extra) => { sent.push([model, JSON.stringify(extra.reasoning)]); if (model === 'r:free' && extra.reasoning.effort === 'none') return { ok: false, status: 400, error: 'reasoning is mandatory' }; return chat(model, messages); };
+const rb = await M.translateBatch([{ link: 'q', title: 'Хакеры атаковали банк', lang: 'ru' }], { chat: rchat, models: ['r:free'], reasoning: { 'r:free': { param: true, mandatory: false } } });
+ok(rb.done && rb.done[0].ok && sent.length === 2 && /"none"/.test(sent[0][1]) && !/effort/.test(sent[1][1]) && rb.calls[0].reasoning === 'none', 'a refused setting is retried with the default ' + JSON.stringify({ sent, calls: rb.calls }));
 // The daily allowance (real budget path, no injected chat).
 await db.query(`INSERT INTO ti.kv (k, v, at) VALUES ('translate:budget', $1, now())`, [{ day: new Date().toISOString().slice(0, 10), used: M.TR.DAILY }]);
 ok((await M.translateBatch([{ link: 'x', title: 'Хакеры', lang: 'ru' }], { models: ['m:free'] })).stop === 'daily allowance spent', 'the daily allowance stops requests');
@@ -127,4 +160,11 @@ await db.query(`INSERT INTO ti.kv (k, v, at) VALUES ('translate:budget', $1, now
 const got = await Promise.all(Array.from({ length: 10 }, () => M.translateBatch([{ link: 'z', title: 'خبر', lang: 'fa' }], { models: ['m:free'] }).catch((e) => ({ err: e.message }))));
 const used = (await db.query(`SELECT v FROM ti.kv WHERE k = 'translate:budget'`)).rows[0].v.used;
 ok(used === M.TR.DAILY && got.filter((g) => g.stop === 'daily allowance spent').length >= 7, 'parallel requests never overspend the allowance ' + JSON.stringify({ used, stops: got.map((g) => g.stop) }));
+// 3.13.2: the account's share. Other jobs' use today counts against ACCOUNT_DAILY.
+await db.query(`DELETE FROM ti.kv WHERE k IN ('translate:budget', 'triage:budget', 'report:budget')`);
+const today = new Date().toISOString().slice(0, 10);
+await db.query(`INSERT INTO ti.kv (k, v, at) VALUES ('triage:budget', $1, now()), ('report:budget', $2, now())`, [{ day: today, used: M.TR.ACCOUNT_DAILY - 3, cap: 600 }, { day: '2000-01-01', used: 200, cap: 240 }]);
+const share = await Promise.all(Array.from({ length: 6 }, () => M.translateBatch([{ link: 'z', title: 'خبر', lang: 'fa' }], { models: ['m:free'] }).catch((e) => ({ err: e.message }))));
+const used2 = (await db.query(`SELECT v FROM ti.kv WHERE k = 'translate:budget'`)).rows[0].v.used;
+ok(used2 === 3 && share.filter((g) => g.stop === 'daily allowance spent').length >= 3, 'translation stops where the account share runs out; yesterday\'s use of another job counts nothing ' + JSON.stringify({ used2, stops: share.map((g) => g.stop || g.err) }));
 console.log(`translate_test: ${pass} checks passed`);

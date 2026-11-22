@@ -55,11 +55,12 @@
       if (TI.failed('live_maritime')) row('Maritime security', 'Maritime feed unavailable.');
       else if (!TI.ready('live_maritime')) row('Maritime security', h('span', { class: 'dash-skeleton', text: 'Loading' }));
       else {
-        const src = kindRows('live_maritime', 'source');
+        const src = kindRows('live_maritime', 'source').filter((s) => s.id !== 'PRESS');
         const okSrc = src.filter((s) => s.ok);
-        const counts = mt ? `${int(mt.advisories)} advisories in force, ${int(mt.incidents_30d)} ASAM incidents in 30 days, ${int(mt.warnings)} navigational warnings (${int(mt.warn_hostile)} hostile, ${int(mt.warn_mines)} mines, ${int(mt.warn_gnss)} GNSS, ${int(mt.warn_military)} military). ` : '';
+        const counts = mt && okSrc.length ? `${int(mt.advisories)} advisories in force, ${int(mt.incidents_30d)} ASAM incidents in 30 days, ${int(mt.warnings)} navigational warnings (${int(mt.warn_hostile)} hostile, ${int(mt.warn_mines)} mines, ${int(mt.warn_gnss)} GNSS, ${int(mt.warn_military)} military). ` : '';
+        const press = mt && +mt.press_14d ? `${int(mt.press_7d)} maritime press reports of security incidents in 7 days (${int(mt.press_14d)} in 14; one outlet's headline each, so one incident can count more than once). ` : '';
         const down = src.filter((s) => !s.ok).map((s) => `${s.id} ${s.stale ? 'stale' : 'unavailable'}`).join(', ');
-        row('Maritime security', h('span', {}, counts, okSrc.length ? '' : 'No maritime source is current: ', down ? down + '. ' : ''),
+        row('Maritime security', h('span', {}, counts, press, okSrc.length ? '' : 'No official maritime source is current: ', down ? down + '. ' : ''),
           h('span', { class: 'ti-ctx-note', text: 'The Theaters page lists what each source answered.' }));
       }
     }
@@ -107,8 +108,9 @@
       const m = metaOf('live_maritime');
       setCount(sec, 'maritime-asof', fresh(m));
       const src = kindRows('live_maritime', 'source');
-      const live = src.filter((s) => s.ok).length;
-      note(sec, 'maritime-note', live ? `${live} of ${src.length} maritime sources answered at the last run. ` : `None of the ${src.length} maritime sources gives current data from the collector's network: each row says what it answered. Maritime warnings and incidents stay off the map until one does. `, m ? m.method || '' : '');
+      const off = src.filter((s) => s.id !== 'PRESS'), live = off.filter((s) => s.ok).length, pr = src.find((s) => s.id === 'PRESS');
+      const prn = pr && pr.ok ? `The maritime press carried ${int(pr.n)} reports of security incidents in 14 days. ` : '';
+      note(sec, 'maritime-note', (live ? `${live} of ${off.length} official maritime sources answered at the last run. ` : `None of the ${off.length} official maritime sources gives current data from the collector's network: each row says what it answered. Official warnings and incidents stay off the map until one does. `) + prn, m ? m.method || '' : '');
       TI.table(tm, src, [
         { field: 'id', label: 'Source', link: 'url' },
         { field: 'ok', label: 'State', get: (r) => (r.ok ? 'Current' : r.stale ? 'Stale' : 'Unavailable') },
