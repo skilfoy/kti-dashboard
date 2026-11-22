@@ -9,7 +9,8 @@ Run: python3 -I pipeline/build_feeds.py WORK FEEDS [YYYY-MM-DD]
 Steps: fetch.py and build_data.py (KEV, CVE, ATT&CK, ICS, leak-site and media baselines), build_gazetteer.py (the entity
 gazetteer the collector's entities job matches against), fetch_defense.py and
 build_defense.py (threat-informed defense), fetch_weaponization.py and build_weaponization.py (PoC and weaponization
-dates; reads FEEDS/kev.json and FEEDS/early_warning.json, so it runs last).
+dates; reads FEEDS/kev.json and FEEDS/early_warning.json), fetch_cvelist.py and build_baserates.py (weakness base rates by
+product family over every CVE List V5 record; reads the same two datasets and fetch.py's KEV and CVSS-BT downloads).
 Exit status 1 when the core step (build_data.py) failed, so the workflow keeps the last good site.
 """
 import datetime as dt
@@ -22,8 +23,8 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 WORK, FEEDS = os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])
 DAY = sys.argv[3] if len(sys.argv) > 3 else dt.date.today().isoformat()
-RAW, RAW2, RAW3, RAW4 = (os.path.join(WORK, d) for d in ("raw", "raw2", "raw3", "raw4"))
-for d in (WORK, FEEDS, RAW, RAW2, RAW3, RAW4):
+RAW, RAW2, RAW3, RAW4, RAW5 = (os.path.join(WORK, d) for d in ("raw", "raw2", "raw3", "raw4", "raw5"))
+for d in (WORK, FEEDS, RAW, RAW2, RAW3, RAW4, RAW5):
     os.makedirs(d, exist_ok=True)
 
 STEPS = [
@@ -34,15 +35,20 @@ STEPS = [
     ("build_defense", ["build_defense.py", RAW, RAW3, FEEDS, DAY]),
     ("fetch_weaponization", ["fetch_weaponization.py", RAW4, FEEDS]),
     ("build_weaponization", ["build_weaponization.py", RAW4, FEEDS, DAY]),
+    ("fetch_cvelist", ["fetch_cvelist.py", RAW5, DAY]),
+    ("build_baserates", ["build_baserates.py", RAW5, RAW, RAW2, FEEDS, DAY]),
 ]
 # A build step needs its fetch; a failed fetch skips the build so yesterday's datasets stand.
-NEEDS = {"build_data": "fetch", "build_gazetteer": "build_data", "build_defense": "fetch_defense", "build_weaponization": "fetch_weaponization"}
+NEEDS = {"build_data": "fetch", "build_gazetteer": "build_data", "build_defense": "fetch_defense", "build_weaponization": "fetch_weaponization",
+         "build_baserates": ("fetch_cvelist", "build_data")}
 
 results = {}
 for name, (script, *args) in STEPS:
-    if NEEDS.get(name) and results.get(NEEDS[name], {}).get("status") == "failed":
-        results[name] = {"status": "skipped", "reason": NEEDS[name] + " failed"}
-        print(f"== {name}: skipped ({NEEDS[name]} failed)", flush=True)
+    need = NEEDS.get(name, ())
+    bad = [n for n in ((need,) if isinstance(need, str) else need) if results.get(n, {}).get("status") == "failed"]
+    if bad:
+        results[name] = {"status": "skipped", "reason": ", ".join(bad) + " failed"}
+        print(f"== {name}: skipped ({', '.join(bad)} failed)", flush=True)
         continue
     t0 = time.time()
     print(f"== {name}", flush=True)

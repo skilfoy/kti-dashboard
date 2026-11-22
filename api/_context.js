@@ -41,6 +41,8 @@ TYPES.cyphys = { snap: 'cyphys', freshMin: 150, store: true };
 TYPES.sigma = { snap: 'sigma', freshMin: 150, store: true };
 // Threatcasting futures (3.9.0); published in the :04 slot every hour, drafting or not.
 TYPES.foresight = { snap: 'foresight', freshMin: 150, store: true };
+// Open-source disclosure watch (3.14.0); every three hours.
+TYPES.osswatch = { snap: 'osswatch', freshMin: 300, store: true };
 const CABLE_TERMS = { licence: 'ODbL-1.0', licence_url: 'https://opendatacommons.org/licenses/odbl/1-0/', attribution: '© OpenStreetMap contributors',
   attribution_url: 'https://www.openstreetmap.org/copyright', licence_note: '/open-data/cables-LICENSE.txt', coverage: 'partial' };
 function cablesGeojson(doc) {

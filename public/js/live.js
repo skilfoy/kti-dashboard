@@ -179,6 +179,7 @@
   docLoader('live_leaksites', 'ThreatCluster\'s first-party leak-site crawl cross-checked against ransomware.live per group: claims in 30 days and in the shared window, matches, and corroboration counting first-party rows only, via threat-feeds /api/context.');
   docLoader('live_lists', 'Free IPv4 blocklists checked against the hosts on the threat map: entries, hosts matched, overlap with other operators\' lists and each list\'s role in the credibility count, via threat-feeds /api/context.');
   docLoader('live_blogs', 'First-party CTI blogs from the awesome_threat_intel_blogs list (CC BY 4.0): each blog\'s feed status and the last 7 days of item titles and links, via threat-feeds /api/context.');
+  docLoader('live_osswatch', 'Open-source disclosures from OSV.dev, oss-security and HackerOne Hacktivity set against their CVE records, with reach from ecosyste.ms and OSS-Fuzz, via threat-feeds /api/context.');
   docLoader('live_psirt', 'Vendor PSIRT and national CERT advisory feeds read from each publisher: title, link, date and CVE identifiers, with CVEs listed in CISA KEV marked, via threat-feeds /api/context.');
   docLoader('live_triage', 'Machine triage of collected titles by a free hosted language model under deterministic checks: relevance, vector, theater and actors per title, unreviewed, with the tier\'s evaluation against analyst labels, via threat-feeds /api/context.');
   docLoader('live_news', 'Theater news feeds read every hour from each outlet: title, link and date only, labelled by the triage tier, via threat-feeds /api/context.');

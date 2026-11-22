@@ -12,6 +12,7 @@
   TI.f = {
     int: (v) => (bad(v) || isNaN(+v) ? '—' : fInt(+v)),
     pct: (v) => (bad(v) || isNaN(+v) ? '—' : fPct(+v)),
+    pct1: (v) => (bad(v) || isNaN(+v) ? '—' : d3.format('.1%')(+v)),
     signedPct: (v) => (bad(v) || isNaN(+v) ? '—' : fSigned(+v)),
     signedInt: (v) => (bad(v) || isNaN(+v) ? '—' : (+v > 0 ? '+' : '') + fInt(+v)),
     dec1: (v) => (bad(v) || isNaN(+v) ? '—' : d3.format('.1f')(+v)),

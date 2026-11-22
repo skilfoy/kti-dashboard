@@ -72,19 +72,25 @@ jobs:
           restore-keys: feeds-
 
       # GitHub starts scheduled runs on a best-effort basis and can start one hours late or skip a slot under load, so a
-      # push to main rebuilds the feeds itself when the last rebuild attempt is more than nine hours old.
+      # push to main rebuilds the feeds itself when the last rebuild attempt is more than nine hours old. A machine-built
+      # dataset the catalog names but the restored feeds lack (one a commit has just added) counts as stale too, so the
+      # commit that adds a dataset builds it before the site is assembled.
       - name: Check the age of the built feeds
         id: age
         run: |
           python3 -I - >> "$GITHUB_OUTPUT" <<'EOF'
-          import datetime as dt, json
+          import datetime as dt, json, os, sys
           try:
               at = json.load(open("feeds/_build.json"))["attempted"]
               hours = (dt.datetime.now(dt.timezone.utc) - dt.datetime.fromisoformat(at.replace("Z", "+00:00"))).total_seconds() / 3600
           except (OSError, ValueError, KeyError, TypeError):
               hours = float("inf")
+          sys.path.insert(0, "pipeline")
+          from datasets import AUTHORED, D
+          missing = [d for d in D if d not in AUTHORED and d != "verification" and not os.path.exists(os.path.join("feeds", d + ".json"))]
           print(f"hours={hours:.1f}")
-          print("stale=" + ("true" if hours > 9 else "false"))
+          print("missing=" + ",".join(missing))
+          print("stale=" + ("true" if hours > 9 or missing else "false"))
           EOF
 
       # A failed rebuild leaves the restored datasets in place, so the site still deploys with the last good feeds;
@@ -92,7 +98,7 @@ jobs:
       - name: Rebuild feeds from their sources
         id: rebuild
         if: >-
-          github.event_name == 'schedule' || inputs.rebuild_feeds || steps.feeds.outputs.cache-matched-key == '' ||
+          github.event_name == 'schedule' || inputs.rebuild_feeds || steps.feeds.outputs.cache-matched-key == '' || steps.age.outputs.missing != '' ||
           (github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.age.outputs.stale == 'true')
         continue-on-error: true
         run: |

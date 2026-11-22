@@ -44,7 +44,7 @@ jobs:
           export const LABEL = 'collector-alert';
           // Minutes between scheduled runs of each job (neon/parts/50-http.mjs plan()). A job is silent when its last run is
           // older than 90 minutes, or for a job slower than hourly, older than its own interval plus 90 minutes.
-          export const CADENCE_MIN = { gdelt: 15, infra: 30, snap: 30, health: 30, ioda: 30, lists: 60, leaksites: 60, links: 60, retention: 60, fires: 60, maritime: 60, sources: 15, reports: 15, triage: 60, psirt: 180,
+          export const CADENCE_MIN = { gdelt: 15, infra: 30, snap: 30, health: 30, ioda: 30, lists: 60, leaksites: 60, links: 60, retention: 60, fires: 60, maritime: 60, sources: 15, reports: 15, triage: 60, psirt: 180, osswatch: 180,
             unit42: 1440, genioc: 1440, lanesreg: 1440, sec8k: 840, ransompay: 10080 };
           export const silentAfterMin = (job) => { const c = CADENCE_MIN[job] || 15; return c <= 60 ? 90 : c + 90; };
           // Feeds the map or the store-first endpoints depend on (runbook 6c); a failing streak of 4 checks (2 hours) is a problem.
@@ -70,7 +70,7 @@ jobs:
           const restatesGap = (job, j) => !!GAP_JOBS[job] && j.ok === false && GAP_JOBS[job].test(String(j.error || ''));
           // Jobs added after the alert workflow: no "no run recorded" problem until their first run is in the record.
           // The blogs and news jobs left the schedule with 3.0 (the sources job reads their feeds); they are not watched.
-          export const NEW_JOBS = ['cables', 'psirt', 'triage', 'news', 'sources', 'reports'];
+          export const NEW_JOBS = ['cables', 'psirt', 'triage', 'news', 'sources', 'reports', 'osswatch'];
           const STREAK = 4, FAILS_24H = 3, STALE_RECORD_MIN = 90;
 
           const mins = (now, t) => Math.round((now - Date.parse(t)) / 60000);

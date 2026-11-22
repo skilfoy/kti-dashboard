@@ -72,23 +72,10 @@ def first_sentences(s, k=2, n=420):
 
 
 # ---------------------------------------------------------------- KEV + CVE
-# Order matters: the first matching rule wins, so product-specific rules run before broad vendor rules
-# (a Zyxel switch is a network device, a Cisco or Fortinet mail gateway is an email appliance).
-EDGE_RULES = [
-    ("Email / file-transfer appliance", r"barracuda|email security|secure email|email gateway|fortimail|\besa\b|moveit|goanywhere|cleo|accellion|fta\b|crushftp|wing ftp|serv-u|zimbra|exchange server|sharefile"),
-    ("Remote-access gateway / ADC", r"ivanti connect secure|ivanti policy secure|pulse connect|pulse secure|netscaler|citrix adc|citrix gateway|big-ip|f5 |array networks|ivanti neurons for zero|endpoint manager mobile|epmm|mobileiron|ivanti sentry"),
-    ("Remote management / support", r"screenconnect|connectwise|simplehelp|beyondtrust|remote support|privileged remote access|kaseya|n-able|take control|teamviewer|anydesk|ivanti endpoint manager\b|desktop central|endpoint central"),
-    ("Router / network device", r"\bios xe\b|\bios xr\b|cisco ios|nx-os|mikrotik|routeros|d-link|tp-link|draytek|netgear|ubiquiti|edgerouter|junos|arcadyan|\bzte\b|huawei.*router|linksys|tenda|totolink|four-faith|cisco small business|rv\d{3}|sd-wan|velocloud|identity services engine|\bswitch(es)?\b|arubaos|aruba"),
-    ("Firewall / VPN", r"fortios|fortigate|fortiproxy|fortiweb|fortimanager|fortianalyzer|fortiswitch|pan-os|globalprotect|palo alto|adaptive security appliance|\basa\b|firepower|secure firewall|sonicwall|sonicos|\bsma\b|check point|quantum security|watchguard|firebox|sophos firewall|xg firewall|zyxel|juniper srx"),
-]
-
-
-def edge_class(vendor, product, name):
-    t = f"{vendor} {product} {name}".lower()
-    for label, rx in EDGE_RULES:
-        if re.search(rx, t):
-            return label
-    return ""
+# The edge-device classes (EDGE_RULES, edge_class) live in families.py, which also holds the product families of the
+# weakness base rates (build_baserates.py), so every vulnerability row on the site uses one taxonomy.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # this folder only: the product families module
+from families import EDGE_RULES, edge_class  # noqa: E402,F401
 
 
 def cvss_from(record):

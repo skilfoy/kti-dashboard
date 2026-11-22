@@ -2,7 +2,7 @@
  "schema": 1,
  "title": "KTI data sources registry",
  "description": "One row per upstream the platform reads or has evaluated. Secrets appear by name and location only, never by value. Checked by pipeline/check_data_sources.mjs.",
- "generated": "2026-11-03",
+ "generated": "2026-11-22",
  "statuses": [
   "live",
   "known_gap",
@@ -29,7 +29,10 @@
     "page:defense",
     "live_graph",
     "page:graph",
-    "live_alerts"
+    "live_alerts",
+    "weakness_rates",
+    "weakness_families",
+    "weakness_cve"
    ],
    "url": "https://github.com/cisagov/kev-data",
    "access": "open",
@@ -46,7 +49,7 @@
     "S-KEV"
    ],
    "added": "2026-11-03",
-   "reviewed": "2026-11-19"
+   "reviewed": "2026-11-22"
   },
   {
    "id": "cve-list",
@@ -57,7 +60,10 @@
     "kev",
     "early_warning",
     "vuln_ladder",
-    "page:vulnerabilities"
+    "page:vulnerabilities",
+    "weakness_rates",
+    "weakness_families",
+    "weakness_cve"
    ],
    "url": "https://github.com/CVEProject/cvelistV5",
    "access": "open",
@@ -65,7 +71,7 @@
    "licence": "CVE Terms of Use (free to copy and distribute)",
    "attribution": "CVE records from the CVE Program",
    "commercial_use": "Allowed under the CVE terms",
-   "cadence": "three times a day (site build)",
+   "cadence": "three times a day (site build): per-record reads for KEV and early-warning CVEs, and the daily midnight archive of every record for the weakness base rates",
    "health_feed": null,
    "jobs": [],
    "status": "live",
@@ -74,7 +80,7 @@
     "S-CVE"
    ],
    "added": "2026-11-03",
-   "reviewed": "2026-11-03"
+   "reviewed": "2026-11-22"
   },
   {
    "id": "cvss-bt",
@@ -86,7 +92,10 @@
     "early_warning",
     "vuln_ladder",
     "cvss_bands",
-    "page:vulnerabilities"
+    "page:vulnerabilities",
+    "weakness_rates",
+    "weakness_families",
+    "weakness_cve"
    ],
    "url": "https://github.com/t0sche/cvss-bt",
    "access": "open",
@@ -106,7 +115,7 @@
     "S-NUC"
    ],
    "added": "2026-11-03",
-   "reviewed": "2026-11-03"
+   "reviewed": "2026-11-22"
   },
   {
    "id": "first-epss",
@@ -269,21 +278,26 @@
    "name": "GitHub Security Advisories",
    "owner": "GitHub",
    "category": "Vulnerabilities",
-   "feeds": [],
-   "url": "https://github.com/advisories",
+   "feeds": [
+    "live_osswatch",
+    "page:vulnerabilities"
+   ],
+   "url": "https://github.com/github/advisory-database",
    "access": "open",
    "secret": null,
-   "licence": "CC BY 4.0 (GitHub Advisory Database; unverified here)",
-   "attribution": "",
-   "commercial_use": "",
-   "cadence": "",
+   "licence": "CC BY 4.0 (GitHub Advisory Database)",
+   "attribution": "GitHub Advisory Database",
+   "commercial_use": "Allowed under CC BY 4.0",
+   "cadence": "every three hours (collector osswatch), read through OSV.dev's export of the GitHub-reviewed advisories",
    "health_feed": null,
-   "jobs": [],
-   "status": "not_implemented",
-   "gap_note": "Not collected; no code reads it",
+   "jobs": [
+    "osswatch"
+   ],
+   "status": "live",
+   "gap_note": "",
    "source_ids": [],
    "added": "2026-11-03",
-   "reviewed": "2026-11-03"
+   "reviewed": "2026-11-22"
   },
   {
    "id": "mitre-attack",
@@ -4789,6 +4803,165 @@
    "source_ids": [],
    "added": "2026-11-20",
    "reviewed": "2026-11-20"
+  },
+  {
+   "id": "osv-dev",
+   "name": "OSV.dev vulnerability export (all language ecosystems and OSS-Fuzz)",
+   "owner": "Google (OSV.dev) with each database's maintainers",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_osswatch",
+    "page:vulnerabilities"
+   ],
+   "url": "https://osv.dev/",
+   "access": "open",
+   "secret": null,
+   "licence": "CC BY 4.0 (OSV.dev), with each source's own terms: GitHub Advisory Database CC BY 4.0, PyPA CC BY 4.0, Go CC BY 4.0, RustSec CC0 1.0, OSS-Fuzz CC BY 4.0",
+   "attribution": "OSV.dev",
+   "commercial_use": "Allowed with attribution",
+   "cadence": "every three hours (collector osswatch): the head of each ecosystem's modified_id.csv, then the records not yet read",
+   "health_feed": "osv",
+   "jobs": [
+    "osswatch"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-22",
+   "reviewed": "2026-11-22"
+  },
+  {
+   "id": "oss-security",
+   "name": "oss-security mailing list (Openwall), via seclists.org",
+   "owner": "Openwall; syndicated by seclists.org (Nmap Project)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_osswatch",
+    "page:vulnerabilities"
+   ],
+   "url": "https://seclists.org/oss-sec/",
+   "access": "open",
+   "secret": null,
+   "licence": "Titles and links only; each post belongs to its author",
+   "attribution": "oss-security list, seclists.org",
+   "commercial_use": "",
+   "cadence": "every three hours (collector osswatch)",
+   "health_feed": "oss_security",
+   "jobs": [
+    "osswatch"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-22",
+   "reviewed": "2026-11-22"
+  },
+  {
+   "id": "hackerone-hacktivity",
+   "name": "HackerOne Hacktivity (disclosed reports)",
+   "owner": "HackerOne",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_osswatch",
+    "page:vulnerabilities"
+   ],
+   "url": "https://api.hackerone.com/hacker-resources",
+   "access": "registration",
+   "secret": {
+    "name": "HACKERONE_API_TOKEN",
+    "where": "neon_function_variable"
+   },
+   "licence": "HackerOne terms; reports belong to their reporters and programs. Titles, links, dates, CWE, severity and CVE ids only; no report text or AI summary is kept",
+   "attribution": "HackerOne Hacktivity",
+   "commercial_use": "Not stated; the platform's terms bar derivative works of the platform",
+   "cadence": "every three hours (collector osswatch)",
+   "health_feed": "hackerone",
+   "jobs": [
+    "osswatch"
+   ],
+   "status": "live",
+   "gap_note": "Read with HACKERONE_API_USERNAME and HACKERONE_API_TOKEN (a personal hacker API token) when the function holds them; until then the job reads the same endpoint anonymously, which answers 50 reports a page, and maps weakness names to CWE ids from a built-in table instead of the API's weakness list",
+   "source_ids": [],
+   "added": "2026-11-22",
+   "reviewed": "2026-11-22"
+  },
+  {
+   "id": "cve-services",
+   "name": "CVE Services API (record and id state)",
+   "owner": "CVE Program (MITRE)",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_osswatch",
+    "page:vulnerabilities"
+   ],
+   "url": "https://cveawg.mitre.org/api/",
+   "access": "open",
+   "secret": null,
+   "licence": "CVE Terms of Use (free to copy and distribute)",
+   "attribution": "CVE records from the CVE Program",
+   "commercial_use": "Allowed under the CVE terms",
+   "cadence": "every three hours (collector osswatch): each disclosure's first CVE id until its record is complete",
+   "health_feed": "cve_services",
+   "jobs": [
+    "osswatch"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-22",
+   "reviewed": "2026-11-22"
+  },
+  {
+   "id": "ecosystems-packages",
+   "name": "ecosyste.ms packages (usage and critical flag)",
+   "owner": "ecosyste.ms",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_osswatch",
+    "page:vulnerabilities"
+   ],
+   "url": "https://packages.ecosyste.ms/",
+   "access": "open",
+   "secret": null,
+   "licence": "CC BY-SA 4.0 (ecosyste.ms open data)",
+   "attribution": "ecosyste.ms",
+   "commercial_use": "Allowed under CC BY-SA 4.0 (share-alike)",
+   "cadence": "one lookup per package a week, from the collector osswatch",
+   "health_feed": "ecosystems",
+   "jobs": [
+    "osswatch"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-22",
+   "reviewed": "2026-11-22"
+  },
+  {
+   "id": "oss-fuzz-projects",
+   "name": "OSS-Fuzz project list (google/oss-fuzz projects/)",
+   "owner": "Google",
+   "category": "Vulnerabilities",
+   "feeds": [
+    "live_osswatch",
+    "page:vulnerabilities"
+   ],
+   "url": "https://github.com/google/oss-fuzz/tree/master/projects",
+   "access": "open",
+   "secret": null,
+   "licence": "Apache-2.0 (repository); project names only",
+   "attribution": "",
+   "commercial_use": "Allowed",
+   "cadence": "daily (collector osswatch, GitHub trees API)",
+   "health_feed": null,
+   "jobs": [
+    "osswatch"
+   ],
+   "status": "live",
+   "gap_note": "",
+   "source_ids": [],
+   "added": "2026-11-22",
+   "reviewed": "2026-11-22"
   }
  ]
 }
