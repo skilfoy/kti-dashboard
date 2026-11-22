@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.13.2 (22 November 2026)
+
+- Translation takes the account's spare share. Since 3.12.2 its daily allowance of 420 requests is all that bounds it, at roughly 11,000 titles a day against an inflow of about 8,800 and a backlog near 15,500.
+  - **Allowance.** It rises to 600 requests a day.
+  - **Shared limit.** A request is granted only while every job's use today, from the triage, reports, Sigma and threatcasting budgets in kv, stays under 950. That keeps the account inside OpenRouter's free tier of about 1,000 requests a day.
+  - **Recent use.** On 19 to 21 November the other jobs used 120 to 230 requests a day between them, against caps that add up to 858.
+- Collector 2026-11-22.3.
+
 ## 3.13.1 (22 November 2026)
 
 - Press-reported maritime incidents, precision after the first live run, which kept 54 entries from 967. Market notes, sanctions stories, defence packages and a carrier deployment had passed on wording in their summaries, and one Black Sea story had been placed in the Red Sea by its summary.

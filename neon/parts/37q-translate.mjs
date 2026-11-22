@@ -15,9 +15,14 @@
 //    - for a non-Latin source, text that differs from the source.
 //    A title that fails twice is left untranslated. The entities job reads translated titles as a third source (by
 //    tr_at), triage labels the English title, and search matches it.
-export const TR = { WINDOW_H: 48, BATCH: 40, PARALLEL: 3, ROUNDS: 3, DAILY: 420, MIN_THREATCON: 4, MAX_FAILS: 2, BUDGET_MS: 120000, CALL_MS: 75000, MIN_CALL_MS: 20000, MAX_TOKENS: 12000, PROMPT_V: 1,
+export const TR = { WINDOW_H: 48, BATCH: 40, PARALLEL: 3, ROUNDS: 3, DAILY: 600, MIN_THREATCON: 4, MAX_FAILS: 2, BUDGET_MS: 120000, CALL_MS: 75000, MIN_CALL_MS: 20000, MAX_TOKENS: 12000, PROMPT_V: 1,
   // Model order (3.12.1): each model's record of readable answers, decayed by DECAY a run so the order follows the last day.
-  DECAY: 0.97 };
+  DECAY: 0.97,
+  // The account's share (3.13.2). OpenRouter's credited free tier allows about 1,000 requests a day across every job on the
+  // key. The jobs' own caps add up to more (triage 600, reports 240, translation 600, Sigma 6, threatcasting 12), though
+  // on 19 to 21 November they used 120 to 450 between them. Translation, the only job that can use more, takes a request
+  // only while every job's use today stays under ACCOUNT_DAILY.
+  ACCOUNT_DAILY: 950, OTHER_BUDGETS: ['triage:budget', 'report:budget', 'sigma:budget', 'foresight:budget'] };
 
 // --- language identification -----------------------------------------------------------------------------------------------
 const LATIN_LANGS = {
@@ -150,7 +155,10 @@ async function trBudget() {
   const day = new Date().toISOString().slice(0, 10);
   await sql(`INSERT INTO ti.kv (k, v, at) VALUES ('translate:budget', jsonb_build_object('day', $1::text, 'used', 0, 'cap', $2::int), now()) ON CONFLICT (k) DO NOTHING`, [day, TR.DAILY]);
   const r = await sql(`UPDATE ti.kv SET v = jsonb_build_object('day', $1::text, 'cap', $2::int, 'used', CASE WHEN v->>'day' = $1 THEN (v->>'used')::int ELSE 0 END + 1), at = now()
-    WHERE k = 'translate:budget' AND (v->>'day' IS DISTINCT FROM $1 OR (v->>'used')::int < $2::int) RETURNING (v->>'used')::int AS used`, [day, TR.DAILY]);
+    WHERE k = 'translate:budget' AND (v->>'day' IS DISTINCT FROM $1 OR (v->>'used')::int < $2::int)
+      AND CASE WHEN v->>'day' = $1 THEN (v->>'used')::int ELSE 0 END + 1
+        + (SELECT coalesce(sum((o.v->>'used')::int), 0) FROM ti.kv o WHERE o.k = ANY(ARRAY(SELECT jsonb_array_elements_text($4::jsonb))) AND o.v->>'day' = $1) <= $3::int
+    RETURNING (v->>'used')::int AS used`, [day, TR.DAILY, TR.ACCOUNT_DAILY, JSON.stringify(TR.OTHER_BUDGETS)]);
   return r.length > 0;
 }
 // The queue's order: cyber categories, then theater and geopolitical press from theaters at ThreatCon MIN_THREATCON

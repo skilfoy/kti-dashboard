@@ -33,7 +33,7 @@ Before 3.10.0 the tag was the feed's, from five scripts. As a result:
 The `translate` job runs in every slot, right after `sources`:
 
 1. **Queue.** It takes non-English titles of the last 48 hours in this order: cyber categories, then theater and geopolitical press from theaters at ThreatCon 4 or above (by the feed's region), then the rest of that press, then everything else. Newest first within each group.
-2. **Request.** Each round sends up to three batches of 40 at once to the reports' free hosted models, each batch starting on a different model. A run makes up to three rounds within 120 seconds. The job has its own allowance of 420 requests a day (kv `translate:budget`), taken one request at a time in one SQL statement.
+2. **Request.** Each round sends up to three batches of 40 at once to the reports' free hosted models, each batch starting on a different model. A run makes up to three rounds within 120 seconds. The job has its own allowance of 600 requests a day (kv `translate:budget`), taken one request at a time in one SQL statement, and takes a request only while all jobs' use today (the triage, reports, Sigma and threatcasting budgets) stays under 950, inside OpenRouter's free tier of about 1,000 a day.
 3. **Checks.** A translation is stored in `ti.item.title_en`, with the model and time, only when all of these hold:
    - each line is answered once;
    - the text is mostly Latin letters;
