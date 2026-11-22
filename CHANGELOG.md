@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.13.0 (22 November 2026)
+
+- Maritime incidents reported in the press keep the maritime document current when the official sources do not answer. Since 21 November 2026 none of the four official sources has answered the collector: MARAD and UKMTO refuse cloud addresses (HTTP 403), and NGA's API and daily memoranda answer HTTP 503. Until now the job failed every hour and the site held its last document.
+  - **Source.** The maritime job reads 14 days of entries the source network already collects: the maritime trade press (Maritime Executive, gCaptain, Lloyd's List, Safety4Sea, Splash, Seatrade, USNI News, Naval News and others) and UKMTO's own feed, which answers where UKMTO's API does not. No new outside request is made.
+  - **Selection.** An entry is kept when its title or summary reports a security incident: an attack, a boarding, piracy, a seizure, drones, missiles, mines, GNSS interference, a suspicious approach, or a JMIC, UKMTO or ReCAAP notice. Headlines that use those words for other things are left out, such as weapons programmes, market and insurance stories, meetings and cyber attacks.
+  - **Placement and counting.** Each kept entry is placed in a theater by the advisory wording rules, then by port and place names, then by the feed's theater, and counted once per headline.
+  - **Display.** The document gains a `PRESS` source row, `press_7d` and `press_14d` per theater, press rows with the publisher, and `degraded` when no official source is current. The theater context line and the Theaters page note report press counts apart from official advisories, incidents and warnings.
+  - **Warning indicators.** These still read only the official notices, so press reports never stand in for them.
+- Collector 2026-11-22.1.
+
 ## 3.12.2 (21 November 2026)
 
 - Translation asks each model for the least reasoning it allows. The first 3.12.1 run's diagnostics showed the cause of the empty answers: with low effort, reasoning models spent 3,500 to 12,000 output tokens on 40 headlines whose answer needs about 1,200, and two came back empty with finish reason `length`.
