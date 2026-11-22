@@ -705,6 +705,37 @@ const M = await import(path.join(TF, 'neon', 'collector.mjs'));
   await db.query(`DELETE FROM ti.item WHERE link LIKE 'https://w.example/%'`); await db.query(`DELETE FROM ti.triage WHERE link LIKE 'https://w.example/%'`); M.resetMirrorMemory(); // leave the later checks the state they expect
   const pc = await M.triagePace(560, new Date(new Date().toISOString().slice(0, 10) + 'T23:50:00Z'));
   ok(pc.share >= 1 && pc.share <= Math.ceil(1.5 * pc.left), 'the last slot of the day may take what is left ' + JSON.stringify(pc));
+  {
+  // 3.11.2: the subscription worker. A triage run opens a batch of the oldest stories (high-yield kinds first) in ti.kv;
+  // the session's label lines, left as inbox rows, are stored only after triageCheck on the next run.
+  await db.query(`INSERT INTO ti.item (link, fp, feed, source, host, title, published, category, region) VALUES
+    ('https://wk.example/a', 'fp-wk-a', 'wk', 'Work Wire', 'wk.example', 'Akira ransomware hits regional water utility', now() - interval '20 days', 'topic-cyber', 'Global'),
+    ('https://wk.example/b', 'fp-wk-b', 'wk', 'Work Wire', 'wk.example', 'Parliament debates fishing quotas reform', now() - interval '19 days', 'geopolitics', 'Global'),
+    ('https://wk.example/c', 'fp-wk-c', 'wk', 'Work Wire', 'wk.example', 'Drone strikes reported near Port Sudan airport', now() - interval '1 hour', 'topic-theater', 'Global')`);
+  await db.query(`DELETE FROM ti.kv WHERE k LIKE 'triage:worker:%'`);
+  const c1 = await M.triageClaim(2), c2 = await M.triageClaim(2), b1 = await M.kvGet('triage:worker:batch');
+  const lines = b1.text.split('\n'), idOf = (re) => +lines.find((l) => /^\d+\t/.test(l) && re.test(l)).split('\t')[0];
+  ok(c1.ticket && c1.count === 2 && c2.resumed && c2.ticket === c1.ticket && b1.ticket === c1.ticket && /untrusted data/.test(b1.text) && /tab-separated/.test(b1.text)
+    && /Akira ransomware/.test(b1.text) && /Port Sudan/.test(b1.text) && !/fishing/.test(b1.text) && b1.text.indexOf('Akira') < b1.text.indexOf('Port Sudan'),
+    'a claim opens a batch of the oldest high-yield stories, published for the session, and a second claim resumes it ' + JSON.stringify({ c1, c2: c2.resumed }));
+  const idA = idOf(/Akira/), idC = idOf(/Port Sudan/);
+  const put = (k, v) => db.query(`INSERT INTO ti.kv (k, v, at) VALUES ($1, $2::jsonb, now())`, ['triage:worker:inbox:' + k, JSON.stringify(v)]);
+  await put('1', { ticket: c1.ticket, model: 'claude-haiku-5-5', tsv: `${idA}\t3\t5\tT-GLB\tAkira;LockBit\tRansomware attack on a water utility.\n${idC}\t3\t0\tT-NOWHERE\t-\tStrikes near the airport.\n999\t1\t0\tT-GLB\t-\tx\nnot a label line` });
+  await put('2', { ticket: 'stale', tsv: `${idC}\t3\t0\tT-SDN\t-\tStrikes.` });
+  const k1 = await M.triageWorkerTick();
+  const [rowA] = (await db.query(`SELECT relevance, vector, actors, model FROM ti.triage WHERE link = 'https://wk.example/a'`)).rows;
+  const r1 = k1.results[0];
+  ok(k1.inbox === 2 && r1.stories === 1 && r1.remaining === 1 && r1.rejects.theater_not_listed === 1 && r1.rejects.id_not_in_batch === 1 && r1.unreadable_lines === 1 && /no open ticket/.test(k1.results[1].error)
+    && rowA && rowA.relevance === 3 && rowA.vector === M.TRIAGE_VECTORS[4] && JSON.stringify(rowA.actors) === '["Akira"]' && rowA.model === 'claude-subscription:claude-haiku-5-5'
+    && !(await db.query(`SELECT 1 FROM ti.kv WHERE k LIKE 'triage:worker:inbox:%'`)).rows.length && (await M.kvGet('triage:worker:batch')).count === 1,
+    'inbox labels pass the model checks: a theater off the list, an id outside the ticket and a stale ticket are refused, an actor not in the title is dropped ' + JSON.stringify({ r1, rowA }));
+  await put('3', { ticket: c1.ticket, model: '$(rm -rf)', tsv: `${idC}\t3\t0\tT-SDN\t-\tStrikes near the airport.` });
+  const k2 = await M.triageWorkerTick();
+  const [rowC] = (await db.query(`SELECT model, theater FROM ti.triage WHERE link = 'https://wk.example/c'`)).rows;
+  ok(k2.results[0].remaining === 0 && rowC.model === 'claude-subscription' && rowC.theater === 'T-SDN' && k2.open.ticket && k2.open.ticket !== c1.ticket && /fishing/.test((await M.kvGet('triage:worker:batch')).text),
+    'a finished ticket closes, the next run opens the next batch, and an odd model name is not stored ' + JSON.stringify(k2.open));
+  await db.query(`DELETE FROM ti.item WHERE link LIKE 'https://wk.example/%'`); await db.query(`DELETE FROM ti.triage WHERE link LIKE 'https://wk.example/%'`); await db.query(`DELETE FROM ti.kv WHERE k LIKE 'triage:worker:%'`); M.resetMirrorMemory();
+  }
   // Story clustering: same story from three publishers, a shared CVE with different wording, and an unrelated title.
   const cl = M.clusterTitles([{ title: 'Fortinet patches critical FortiOS SSL VPN authentication bypass', cves: [] }, { title: 'Critical FortiOS SSL VPN authentication bypass patched by Fortinet', cves: [] },
     { title: 'Exploitation of CVE-2026-33333 seen in the wild against gateways', cves: ['CVE-2026-33333'] }, { title: 'Gateways under attack: CVE-2026-33333 exploitation in the wild', cves: ['CVE-2026-33333'] },

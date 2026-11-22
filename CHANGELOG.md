@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.13.4 (22 November 2026)
+
+- Triage gets a second worker: a scheduled Claude session on the owner's subscription, for the titles the free models have no requests left for. It takes the oldest titles, the ones closest to leaving the 30-day label window, while the free models take the newest. It needs no key of its own. It reads the open batch from `ti.kv` through the owner's Neon connector and leaves its labels there as inbox rows. It never writes `ti.triage`.
+- Every triage run now drains that inbox first. Each label passes the same checks as a model answer: an id from the batch, a vector and theater from the closed lists, actors that occur in the title, and a reason without links. A label that fails is dropped and counted. The run then opens the next batch of 600 stories. One batch is open at a time and lapses after three hours, so a session that stops half way leaves its remaining stories to the next. Stored labels carry the model `claude-subscription:<model id>`.
+- The session's prompt is `pipeline/TRIAGE_WORKER_PROMPT.md`.
+- Collector 2026-11-22.5.
+
 ## 3.13.3 (22 November 2026)
 
 - Triage labels every title instead of only the last day's. 3.10.6 sent only titles of the last 24 hours, so most world news aged out unlabelled. The labelling window is now 30 days, the life of a label, and nothing ages out while it is stored. High-yield kinds still go first, and within each tier the newest titles go first, so the backlog takes the spare capacity.
